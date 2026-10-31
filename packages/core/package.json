@@ -1,0 +1,12 @@
+{
+    "name": "@betting/core",
+    "private": true,
+    "type": "module",
+    "description": "Pure betting maths and domain rules, shared by the worker and the dashboard",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc"
+    }
+}
