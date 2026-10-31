@@ -1,0 +1,35 @@
+{
+    "name": "betting-bot",
+    "private": true,
+    "type": "module",
+    "description": "Paper-betting system for European football: a human expert and a value scanner measured against the closing line",
+    "license": "MIT",
+    "packageManager": "pnpm@12.16.1",
+    "engines": {
+        "node": ">=24"
+    },
+    "scripts": {
+        "typecheck": "turbo run typecheck",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
+        "lint": "eslint . --max-warnings=0",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "@types/node": "24.19.2",
+        "@vitest/coverage-v8": "5.0.5",
+        "eslint": "10.14.0",
+        "husky": "9.1.7",
+        "jiti": "2.7.0",
+        "lint-staged": "17.6.0",
+        "prettier": "3.9.10",
+        "turbo": "2.11.10",
+        "typescript": "6.0.3",
+        "typescript-eslint": "8.72.1",
+        "vitest": "5.0.5"
+    }
+}

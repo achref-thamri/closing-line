@@ -1,0 +1,9 @@
+{
+    "$schema": "https://turborepo.com/schema.json",
+    "tasks": {
+        "typecheck": {
+            "dependsOn": ["^typecheck"],
+            "inputs": ["src/**", "tsconfig.json", "package.json"]
+        }
+    }
+}
