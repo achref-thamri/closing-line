@@ -1,7 +1,11 @@
 export { crossedUsageLevels, dailyAllowance, daysLeftInMonth, decideCredits } from "./credits.ts";
 export type { CreditDecision, CreditPriority, CreditState } from "./credits.ts";
+export { availableBankrollOre, settledLossOre } from "./bankroll.ts";
+export type { LedgerBet } from "./bankroll.ts";
 export { devigPower, devigProportional } from "./devig.ts";
 export { impliedProbability, overround } from "./odds.ts";
+export { fairProbabilities, favourite, findValueBets, netOdds } from "./scanner.ts";
+export type { PriceQuote, ValueBet } from "./scanner.ts";
 export { outcomeOf, settle1x2 } from "./settlement.ts";
 export type { MatchResult, Outcome, Settlement } from "./settlement.ts";
 export { kellyFraction, kellyStake } from "./staking.ts";

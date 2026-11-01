@@ -34,6 +34,8 @@ describe("parseConfig", () => {
             stake: { kellyMultiplier: 0.25, maxBankrollFraction: 0.02, minStake: 50, maxStake: 500, step: 10 },
         });
         expect(config.humans.maxBankrollFraction).toBe(0.05);
+        expect(config.benchmarkStake).toBe(100);
+        expect(config.closingWindowMinutes).toBe(45);
         expect(config.credits).toEqual({ reserve: 50, warnAt: [0.7, 0.9] });
         expect(config.timezone).toBe("Europe/Copenhagen");
         expect(config.telegram).toEqual({ botToken: "123:abc", ownerChatId: 42, friendChatId: undefined });

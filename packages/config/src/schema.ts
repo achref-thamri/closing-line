@@ -87,6 +87,10 @@ export const settingsSchema = z
                 stake: stakeRulesSchema.prefault({}),
             })
             .prefault({}),
+        /** Flat stake for the "always back the favourite" benchmark. */
+        benchmarkStake: z.number().positive().default(100),
+        /** Polls this close to kickoff record closing prices and place the benchmark bet. */
+        closingWindowMinutes: z.int().positive().max(180).default(45),
         humans: z.strictObject({ maxBankrollFraction: fraction.default(0.05) }).prefault({}),
         startingBankroll: z.number().positive().default(10_000),
         /** A player that loses this share of its bankroll in a week pauses until Monday. */
