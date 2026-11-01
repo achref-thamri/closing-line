@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { bankrollSeries, playerStats, type MetricsBet } from "../metrics.ts";
+import {
+    availableFromTotals,
+    bankrollSeries,
+    playerStats,
+    statsFromTotals,
+    totalsOf,
+    type MetricsBet,
+} from "../metrics.ts";
 
 const settledAt = new Date("2026-11-08T18:00:00Z");
 const bet = (
@@ -59,5 +66,19 @@ describe("bankrollSeries", () => {
     it("starts no later than the first settlement", () => {
         const series = bankrollSeries(1_000_000, new Date("2026-12-01T00:00:00Z"), [bet("won", 10_000, 15_000, null)]);
         expect(series[0]).toEqual({ at: settledAt, bankrollOre: 1_000_000 });
+    });
+});
+
+describe("totals", () => {
+    it("give the same stats as the bets they sum", () => {
+        const bets = [
+            bet("won", 10_000, 15_000, 0.05),
+            bet("lost", 20_000, -20_000, -0.01),
+            bet("open", 12_000, null, 0.02),
+        ];
+        const totals = totalsOf(bets);
+        expect(totals).toMatchObject({ openStakeOre: 12_000, clvSum: 0.06, clvCount: 3 });
+        expect(statsFromTotals(totals)).toEqual(playerStats(bets));
+        expect(availableFromTotals(1_000_000, totals)).toBe(1_000_000 - 5_000 - 12_000);
     });
 });

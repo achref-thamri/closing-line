@@ -125,6 +125,7 @@ export const bets = pgTable(
         check("bets_stake_positive", sql`${table.stakeOre} > 0`),
         check("bets_odds_above_one", sql`${table.lockedOdds} > 1`),
         check("bets_settled_consistently", sql`(${table.status} = 'open') = (${table.settledAt} is null)`),
+        check("bets_h2h_selection", sql`${table.market} <> 'h2h' or ${table.selection} in ('home', 'draw', 'away')`),
     ],
 );
 

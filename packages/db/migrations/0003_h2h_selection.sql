@@ -1,0 +1,1 @@
+ALTER TABLE "bets" ADD CONSTRAINT "bets_h2h_selection" CHECK ("bets"."market" <> 'h2h' or "bets"."selection" in ('home', 'draw', 'away'));

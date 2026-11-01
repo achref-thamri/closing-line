@@ -1,5 +1,5 @@
 import type { Config } from "@betting/config";
-import { playerStats } from "@betting/core";
+import { statsFromTotals, totalsOf } from "@betting/core";
 import type { Repositories } from "@betting/db";
 
 const WEEK_MS = 7 * 86_400_000;
@@ -20,11 +20,13 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         `📊 Weekly report, ${dateText(weekStart, deps.config.timezone)} – ${dateText(now, deps.config.timezone)}`,
     ];
     let mostSettled = 0;
+    const allTotals = await deps.repos.bets.totals();
+    const weekTotals = await deps.repos.bets.totals({ settledSince: weekStart });
+    const none = totalsOf([]);
 
     for (const player of await deps.repos.players.list()) {
-        const bets = await deps.repos.bets.forPlayer(player.id);
-        const week = playerStats(bets.filter((bet) => bet.settledAt !== null && bet.settledAt >= weekStart));
-        const all = playerStats(bets);
+        const week = statsFromTotals(weekTotals.get(player.id) ?? none);
+        const all = statsFromTotals(allTotals.get(player.id) ?? none);
         mostSettled = Math.max(mostSettled, all.settled);
         lines.push(
             "",

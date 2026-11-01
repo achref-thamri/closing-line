@@ -36,7 +36,7 @@ function bet(overrides: Partial<NewBet> = {}): NewBet {
         playerId: "scanner",
         fixtureId: "evt1",
         market: "h2h",
-        selection: "Arsenal",
+        selection: "away",
         stakeOre: 15_000,
         lockedOdds: 2.54,
         bookmaker: "unibet_se",
@@ -107,7 +107,7 @@ describe("odds", () => {
             {
                 ...row,
                 bookmaker: "pinnacle",
-                selection: "Arsenal",
+                selection: "away",
                 price: 2.47,
                 bookmakerUpdatedAt: at(130),
                 takenAt: at(120),
@@ -115,7 +115,7 @@ describe("odds", () => {
             {
                 ...row,
                 bookmaker: "pinnacle",
-                selection: "Arsenal",
+                selection: "away",
                 price: 2.4,
                 bookmakerUpdatedAt: at(31),
                 takenAt: at(30),
@@ -123,7 +123,7 @@ describe("odds", () => {
             {
                 ...row,
                 bookmaker: "unibet_se",
-                selection: "Arsenal",
+                selection: "away",
                 price: 2.5,
                 bookmakerUpdatedAt: at(125),
                 takenAt: at(120),
@@ -146,7 +146,7 @@ describe("odds", () => {
                     market: "h2h",
                     kind: "poll",
                     bookmaker: "pinnacle",
-                    selection: "Arsenal",
+                    selection: "away",
                     price: 1,
                     bookmakerUpdatedAt: kickoff,
                     takenAt: kickoff,
@@ -167,7 +167,7 @@ describe("bets", () => {
 
     it("gives bets time-ordered ids", async () => {
         const first = await repos.bets.place(bet());
-        const second = await repos.bets.place(bet({ selection: "Draw" }));
+        const second = await repos.bets.place(bet({ selection: "draw" }));
         expect(first && second && first.id < second.id).toBe(true);
     });
 
@@ -208,7 +208,7 @@ describe("bets", () => {
 
     it("lists recent bets with their match, newest first", async () => {
         await repos.bets.place(bet());
-        await repos.bets.place(bet({ playerId: "friend", selection: "Draw" }));
+        await repos.bets.place(bet({ playerId: "friend", selection: "draw" }));
         const recent = await repos.bets.recent(10);
         expect(recent.map((row) => [row.playerId, row.fixture.homeTeam, row.fixture.awayTeam])).toEqual([
             ["friend", "Liverpool", "Arsenal"],
@@ -225,9 +225,56 @@ describe("bets", () => {
         expect((await repos.bets.open(["evt2"])).map((row) => row.fixtureId)).toEqual(["evt2"]);
     });
 
-    it("rejects a bet on an unknown fixture or with no stake", async () => {
+    it("rejects a bet on an unknown fixture, with no stake, or on a team name instead of a 1X2 outcome", async () => {
         await expect(repos.bets.place(bet({ fixtureId: "nope" }))).rejects.toThrow();
         await expect(repos.bets.place(bet({ stakeOre: 0 }))).rejects.toThrow();
+        await expect(repos.bets.place(bet({ selection: "Arsenal" }))).rejects.toThrow();
+    });
+
+    it("sums each player's bets in the database", async () => {
+        const settledAt = new Date("2026-11-08T18:30:00Z");
+        const won = await repos.bets.place(bet());
+        const lost = await repos.bets.place(bet({ selection: "home", stakeOre: 10_000 }));
+        await repos.bets.place(bet({ selection: "draw", stakeOre: 5_000 }));
+        await repos.bets.place(bet({ playerId: "friend", stakeOre: 20_000 }));
+        await repos.bets.setClosing(won?.id ?? "", { fairOdds: 2.4, clv: 0.06, provisional: false });
+        await repos.bets.setClosing(lost?.id ?? "", { fairOdds: 3, clv: -0.02, provisional: false });
+        await repos.bets.settle(won?.id ?? "", { status: "won", profitOre: 23_100, settledAt });
+        await repos.bets.settle(lost?.id ?? "", { status: "lost", profitOre: -10_000, settledAt });
+
+        const totals = await repos.bets.totals();
+        expect(totals.get("scanner")).toEqual({
+            settled: 2,
+            won: 1,
+            void: 0,
+            open: 1,
+            stakedOre: 25_000,
+            profitOre: 13_100,
+            openStakeOre: 5_000,
+            clvSum: expect.closeTo(0.04, 10) as number,
+            clvCount: 2,
+        });
+        expect(totals.get("friend")).toMatchObject({ open: 1, openStakeOre: 20_000, settled: 0 });
+
+        const sinceSettlement = await repos.bets.totals({ settledSince: new Date(settledAt.getTime() + 1) });
+        expect(sinceSettlement.get("scanner")).toBeUndefined();
+        expect((await repos.bets.totals({ settledSince: settledAt })).get("scanner")).toMatchObject({
+            settled: 2,
+            open: 0,
+        });
+    });
+
+    it("answers whether a player has a bet on a fixture, and lists settled bets for charts", async () => {
+        const placed = await repos.bets.place(bet());
+        await repos.bets.place(bet({ selection: "home" }));
+        expect(await repos.bets.hasBet("scanner", "evt1")).toBe(true);
+        expect(await repos.bets.hasBet("friend", "evt1")).toBe(false);
+
+        const settledAt = new Date("2026-11-08T18:30:00Z");
+        await repos.bets.settle(placed?.id ?? "", { status: "won", profitOre: 23_100, settledAt });
+        expect(await repos.bets.settledLedger("scanner")).toEqual([
+            { status: "won", stakeOre: 15_000, profitOre: 23_100, settledAt, clv: null },
+        ]);
     });
 });
 

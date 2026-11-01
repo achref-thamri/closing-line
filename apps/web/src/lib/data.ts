@@ -1,4 +1,4 @@
-import { bankrollSeries, playerStats, type BankrollPoint, type PlayerStats } from "@betting/core";
+import { bankrollSeries, statsFromTotals, totalsOf, type BankrollPoint, type PlayerStats } from "@betting/core";
 import { createRepositories, openDatabase, type BetWithFixture, type DatabaseHandle, type Player } from "@betting/db";
 import { seedDemo } from "./demo.ts";
 
@@ -35,16 +35,16 @@ function database(): Promise<DatabaseHandle> {
 
 export async function loadDashboard(): Promise<Dashboard> {
     const repos = createRepositories((await database()).db);
+    const totals = await repos.bets.totals();
     const players = await Promise.all(
         (await repos.players.list()).map(async (player) => {
-            const bets = await repos.bets.forPlayer(player.id);
-            const stats = playerStats(bets);
-            const start = bets[0]?.createdAt ?? player.createdAt;
+            const stats = statsFromTotals(totals.get(player.id) ?? totalsOf([]));
+            const ledger = await repos.bets.settledLedger(player.id);
             return {
                 player,
                 stats,
                 bankrollOre: player.startingBankrollOre + stats.profitOre,
-                series: bankrollSeries(player.startingBankrollOre, start, bets),
+                series: bankrollSeries(player.startingBankrollOre, player.createdAt, ledger),
             };
         }),
     );

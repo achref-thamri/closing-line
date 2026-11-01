@@ -1,5 +1,5 @@
 import type { Config } from "@betting/config";
-import { matchFixture, settle1x2, type Outcome } from "@betting/core";
+import { matchFixture, settle1x2, toOutcome } from "@betting/core";
 import type { Fixture, Repositories } from "@betting/db";
 import type { ResultsSource } from "../ports/results.ts";
 
@@ -14,7 +14,7 @@ const KICKOFF_TOLERANCE_MS = 3 * HOUR_MS;
 
 export interface SettleBetsDeps {
     results: ResultsSource;
-    repos: Pick<Repositories, "fixtures" | "bets">;
+    repos: Pick<Repositories, "fixtures" | "bets" | "players">;
     config: Pick<Config, "leagues">;
     now: () => Date;
     notify: (message: string) => Promise<void>;
@@ -40,6 +40,7 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     );
     const report: SettleReport = { fixtures: 0, settledBets: 0, unmatched: [] };
     const lines: string[] = [];
+    const names = new Map((await deps.repos.players.list()).map((player) => [player.id, player.name]));
 
     for (const league of deps.config.leagues) {
         const fixtures = due.filter((fixture) => fixture.league === league.oddsApiKey);
@@ -68,7 +69,7 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
                 continue;
             }
             report.fixtures++;
-            const settled = await settleFixtureBets(deps, fixture.id, now);
+            const settled = await settleFixtureBets(deps, fixture.id, now, names);
             report.settledBets += settled.length;
             lines.push(...settled.map((line) => `${line} — ${fixture.homeTeam} v ${fixture.awayTeam}`));
         }
@@ -78,19 +79,26 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     return report;
 }
 
-async function settleFixtureBets(deps: SettleBetsDeps, fixtureId: string, now: Date): Promise<string[]> {
+async function settleFixtureBets(
+    deps: SettleBetsDeps,
+    fixtureId: string,
+    now: Date,
+    names: ReadonlyMap<string, string>,
+): Promise<string[]> {
     const fixture = await deps.repos.fixtures.get(fixtureId);
     if (!fixture) return [];
     const result = resultOf(fixture);
     const lines: string[] = [];
     for (const bet of await deps.repos.bets.open([fixtureId])) {
         const settlement = settle1x2(
-            { selection: bet.selection as Outcome, stakeOre: bet.stakeOre, decimalOdds: bet.lockedOdds },
+            { selection: toOutcome(bet.selection), stakeOre: bet.stakeOre, decimalOdds: bet.lockedOdds },
             result,
         );
         if (!(await deps.repos.bets.settle(bet.id, { ...settlement, settledAt: now }))) continue;
         const profit = (settlement.profitOre / 100).toFixed(0);
-        lines.push(`${bet.playerId}: ${settlement.status} ${settlement.profitOre >= 0 ? "+" : ""}${profit} kr`);
+        lines.push(
+            `${names.get(bet.playerId) ?? bet.playerId}: ${settlement.status} ${settlement.profitOre >= 0 ? "+" : ""}${profit} kr`,
+        );
     }
     return lines;
 }

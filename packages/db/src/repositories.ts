@@ -1,3 +1,4 @@
+import type { PlayerTotals } from "@betting/core";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
@@ -136,6 +137,59 @@ export function createRepositories(db: Database) {
                     .orderBy(desc(bets.createdAt))
                     .limit(limit);
                 return rows.map((row) => ({ ...row.bet, fixture: row.fixture }));
+            },
+            /**
+             * Per-player sums computed by Postgres, so bankrolls and reports never load a player's whole history.
+             * With `settledSince`, only bets settled at or after it count (open bets are left out).
+             */
+            async totals(options: { settledSince?: Date } = {}): Promise<Map<string, PlayerTotals>> {
+                const decided = sql`${bets.status} in ('won', 'lost')`;
+                const count = (condition: ReturnType<typeof sql>) =>
+                    sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
+                const sum = (column: ReturnType<typeof sql>, condition: ReturnType<typeof sql>) =>
+                    sql<number>`coalesce(sum(${column}) filter (where ${condition}), 0)`.mapWith(Number);
+                const rows = await db
+                    .select({
+                        playerId: bets.playerId,
+                        settled: count(decided),
+                        won: count(sql`${bets.status} = 'won'`),
+                        void: count(sql`${bets.status} = 'void'`),
+                        open: count(sql`${bets.status} = 'open'`),
+                        stakedOre: sum(sql`${bets.stakeOre}`, decided),
+                        profitOre: sum(sql`${bets.profitOre}`, sql`${bets.status} <> 'open'`),
+                        openStakeOre: sum(sql`${bets.stakeOre}`, sql`${bets.status} = 'open'`),
+                        clvSum: sum(sql`${bets.clv}`, sql`${bets.clv} is not null`),
+                        clvCount: count(sql`${bets.clv} is not null`),
+                    })
+                    .from(bets)
+                    .where(options.settledSince && gte(bets.settledAt, options.settledSince))
+                    .groupBy(bets.playerId);
+                return new Map(rows.map(({ playerId, ...totals }) => [playerId, totals]));
+            },
+            /** Whether the player already has any bet on the fixture. */
+            async hasBet(playerId: string, fixtureId: string): Promise<boolean> {
+                const rows = await db
+                    .select({ id: bets.id })
+                    .from(bets)
+                    .where(and(eq(bets.playerId, playerId), eq(bets.fixtureId, fixtureId)))
+                    .limit(1);
+                return rows.length > 0;
+            },
+            /** Settled bets in settlement order, with only what a bankroll chart needs. */
+            settledLedger(
+                playerId: string,
+            ): Promise<Pick<Bet, "status" | "stakeOre" | "profitOre" | "settledAt" | "clv">[]> {
+                return db
+                    .select({
+                        status: bets.status,
+                        stakeOre: bets.stakeOre,
+                        profitOre: bets.profitOre,
+                        settledAt: bets.settledAt,
+                        clv: bets.clv,
+                    })
+                    .from(bets)
+                    .where(and(eq(bets.playerId, playerId), sql`${bets.status} <> 'open'`))
+                    .orderBy(bets.settledAt);
             },
             forPlayer(playerId: string): Promise<Bet[]> {
                 return db.select().from(bets).where(eq(bets.playerId, playerId)).orderBy(bets.createdAt);
