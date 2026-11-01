@@ -129,6 +129,9 @@ The dashboard listens on the server's loopback only and opens through an SSH tun
 ssh -N -L 3300:localhost:3000 <server>   # then http://localhost:3300
 ```
 
+`docker/check-backup.sh` proves a backup restores: it loads the newest dump into a scratch database and compares
+row counts with the live one (`docker compose exec -T backup sh -s < docker/check-backup.sh`).
+
 Merges to `main`
 deploy after CI passes ([deploy.yml](.github/workflows/deploy.yml)): GitHub Actions streams the tree over SSH with
 a key that can only run [server-deploy.sh](scripts/server-deploy.sh), which unpacks aside, rebuilds and fails the
