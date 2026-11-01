@@ -21,6 +21,7 @@ export const playerKind = pgEnum("player_kind", ["human", "scanner", "shadow", "
 export const fixtureStatus = pgEnum("fixture_status", ["scheduled", "finished", "void"]);
 export const snapshotKind = pgEnum("snapshot_kind", ["poll", "on_demand", "closing"]);
 export const betStatus = pgEnum("bet_status", ["open", "won", "lost", "void"]);
+export const runStatus = pgEnum("run_status", ["running", "succeeded", "skipped", "failed"]);
 
 /** Everyone with a virtual bankroll: humans, the scanner, the shadow player and benchmarks. */
 export const players = pgTable("players", {
@@ -158,4 +159,18 @@ export const apiUsage = pgTable(
         lastCost: integer("last_cost").notNull(),
     },
     (table) => [index("api_usage_provider_taken_idx").on(table.provider, table.takenAt)],
+);
+
+/** One row per scheduled job run, keyed so a job runs at most once (e.g. `prekickoff:soccer_epl:2026-11-08T14:00`). */
+export const jobRuns = pgTable(
+    "job_runs",
+    {
+        key: text().primaryKey(),
+        job: text().notNull(),
+        status: runStatus().notNull().default("running"),
+        message: text(),
+        startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+        finishedAt: timestamp("finished_at", { withTimezone: true }),
+    },
+    (table) => [index("job_runs_started_idx").on(table.startedAt)],
 );

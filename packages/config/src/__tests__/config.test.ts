@@ -40,6 +40,7 @@ describe("parseConfig", () => {
         expect(config.timezone).toBe("Europe/Copenhagen");
         expect(config.telegram).toEqual({ botToken: "123:abc", ownerChatId: 42, friendChatId: undefined });
         expect(config.logLevel).toBe("info");
+        expect(config.heartbeatPath).toBe("data/heartbeat");
     });
 
     it("uses embedded PGlite without a database URL and Postgres with one", () => {

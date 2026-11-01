@@ -22,7 +22,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs restart identity cascade",
     );
     await repos.players.ensure([
         { id: "scanner", name: "Scanner", kind: "scanner", startingBankrollOre: 1_000_000 },
@@ -216,6 +216,26 @@ describe("bets", () => {
     it("rejects a bet on an unknown fixture or with no stake", async () => {
         await expect(repos.bets.place(bet({ fixtureId: "nope" }))).rejects.toThrow();
         await expect(repos.bets.place(bet({ stakeOre: 0 }))).rejects.toThrow();
+    });
+});
+
+describe("runs", () => {
+    it("runs each key once and records how it ended", async () => {
+        const at = new Date("2026-11-08T13:30:00Z");
+        expect(await repos.runs.start("prekickoff:soccer_epl:2026-11-08T14:00", "prekickoff", at)).toBe(true);
+        expect(await repos.runs.start("prekickoff:soccer_epl:2026-11-08T14:00", "prekickoff", at)).toBe(false);
+        await repos.runs.finish("prekickoff:soccer_epl:2026-11-08T14:00", {
+            status: "skipped",
+            message: "daily allowance used",
+            finishedAt: at,
+        });
+        await repos.runs.start("settle:2026-11-08T15", "settle", new Date("2026-11-08T14:15:00Z"));
+        await repos.runs.finish("settle:2026-11-08T15", { status: "succeeded", finishedAt: at });
+
+        expect(await repos.runs.keysSince(new Date("2026-11-08T14:00:00Z"))).toEqual(["settle:2026-11-08T15"]);
+        const [latest, first] = await repos.runs.recent(2);
+        expect(latest).toMatchObject({ key: "settle:2026-11-08T15", status: "succeeded", message: null });
+        expect(first).toMatchObject({ status: "skipped", message: "daily allowance used", finishedAt: at });
     });
 });
 

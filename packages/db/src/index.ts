@@ -6,6 +6,7 @@ export type {
     Bet,
     Fixture,
     FixtureResult,
+    JobRun,
     NewBet,
     NewFixture,
     NewOddsSnapshot,
