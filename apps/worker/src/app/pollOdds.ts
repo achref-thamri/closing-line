@@ -1,12 +1,12 @@
 import type { Config } from "@betting/config";
 import {
-    availableBankrollOre,
+    availableFromTotals,
     closingLineValue,
     fairProbabilities,
     favourite,
     findValueBets,
     kellyStake,
-    settledLossOre,
+    toOutcome,
     type CreditPriority,
     type Outcome,
 } from "@betting/core";
@@ -93,10 +93,8 @@ async function scannerBets(deps: PollOddsDeps, event: EventOdds, fair: Record<Ou
     });
     let placed = 0;
     for (const value of values) {
-        const bankrollOre = availableBankrollOre(
-            config.startingBankroll * 100,
-            await deps.repos.bets.forPlayer(SCANNER),
-        );
+        const totals = (await deps.repos.bets.totals()).get(SCANNER) ?? { profitOre: 0, openStakeOre: 0 };
+        const bankrollOre = availableFromTotals(config.startingBankroll * 100, totals);
         const stake = kellyStake(bankrollOre / 100, value.netOdds, value.fairProbability, config.scanner.stake);
         if (stake === 0) continue;
         const bet = await deps.repos.bets.place({
@@ -124,8 +122,7 @@ async function scannerBets(deps: PollOddsDeps, event: EventOdds, fair: Record<Ou
 async function favouriteBet(deps: PollOddsDeps, event: EventOdds, fair: Record<Outcome, number>): Promise<number> {
     const pick = favourite(event.quotes, deps.config.sharpBookmaker);
     if (!pick) return 0;
-    const existing = await deps.repos.bets.forPlayer(FAVOURITE);
-    if (existing.some((bet) => bet.fixtureId === event.id)) return 0;
+    if (await deps.repos.bets.hasBet(FAVOURITE, event.id)) return 0;
     const bet = await deps.repos.bets.place({
         playerId: FAVOURITE,
         fixtureId: event.id,
@@ -144,7 +141,7 @@ async function favouriteBet(deps: PollOddsDeps, event: EventOdds, fair: Record<O
 async function recordClosing(deps: PollOddsDeps, event: EventOdds, fair: Record<Outcome, number>): Promise<number> {
     const open = await deps.repos.bets.open([event.id]);
     for (const bet of open) {
-        const fairOdds = 1 / fair[bet.selection as Outcome];
+        const fairOdds = 1 / fair[toOutcome(bet.selection)];
         await deps.repos.bets.setClosing(bet.id, {
             fairOdds,
             clv: closingLineValue(bet.lockedOdds, fairOdds),
@@ -156,8 +153,8 @@ async function recordClosing(deps: PollOddsDeps, event: EventOdds, fair: Record<
 
 /** The scanner sits out after losing `weeklyLossPause` of its starting bankroll in the last seven days. */
 async function isScannerPaused(deps: PollOddsDeps, now: Date): Promise<boolean> {
-    const bets = await deps.repos.bets.forPlayer(SCANNER);
-    const lossOre = settledLossOre(bets, new Date(now.getTime() - WEEK_MS));
+    const week = (await deps.repos.bets.totals({ settledSince: new Date(now.getTime() - WEEK_MS) })).get(SCANNER);
+    const lossOre = Math.max(0, -(week?.profitOre ?? 0));
     return lossOre >= deps.config.weeklyLossPause * deps.config.startingBankroll * 100;
 }
 

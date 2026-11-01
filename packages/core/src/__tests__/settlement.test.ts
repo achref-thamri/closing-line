@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { outcomeOf, settle1x2 } from "../settlement.ts";
+import { isOutcome, outcomeOf, settle1x2, toOutcome } from "../settlement.ts";
 
 describe("outcomeOf", () => {
     it("reads the 1X2 outcome from the score", () => {
@@ -37,5 +37,13 @@ describe("settle1x2", () => {
                 { status: "finished", homeGoals: 0, awayGoals: 0 },
             ),
         ).toEqual({ status: "won", profitOre: 2_333 });
+    });
+});
+
+describe("toOutcome", () => {
+    it("accepts the three 1X2 selections and nothing else", () => {
+        expect(["home", "draw", "away"].map(toOutcome)).toEqual(["home", "draw", "away"]);
+        expect(isOutcome("Arsenal")).toBe(false);
+        expect(() => toOutcome("Arsenal")).toThrow(RangeError);
     });
 });

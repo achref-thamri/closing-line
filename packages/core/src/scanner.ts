@@ -1,8 +1,6 @@
 import { devigPower } from "./devig.ts";
-import type { Outcome } from "./settlement.ts";
+import { OUTCOMES, type Outcome } from "./settlement.ts";
 import { edge } from "./value.ts";
-
-const OUTCOMES: readonly Outcome[] = ["home", "draw", "away"];
 
 export interface PriceQuote {
     bookmaker: string;

@@ -100,8 +100,8 @@ describe("settleBets", () => {
         expect(await repos.fixtures.get(id("a"))).toMatchObject({ status: "finished", homeGoals: 2, awayGoals: 0 });
         expect(messages).toEqual([
             "📒 Settled 2 paper bet(s):\n" +
-                "scanner: won +165 kr — Brentford v Nottingham Forest\n" +
-                "favourite: lost -100 kr — Manchester City v Brighton and Hove Albion",
+                "Value scanner: won +165 kr — Brentford v Nottingham Forest\n" +
+                "Always the favourite: lost -100 kr — Manchester City v Brighton and Hove Albion",
         ]);
     });
 
