@@ -18,6 +18,10 @@ player's results by loading every bet the player ever made.
   tests. Only the bankroll chart reads rows, and only the columns it plots.
 - Without `DATABASE_URL` the dashboard runs on in-memory PGlite filled with deterministic demo data.
 - In production it is published on the server's loopback only and opened through an SSH tunnel.
+- Styling is Tailwind CSS: zero runtime cost, so pages stay server components (runtime CSS-in-JS such as Emotion
+  or Chakra UI needs client components), and dark mode and phone layouts are built-in variants. The few
+  components (cards, table, badge) are written by hand; a component library such as shadcn/ui was not worth it
+  at this size.
 
 ## Consequences
 
