@@ -49,7 +49,11 @@ export default async function Home() {
 
             <section className="space-y-3">
                 <h2 className="font-semibold">Bankroll</h2>
-                <BankrollChart series={series} />
+                {dashboard.players.some((summary) => summary.stats.settled + summary.stats.void > 0) ? (
+                    <BankrollChart series={series} />
+                ) : (
+                    <p className="text-sm text-zinc-500">The chart starts with the first settled bet.</p>
+                )}
             </section>
 
             <section className="space-y-3">
