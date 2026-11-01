@@ -104,7 +104,7 @@ node --env-file=.env apps/worker/src/main.ts
 Dashboard with demo data (no database or keys needed):
 
 ```sh
-pnpm --filter @betting/web dev   # http://localhost:3000
+pnpm --filter @betting/web dev   # http://localhost:3300
 ```
 
 | Script                                  | What it does                                   |
@@ -122,7 +122,7 @@ Docker Compose runs Postgres 18, the worker, the dashboard and a nightly `pg_dum
 The dashboard listens on the server's loopback only and opens through an SSH tunnel:
 
 ```sh
-ssh -N -L 3000:localhost:3000 <server>   # then http://localhost:3000
+ssh -N -L 3300:localhost:3000 <server>   # then http://localhost:3300
 ```
 
 Merges to `main`
