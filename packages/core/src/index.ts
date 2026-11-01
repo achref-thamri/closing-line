@@ -1,3 +1,5 @@
+export { crossedUsageLevels, dailyAllowance, daysLeftInMonth, decideCredits } from "./credits.ts";
+export type { CreditDecision, CreditPriority, CreditState } from "./credits.ts";
 export { devigPower, devigProportional } from "./devig.ts";
 export { impliedProbability, overround } from "./odds.ts";
 export { outcomeOf, settle1x2 } from "./settlement.ts";

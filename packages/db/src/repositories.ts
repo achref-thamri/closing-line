@@ -151,6 +151,16 @@ export function createRepositories(db: Database) {
             async record(row: Omit<ApiUsage, "id">): Promise<void> {
                 await db.insert(apiUsage).values(row);
             },
+            /** The last reading taken before `before`, e.g. the balance when the day began. */
+            async latestBefore(provider: string, before: Date): Promise<ApiUsage | undefined> {
+                const [row] = await db
+                    .select()
+                    .from(apiUsage)
+                    .where(and(eq(apiUsage.provider, provider), lt(apiUsage.takenAt, before)))
+                    .orderBy(desc(apiUsage.takenAt), desc(apiUsage.id))
+                    .limit(1);
+                return row;
+            },
             async latest(provider: string): Promise<ApiUsage | undefined> {
                 const [row] = await db
                     .select()

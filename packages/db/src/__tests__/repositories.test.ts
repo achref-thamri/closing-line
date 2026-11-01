@@ -227,4 +227,21 @@ describe("apiUsage", () => {
         await repos.apiUsage.record({ provider: "odds-api", takenAt, used: 2, remaining: 498, lastCost: 1 });
         expect(await repos.apiUsage.latest("odds-api")).toMatchObject({ used: 2, remaining: 498 });
     });
+
+    it("returns the last balance before a moment", async () => {
+        const yesterday = new Date("2026-11-01T22:00:00Z");
+        const today = new Date("2026-11-02T08:00:00Z");
+        await repos.apiUsage.record({
+            provider: "odds-api",
+            takenAt: yesterday,
+            used: 10,
+            remaining: 490,
+            lastCost: 1,
+        });
+        await repos.apiUsage.record({ provider: "odds-api", takenAt: today, used: 11, remaining: 489, lastCost: 1 });
+        await repos.apiUsage.record({ provider: "other", takenAt: yesterday, used: 1, remaining: 9, lastCost: 1 });
+        const midnight = new Date("2026-11-02T00:00:00Z");
+        expect(await repos.apiUsage.latestBefore("odds-api", midnight)).toMatchObject({ remaining: 490 });
+        expect(await repos.apiUsage.latestBefore("odds-api", yesterday)).toBeUndefined();
+    });
 });

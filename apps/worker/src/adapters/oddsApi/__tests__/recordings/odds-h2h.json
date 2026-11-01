@@ -1,0 +1,594 @@
+[
+    {
+        "id": "6a3819cdbe2ba2fe5a3d8f9b4b459965",
+        "sport_key": "soccer_epl",
+        "sport_title": "EPL",
+        "commence_time": "2026-11-01T16:30:00Z",
+        "home_team": "Liverpool",
+        "away_team": "Arsenal",
+        "bookmakers": [
+            {
+                "key": "sport888",
+                "title": "888sport",
+                "last_update": "2026-11-01T01:15:57Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:15:57Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.3
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 2.88
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.3
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "williamhill",
+                "title": "William Hill",
+                "last_update": "2026-11-01T01:16:20Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:19Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.38
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 2.88
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.3
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betfair_ex_eu",
+                "title": "Betfair",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.54
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 3.05
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.5
+                            }
+                        ]
+                    },
+                    {
+                        "key": "h2h_lay",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.58
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 3.1
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.55
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "pinnacle",
+                "title": "Pinnacle",
+                "last_update": "2026-11-01T01:16:41Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:40Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.47
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 2.96
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.43
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "unibet_se",
+                "title": "Unibet (SE)",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.5
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 3
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "leovegas_se",
+                "title": "LeoVegas (SE)",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.43
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 2.88
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.35
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "nordicbet",
+                "title": "Nordic Bet",
+                "last_update": "2026-11-01T01:16:21Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:21Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.42
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 2.92
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.4
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betsson",
+                "title": "Betsson",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.41
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 2.93
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.38
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "coolbet",
+                "title": "Coolbet",
+                "last_update": "2026-11-01T01:16:40Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:40Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.53
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 2.97
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.47
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "matchbook",
+                "title": "Matchbook",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.54
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 3
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.5
+                            }
+                        ]
+                    },
+                    {
+                        "key": "h2h_lay",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Arsenal",
+                                "price": 2.58
+                            },
+                            {
+                                "name": "Liverpool",
+                                "price": 3.1
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.55
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "0f552d9c6990c69474f50ff2fb54e9a3",
+        "sport_key": "soccer_epl",
+        "sport_title": "EPL",
+        "commence_time": "2026-11-02T20:00:00Z",
+        "home_team": "Newcastle United",
+        "away_team": "Everton",
+        "bookmakers": [
+            {
+                "key": "sport888",
+                "title": "888sport",
+                "last_update": "2026-11-01T01:15:57Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:15:57Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 2.9
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.25
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.4
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "williamhill",
+                "title": "William Hill",
+                "last_update": "2026-11-01T01:16:20Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:19Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 2.9
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.3
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betfair_ex_eu",
+                "title": "Betfair",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 3.1
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.46
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.6
+                            }
+                        ]
+                    },
+                    {
+                        "key": "h2h_lay",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 3.15
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.5
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.65
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "pinnacle",
+                "title": "Pinnacle",
+                "last_update": "2026-11-01T01:16:41Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:40Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 2.93
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.43
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.56
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "unibet_se",
+                "title": "Unibet (SE)",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 3
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.4
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.65
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "leovegas_se",
+                "title": "LeoVegas (SE)",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 2.9
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.33
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "nordicbet",
+                "title": "Nordic Bet",
+                "last_update": "2026-11-01T01:16:21Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:21Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 2.88
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.42
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.45
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "betsson",
+                "title": "Betsson",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 2.87
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.41
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.47
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "coolbet",
+                "title": "Coolbet",
+                "last_update": "2026-11-01T01:16:40Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:40Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 3.04
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.43
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.57
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "key": "matchbook",
+                "title": "Matchbook",
+                "last_update": "2026-11-01T01:16:39Z",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 3.1
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.46
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.6
+                            }
+                        ]
+                    },
+                    {
+                        "key": "h2h_lay",
+                        "last_update": "2026-11-01T01:16:39Z",
+                        "outcomes": [
+                            {
+                                "name": "Everton",
+                                "price": 3.15
+                            },
+                            {
+                                "name": "Newcastle United",
+                                "price": 2.5
+                            },
+                            {
+                                "name": "Draw",
+                                "price": 3.65
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]
