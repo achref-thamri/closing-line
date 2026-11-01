@@ -14,11 +14,31 @@ updates:
               update-types: [minor, patch]
       ignore:
           - dependency-name: "@types/node"
-            update-types: [version-update:semver-major]
+            update-types: ["version-update:semver-major"]
           - dependency-name: typescript
-            update-types: [version-update:semver-major]
+            update-types: ["version-update:semver-major"]
     - package-ecosystem: github-actions
       directory: /
       schedule:
           interval: weekly
           day: saturday
+    # Base images in docker/*.Dockerfile (Node).
+    - package-ecosystem: docker
+      directory: /docker
+      schedule:
+          interval: weekly
+          day: saturday
+      ignore:
+          # Stay on the Node LTS line from .nvmrc; moving to the next LTS is a deliberate change.
+          - dependency-name: node
+            update-types: ["version-update:semver-major"]
+    # Images in docker-compose.yml (Postgres, also used by the backup service).
+    - package-ecosystem: docker-compose
+      directory: /
+      schedule:
+          interval: weekly
+          day: saturday
+      ignore:
+          # A Postgres major needs a dump and restore (pg_upgrade), never an automatic bump.
+          - dependency-name: postgres
+            update-types: ["version-update:semver-major"]
