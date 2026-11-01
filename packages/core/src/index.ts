@@ -8,6 +8,8 @@ export { fairProbabilities, favourite, findValueBets, netOdds } from "./scanner.
 export type { PriceQuote, ValueBet } from "./scanner.ts";
 export { outcomeOf, settle1x2 } from "./settlement.ts";
 export type { MatchResult, Outcome, Settlement } from "./settlement.ts";
+export { matchFixture, normalizeTeam, sameTeam } from "./teams.ts";
+export type { ResultCandidate } from "./teams.ts";
 export { kellyFraction, kellyStake } from "./staking.ts";
 export type { StakeRules } from "./staking.ts";
 export { closingLineValue, edge } from "./value.ts";
