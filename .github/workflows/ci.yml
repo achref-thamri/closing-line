@@ -34,3 +34,29 @@ jobs:
                       console.log("| Metric | Coverage |\n|---|---|");
                       for (const k of ["statements", "branches", "functions", "lines"]) console.log(`| ${k} | ${t[k].pct}% |`);' >> "$GITHUB_STEP_SUMMARY"
                   fi
+
+    postgres:
+        name: Postgres 18
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        services:
+            postgres:
+                image: postgres:18
+                env:
+                    POSTGRES_USER: bot
+                    POSTGRES_PASSWORD: bot
+                    POSTGRES_DB: betting_test
+                ports: ["5432:5432"]
+                options: >-
+                    --health-cmd "pg_isready -U bot" --health-interval 5s --health-timeout 5s --health-retries 10
+        env:
+            TEST_DATABASE_URL: postgres://bot:bot@localhost:5432/betting_test
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm exec vitest run --project @betting/db

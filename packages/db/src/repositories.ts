@@ -1,0 +1,167 @@
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { v7 as uuidv7 } from "uuid";
+import type { Database } from "./client.ts";
+import { apiUsage, bets, fixtures, oddsSnapshots, players } from "./schema.ts";
+
+export type Player = typeof players.$inferSelect;
+export type NewPlayer = typeof players.$inferInsert;
+export type Fixture = typeof fixtures.$inferSelect;
+export type NewFixture = Pick<typeof fixtures.$inferInsert, "id" | "league" | "homeTeam" | "awayTeam" | "kickoff">;
+export type OddsSnapshot = typeof oddsSnapshots.$inferSelect;
+export type NewOddsSnapshot = Omit<typeof oddsSnapshots.$inferInsert, "id">;
+export type Bet = typeof bets.$inferSelect;
+export type NewBet = Omit<
+    typeof bets.$inferInsert,
+    "id" | "status" | "closingFairOdds" | "clv" | "profitOre" | "settledAt"
+>;
+export type ApiUsage = typeof apiUsage.$inferSelect;
+
+export type FixtureResult = { status: "finished"; homeGoals: number; awayGoals: number } | { status: "void" };
+
+export function createRepositories(db: Database) {
+    return {
+        players: {
+            /** Creates missing players and leaves existing ones (and their history) untouched. */
+            async ensure(rows: NewPlayer[]): Promise<void> {
+                if (rows.length === 0) return;
+                await db.insert(players).values(rows).onConflictDoNothing();
+            },
+            list(): Promise<Player[]> {
+                return db.select().from(players).orderBy(players.id);
+            },
+        },
+
+        fixtures: {
+            /** Inserts new fixtures and moves rescheduled ones; settled fixtures keep their result. */
+            async upsert(rows: NewFixture[]): Promise<void> {
+                if (rows.length === 0) return;
+                await db
+                    .insert(fixtures)
+                    .values(rows)
+                    .onConflictDoUpdate({
+                        target: fixtures.id,
+                        set: {
+                            homeTeam: sql`excluded.home_team`,
+                            awayTeam: sql`excluded.away_team`,
+                            kickoff: sql`excluded.kickoff`,
+                            updatedAt: sql`now()`,
+                        },
+                        setWhere: eq(fixtures.status, "scheduled"),
+                    });
+            },
+            async get(id: string): Promise<Fixture | undefined> {
+                const [row] = await db.select().from(fixtures).where(eq(fixtures.id, id));
+                return row;
+            },
+            /** Fixtures kicking off in [from, to), earliest first. */
+            between(from: Date, to: Date, status?: Fixture["status"]): Promise<Fixture[]> {
+                return db
+                    .select()
+                    .from(fixtures)
+                    .where(
+                        and(
+                            gte(fixtures.kickoff, from),
+                            sql`${fixtures.kickoff} < ${to}`,
+                            status && eq(fixtures.status, status),
+                        ),
+                    )
+                    .orderBy(fixtures.kickoff);
+            },
+            async setResult(id: string, result: FixtureResult): Promise<void> {
+                await db
+                    .update(fixtures)
+                    .set(
+                        result.status === "finished"
+                            ? { status: "finished", homeGoals: result.homeGoals, awayGoals: result.awayGoals }
+                            : { status: "void", homeGoals: null, awayGoals: null },
+                    )
+                    .where(eq(fixtures.id, id));
+            },
+        },
+
+        odds: {
+            async insert(rows: NewOddsSnapshot[]): Promise<void> {
+                if (rows.length === 0) return;
+                await db.insert(oddsSnapshots).values(rows);
+            },
+            /** The newest price per bookmaker, market and selection for a fixture, optionally only recent ones. */
+            latest(fixtureId: string, since?: Date): Promise<OddsSnapshot[]> {
+                return db
+                    .selectDistinctOn([oddsSnapshots.bookmaker, oddsSnapshots.market, oddsSnapshots.selection])
+                    .from(oddsSnapshots)
+                    .where(and(eq(oddsSnapshots.fixtureId, fixtureId), since && gte(oddsSnapshots.takenAt, since)))
+                    .orderBy(
+                        oddsSnapshots.bookmaker,
+                        oddsSnapshots.market,
+                        oddsSnapshots.selection,
+                        desc(oddsSnapshots.takenAt),
+                    );
+            },
+        },
+
+        bets: {
+            /** Places a bet unless the player already backed this selection; returns the bet only when placed. */
+            async place(bet: NewBet): Promise<Bet | undefined> {
+                const [row] = await db
+                    .insert(bets)
+                    .values({ ...bet, id: uuidv7() })
+                    .onConflictDoNothing()
+                    .returning();
+                return row;
+            },
+            open(fixtureIds?: string[]): Promise<Bet[]> {
+                return db
+                    .select()
+                    .from(bets)
+                    .where(and(eq(bets.status, "open"), fixtureIds && inArray(bets.fixtureId, fixtureIds)))
+                    .orderBy(bets.createdAt);
+            },
+            forPlayer(playerId: string): Promise<Bet[]> {
+                return db.select().from(bets).where(eq(bets.playerId, playerId)).orderBy(bets.createdAt);
+            },
+            /** Records closing odds and CLV; official values may later replace provisional ones. */
+            async setClosing(
+                id: string,
+                closing: { fairOdds: number; clv: number; provisional: boolean },
+            ): Promise<void> {
+                await db
+                    .update(bets)
+                    .set({
+                        closingFairOdds: closing.fairOdds,
+                        clv: closing.clv,
+                        closingProvisional: closing.provisional,
+                    })
+                    .where(eq(bets.id, id));
+            },
+            /** Settles an open bet once; returns false when it was already settled. */
+            async settle(
+                id: string,
+                settlement: { status: "won" | "lost" | "void"; profitOre: number; settledAt: Date },
+            ): Promise<boolean> {
+                const rows = await db
+                    .update(bets)
+                    .set(settlement)
+                    .where(and(eq(bets.id, id), eq(bets.status, "open")))
+                    .returning({ id: bets.id });
+                return rows.length > 0;
+            },
+        },
+
+        apiUsage: {
+            async record(row: Omit<ApiUsage, "id">): Promise<void> {
+                await db.insert(apiUsage).values(row);
+            },
+            async latest(provider: string): Promise<ApiUsage | undefined> {
+                const [row] = await db
+                    .select()
+                    .from(apiUsage)
+                    .where(eq(apiUsage.provider, provider))
+                    .orderBy(desc(apiUsage.takenAt), desc(apiUsage.id))
+                    .limit(1);
+                return row;
+            },
+        },
+    };
+}
+
+export type Repositories = ReturnType<typeof createRepositories>;
