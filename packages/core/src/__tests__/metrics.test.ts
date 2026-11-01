@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { playerStats, type MetricsBet } from "../metrics.ts";
+import { bankrollSeries, playerStats, type MetricsBet } from "../metrics.ts";
 
 const settledAt = new Date("2026-11-08T18:00:00Z");
 const bet = (
@@ -37,5 +37,27 @@ describe("playerStats", () => {
 
     it("has no ROI or CLV before the first bet", () => {
         expect(playerStats([])).toMatchObject({ settled: 0, roi: undefined, averageClv: undefined });
+    });
+});
+
+describe("bankrollSeries", () => {
+    it("adds each settled bet in settlement order", () => {
+        const start = new Date("2026-11-01T00:00:00Z");
+        const late = { ...bet("lost", 20_000, -20_000, null), settledAt: new Date("2026-11-09T18:00:00Z") };
+        const series = bankrollSeries(1_000_000, start, [
+            late,
+            bet("won", 10_000, 15_000, null),
+            bet("open", 5_000, null, null),
+        ]);
+        expect(series).toEqual([
+            { at: start, bankrollOre: 1_000_000 },
+            { at: settledAt, bankrollOre: 1_015_000 },
+            { at: late.settledAt, bankrollOre: 995_000 },
+        ]);
+    });
+
+    it("starts no later than the first settlement", () => {
+        const series = bankrollSeries(1_000_000, new Date("2026-12-01T00:00:00Z"), [bet("won", 10_000, 15_000, null)]);
+        expect(series[0]).toEqual({ at: settledAt, bankrollOre: 1_000_000 });
     });
 });

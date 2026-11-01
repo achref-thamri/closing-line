@@ -15,6 +15,7 @@ export type NewBet = Omit<
     "id" | "status" | "closingFairOdds" | "clv" | "profitOre" | "settledAt"
 >;
 export type ApiUsage = typeof apiUsage.$inferSelect;
+export type BetWithFixture = Bet & { fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "kickoff" | "league"> };
 export type JobRun = typeof jobRuns.$inferSelect;
 
 export type FixtureResult = { status: "finished"; homeGoals: number; awayGoals: number } | { status: "void" };
@@ -116,6 +117,25 @@ export function createRepositories(db: Database) {
                     .from(bets)
                     .where(and(eq(bets.status, "open"), fixtureIds && inArray(bets.fixtureId, fixtureIds)))
                     .orderBy(bets.createdAt);
+            },
+            /** Newest first, with the match each bet is on, for listings. */
+            async recent(limit: number, playerId?: string): Promise<BetWithFixture[]> {
+                const rows = await db
+                    .select({
+                        bet: bets,
+                        fixture: {
+                            homeTeam: fixtures.homeTeam,
+                            awayTeam: fixtures.awayTeam,
+                            kickoff: fixtures.kickoff,
+                            league: fixtures.league,
+                        },
+                    })
+                    .from(bets)
+                    .innerJoin(fixtures, eq(bets.fixtureId, fixtures.id))
+                    .where(playerId ? eq(bets.playerId, playerId) : undefined)
+                    .orderBy(desc(bets.createdAt))
+                    .limit(limit);
+                return rows.map((row) => ({ ...row.bet, fixture: row.fixture }));
             },
             forPlayer(playerId: string): Promise<Bet[]> {
                 return db.select().from(bets).where(eq(bets.playerId, playerId)).orderBy(bets.createdAt);

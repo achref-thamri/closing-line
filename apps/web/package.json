@@ -1,0 +1,28 @@
+{
+    "name": "@betting/web",
+    "private": true,
+    "type": "module",
+    "description": "Dashboard: leaderboard, bankroll and CLV charts, and every bet",
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "typecheck": "tsc",
+        "e2e": "playwright test"
+    },
+    "dependencies": {
+        "@betting/core": "workspace:*",
+        "@betting/db": "workspace:*",
+        "next": "16.4.2",
+        "react": "19.3.1",
+        "react-dom": "19.3.1",
+        "recharts": "3.10.1"
+    },
+    "devDependencies": {
+        "@playwright/test": "1.64.1",
+        "@tailwindcss/postcss": "4.3.3",
+        "@types/react": "19.3.0",
+        "@types/react-dom": "19.3.0",
+        "tailwindcss": "4.3.3"
+    }
+}

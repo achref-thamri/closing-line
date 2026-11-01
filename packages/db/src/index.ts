@@ -4,6 +4,7 @@ export { createRepositories } from "./repositories.ts";
 export type {
     ApiUsage,
     Bet,
+    BetWithFixture,
     Fixture,
     FixtureResult,
     JobRun,
