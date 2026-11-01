@@ -1,0 +1,64 @@
+# Production: Postgres, the worker and a nightly backup, on the same server as the trading bot.
+# Secrets come from .env (see .env.example); POSTGRES_PASSWORD is only needed here.
+services:
+    postgres:
+        image: postgres:18
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: betting
+            POSTGRES_DB: betting
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+        volumes:
+            - pgdata:/var/lib/postgresql
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "betting", "-d", "betting"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        mem_limit: 512m
+        logging: &logging
+            driver: json-file
+            options:
+                max-size: 10m
+                max-file: "5"
+
+    worker:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile
+        image: betting-worker:latest
+        restart: unless-stopped
+        env_file: .env
+        environment:
+            DATABASE_URL: postgres://betting:${POSTGRES_PASSWORD}@postgres:5432/betting
+            HEARTBEAT_PATH: /data/heartbeat
+        volumes:
+            - worker-data:/data
+        depends_on:
+            postgres:
+                condition: service_healthy
+        mem_limit: 512m
+        logging: *logging
+
+    backup:
+        image: postgres:18
+        restart: unless-stopped
+        entrypoint: ["/bin/sh", "/backup.sh"]
+        environment:
+            PGHOST: postgres
+            PGUSER: betting
+            PGDATABASE: betting
+            PGPASSWORD: ${POSTGRES_PASSWORD}
+        volumes:
+            - ./docker/backup.sh:/backup.sh:ro
+            - backups:/backups
+        depends_on:
+            postgres:
+                condition: service_healthy
+        mem_limit: 128m
+        logging: *logging
+
+volumes:
+    pgdata:
+    worker-data:
+    backups:
