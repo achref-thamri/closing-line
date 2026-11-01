@@ -27,7 +27,7 @@ function deps(nowIso: string, handlers: Partial<JobHandlers>): RunnerDeps {
         repos,
         leagues: ["soccer_epl"],
         timeZone: "Europe/Copenhagen",
-        handlers: { sync: ok, settle: ok, morning_poll: ok, prekickoff_poll: ok, ...handlers },
+        handlers: { sync: ok, settle: ok, morning_poll: ok, prekickoff_poll: ok, weekly_report: ok, ...handlers },
         now: () => new Date(nowIso),
         logger: silentLogger,
         notify: (message) => {

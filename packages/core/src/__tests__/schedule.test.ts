@@ -55,6 +55,13 @@ describe("dueJobs", () => {
         expect(plan("2026-11-07T12:26:00Z", ["sync:2026-11-07"])).toEqual([]);
     });
 
+    it("reports weekly on Monday from 08:00 local", () => {
+        const done = ["sync:2026-11-09"];
+        expect(plan("2026-11-09T06:59:00Z", done)).toEqual([]);
+        expect(plan("2026-11-09T07:00:00Z", done)).toEqual(["weekly:2026-11-09"]);
+        expect(plan("2026-11-10T07:00:00Z", ["sync:2026-11-10"])).toEqual([]);
+    });
+
     it("leaves out leagues that are not configured", () => {
         const keys = plan("2026-11-07T14:30:00Z", ["sync:2026-11-07"]);
         expect(keys.some((key) => key.includes("la_liga"))).toBe(false);
@@ -63,7 +70,17 @@ describe("dueJobs", () => {
 
 describe("localTime", () => {
     it("follows daylight saving time", () => {
-        expect(localTime(new Date("2026-07-01T22:30:00Z"), TZ)).toEqual({ date: "2026-07-02", hour: 0, minute: 30 });
-        expect(localTime(new Date("2026-12-31T23:30:00Z"), TZ)).toEqual({ date: "2027-01-01", hour: 0, minute: 30 });
+        expect(localTime(new Date("2026-07-01T22:30:00Z"), TZ)).toEqual({
+            date: "2026-07-02",
+            weekday: 4,
+            hour: 0,
+            minute: 30,
+        });
+        expect(localTime(new Date("2026-12-31T23:30:00Z"), TZ)).toEqual({
+            date: "2027-01-01",
+            weekday: 5,
+            hour: 0,
+            minute: 30,
+        });
     });
 });

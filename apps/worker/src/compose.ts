@@ -6,6 +6,7 @@ import { CreditGuard } from "./app/creditGuard.ts";
 import { pollOdds, type PollReport } from "./app/pollOdds.ts";
 import { settleBets } from "./app/settleBets.ts";
 import { syncFixtures } from "./app/syncFixtures.ts";
+import { weeklyReport } from "./app/weeklyReport.ts";
 import type { Logger } from "./lib/logger.ts";
 import type { Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
@@ -45,6 +46,10 @@ export function compose(options: {
             if (report.unmatched.length > 0)
                 logger.warn({ unmatched: report.unmatched }, "fixtures without a result yet");
             return { status: "succeeded", message: `${report.fixtures} fixtures, ${report.settledBets} bets settled` };
+        },
+        weekly_report: async () => {
+            await notify(await weeklyReport({ repos, config, now }));
+            return { status: "succeeded" };
         },
     };
 
