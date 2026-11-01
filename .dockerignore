@@ -1,0 +1,11 @@
+**/node_modules
+**/__tests__
+coverage
+data
+docs
+.git
+.github
+.husky
+.turbo
+.env
+.env.*

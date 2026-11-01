@@ -60,3 +60,38 @@ jobs:
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             - run: pnpm exec vitest run --project @betting/db
+
+    docker:
+        name: Docker smoke test
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v7
+            - name: Fake secrets
+              run: |
+                  cat > .env <<'ENV'
+                  ODDS_API_KEY=ci-fake
+                  FOOTBALL_DATA_TOKEN=ci-fake
+                  TELEGRAM_BOT_TOKEN=1:ci-fake
+                  TELEGRAM_OWNER_CHAT_ID=1
+                  POSTGRES_PASSWORD=ci-password
+                  ENV
+            - run: docker compose build worker
+            - name: Start Postgres and the worker
+              run: docker compose up -d postgres worker
+            - name: Wait for the worker to report healthy
+              run: |
+                  container=$(docker compose ps -q worker)
+                  for _ in $(seq 1 40); do
+                      status=$(docker inspect --format '{{.State.Health.Status}}' "$container")
+                      echo "worker: $status"
+                      [ "$status" = healthy ] && exit 0
+                      sleep 5
+                  done
+                  docker compose logs worker
+                  exit 1
+            - name: Migrations ran on Postgres 18
+              run: docker compose exec -T postgres psql -U betting -d betting -tAc "select count(*) from players" | grep -qx 2
+            - name: Logs
+              if: always()
+              run: docker compose logs --tail=50 worker
