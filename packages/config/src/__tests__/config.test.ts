@@ -45,9 +45,9 @@ describe("parseConfig", () => {
 
     it("uses embedded PGlite without a database URL and Postgres with one", () => {
         expect(parseConfig(env).database).toEqual({ kind: "pglite", dir: "data/pglite" });
-        expect(parseConfig({ ...env, DATABASE_URL: "postgres://bot:pw@db:5432/betting" }).database).toEqual({
+        expect(parseConfig({ ...env, DATABASE_URL: "postgres://bot:pw@db:5432/closing_line" }).database).toEqual({
             kind: "postgres",
-            url: "postgres://bot:pw@db:5432/betting",
+            url: "postgres://bot:pw@db:5432/closing_line",
         });
     });
 

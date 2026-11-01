@@ -22,21 +22,21 @@ export interface Dashboard {
     credits: { used: number; remaining: number } | undefined;
 }
 
-const cache = globalThis as typeof globalThis & { bettingDatabase?: Promise<DatabaseHandle> };
+const cache = globalThis as typeof globalThis & { closingLineDatabase?: Promise<DatabaseHandle> };
 
 /**
  * With DATABASE_URL the dashboard reads the worker's Postgres and never migrates it. Without it, it runs on an
  * in-memory PGlite database filled with demo data, so it can be shown without real data or keys.
  */
 function database(): Promise<DatabaseHandle> {
-    cache.bettingDatabase ??= (async () => {
+    cache.closingLineDatabase ??= (async () => {
         const url = process.env.DATABASE_URL;
         if (url) return openDatabase({ kind: "postgres", url }, { migrate: false });
         const handle = await openDatabase({ kind: "pglite" });
         await seedDemo(createRepositories(handle.db), new Date());
         return handle;
     })();
-    return cache.bettingDatabase;
+    return cache.closingLineDatabase;
 }
 
 export async function loadDashboard(): Promise<Dashboard> {
