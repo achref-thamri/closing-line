@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { loadConfig } from "@betting/config";
 import { createRepositories, openDatabase } from "@betting/db";
+import { markStarted, markStopped } from "./app/lifecycle.ts";
 import { ensurePlayers } from "./app/players.ts";
 import { compose } from "./compose.ts";
 import { createLogger } from "./lib/logger.ts";
@@ -20,9 +21,11 @@ const notify = createTelegramNotifier({
 const runner = compose({ config, db: database.db, logger, notify });
 const ping = config.healthcheckPingUrl ? createPinger({ url: config.healthcheckPingUrl, logger }) : undefined;
 
-await ensurePlayers(createRepositories(database.db), config);
+const repos = createRepositories(database.db);
+await ensurePlayers(repos, config);
 mkdirSync(dirname(config.heartbeatPath), { recursive: true });
 logger.info({ leagues: runner.leagues, database: config.database.kind }, "worker started");
+await markStarted({ repos, now: () => new Date(), logger, notify });
 
 let running: Promise<void> | undefined;
 let timer: NodeJS.Timeout | undefined;
@@ -52,6 +55,7 @@ async function shutdown(signal: string): Promise<void> {
     logger.info({ signal }, "shutting down");
     clearTimeout(timer);
     await running;
+    await markStopped({ repos });
     await database.close();
     process.exit(0);
 }
