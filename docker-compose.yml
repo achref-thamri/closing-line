@@ -6,13 +6,13 @@ services:
         image: postgres:18
         restart: unless-stopped
         environment:
-            POSTGRES_USER: betting
-            POSTGRES_DB: betting
+            POSTGRES_USER: closing_line
+            POSTGRES_DB: closing_line
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
         volumes:
             - pgdata:/var/lib/postgresql
         healthcheck:
-            test: ["CMD", "pg_isready", "-U", "betting", "-d", "betting"]
+            test: ["CMD", "pg_isready", "-U", "closing_line", "-d", "closing_line"]
             interval: 10s
             timeout: 5s
             retries: 10
@@ -31,7 +31,7 @@ services:
         restart: unless-stopped
         env_file: .env
         environment:
-            DATABASE_URL: postgres://betting:${POSTGRES_PASSWORD}@postgres:5432/betting
+            DATABASE_URL: postgres://closing_line:${POSTGRES_PASSWORD}@postgres:5432/closing_line
             HEARTBEAT_PATH: /data/heartbeat
         volumes:
             - worker-data:/data
@@ -48,7 +48,7 @@ services:
         image: closing-line-web:latest
         restart: unless-stopped
         environment:
-            DATABASE_URL: postgres://betting:${POSTGRES_PASSWORD}@postgres:5432/betting
+            DATABASE_URL: postgres://closing_line:${POSTGRES_PASSWORD}@postgres:5432/closing_line
         # Only on the server's loopback: open it through an SSH tunnel (see the README).
         ports:
             - "127.0.0.1:3000:3000"
@@ -64,8 +64,8 @@ services:
         entrypoint: ["/bin/sh", "/backup.sh"]
         environment:
             PGHOST: postgres
-            PGUSER: betting
-            PGDATABASE: betting
+            PGUSER: closing_line
+            PGDATABASE: closing_line
             PGPASSWORD: ${POSTGRES_PASSWORD}
         volumes:
             - ./docker/backup.sh:/backup.sh:ro
