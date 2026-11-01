@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
 import { apiUsage, bets, fixtures, oddsSnapshots, players } from "./schema.ts";
@@ -61,7 +61,7 @@ export function createRepositories(db: Database) {
                     .where(
                         and(
                             gte(fixtures.kickoff, from),
-                            sql`${fixtures.kickoff} < ${to}`,
+                            lt(fixtures.kickoff, to),
                             status && eq(fixtures.status, status),
                         ),
                     )
