@@ -33,8 +33,9 @@ for _ in $(seq 1 36); do
     done
     if ((${#unhealthy[@]} == 0)); then
         echo "deployed: ${SERVICES[*]} healthy"
-        # Every build leaves cache and an untagged old image behind; keep a week of cache for fast rebuilds.
-        docker builder prune -f --filter until=168h >/dev/null || true
+        # Every build leaves cache and an untagged old image behind. Both projects on this server build here, so cap
+        # the shared build cache by size (enough for fast rebuilds) rather than by age.
+        docker builder prune -f --max-used-space 3gb >/dev/null || true
         docker image prune -f >/dev/null || true
         exit 0
     fi
