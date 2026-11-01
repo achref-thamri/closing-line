@@ -30,7 +30,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs restart identity cascade",
     );
     await ensurePlayers(repos, config);
     await repos.fixtures.upsert([

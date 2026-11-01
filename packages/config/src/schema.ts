@@ -20,6 +20,8 @@ export const envSchema = z.object({
     /** Postgres connection string. Without it the worker uses an embedded PGlite database in `PGLITE_DIR`. */
     DATABASE_URL: z.preprocess(emptyToUndefined, z.url({ protocol: /^postgres(ql)?$/ }).optional()),
     PGLITE_DIR: z.preprocess(emptyToUndefined, z.string().min(1).default("data/pglite")),
+    /** Touched every minute by the worker; Docker's health check reads its age. */
+    HEARTBEAT_PATH: z.preprocess(emptyToUndefined, z.string().min(1).default("data/heartbeat")),
     HEALTHCHECK_PING_URL: z.preprocess(emptyToUndefined, z.url({ protocol: /^https$/ }).optional()),
     LOG_LEVEL: z.preprocess(
         emptyToUndefined,

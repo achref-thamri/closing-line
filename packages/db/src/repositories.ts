@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
-import { apiUsage, bets, fixtures, oddsSnapshots, players } from "./schema.ts";
+import { apiUsage, bets, fixtures, jobRuns, oddsSnapshots, players } from "./schema.ts";
 
 export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
@@ -15,6 +15,7 @@ export type NewBet = Omit<
     "id" | "status" | "closingFairOdds" | "clv" | "profitOre" | "settledAt"
 >;
 export type ApiUsage = typeof apiUsage.$inferSelect;
+export type JobRun = typeof jobRuns.$inferSelect;
 
 export type FixtureResult = { status: "finished"; homeGoals: number; awayGoals: number } | { status: "void" };
 
@@ -144,6 +145,35 @@ export function createRepositories(db: Database) {
                     .where(and(eq(bets.id, id), eq(bets.status, "open")))
                     .returning({ id: bets.id });
                 return rows.length > 0;
+            },
+        },
+
+        runs: {
+            /** Claims a job key; false when it already ran (or is running), so each job runs at most once. */
+            async start(key: string, job: string, startedAt: Date): Promise<boolean> {
+                const rows = await db
+                    .insert(jobRuns)
+                    .values({ key, job, startedAt })
+                    .onConflictDoNothing()
+                    .returning({ key: jobRuns.key });
+                return rows.length > 0;
+            },
+            async finish(
+                key: string,
+                outcome: { status: "succeeded" | "skipped" | "failed"; message?: string | undefined; finishedAt: Date },
+            ): Promise<void> {
+                await db
+                    .update(jobRuns)
+                    .set({ status: outcome.status, message: outcome.message ?? null, finishedAt: outcome.finishedAt })
+                    .where(eq(jobRuns.key, key));
+            },
+            /** Keys of runs started at or after `since`, for planning what is still due. */
+            async keysSince(since: Date): Promise<string[]> {
+                const rows = await db.select({ key: jobRuns.key }).from(jobRuns).where(gte(jobRuns.startedAt, since));
+                return rows.map((row) => row.key);
+            },
+            recent(limit: number): Promise<JobRun[]> {
+                return db.select().from(jobRuns).orderBy(desc(jobRuns.startedAt)).limit(limit);
             },
         },
 
