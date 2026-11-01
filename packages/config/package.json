@@ -1,0 +1,16 @@
+{
+    "name": "@betting/config",
+    "private": true,
+    "type": "module",
+    "description": "Validated configuration: secrets from the environment, tunable settings from an optional JSON file",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc"
+    },
+    "dependencies": {
+        "@betting/core": "workspace:*",
+        "zod": "4.6.7"
+    }
+}
