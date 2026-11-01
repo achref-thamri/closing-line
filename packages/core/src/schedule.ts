@@ -26,9 +26,12 @@ export interface PlanInput {
 const MINUTE_MS = 60_000;
 const SYNC_FROM_HOUR = 6;
 const MORNING_HOURS = [9, 12] as const;
-/** The pre-kickoff poll runs 30 minutes before kickoff, and may start up to 5 minutes before it; never later. */
-const PREKICKOFF_OPENS_MIN = 35;
-const PREKICKOFF_CLOSES_MIN = 5;
+/**
+ * The pre-kickoff poll gives the closing price (ADR 0006), so it runs as late as is safe: from 15 minutes before
+ * kickoff, after team news is priced in, until 2 minutes before; never later.
+ */
+const PREKICKOFF_OPENS_MIN = 15;
+const PREKICKOFF_CLOSES_MIN = 2;
 const SETTLE_FROM_MINUTE = 15;
 const REPORT_HOUR = 8;
 
@@ -38,7 +41,7 @@ const REPORT_HOUR = 8;
  * - `sync`: daily from 06:00 local (free fixture sync).
  * - `settle`: hourly from minute 15 (free; does nothing when no match is due).
  * - `morning_poll`: 09:00–12:00 local, per league with a match still to come that day.
- * - `prekickoff_poll`: per league and kickoff time, 35 to 5 minutes before kickoff.
+ * - `prekickoff_poll`: per league and kickoff time, 15 to 2 minutes before kickoff.
  * - `weekly_report`: Mondays from 08:00 local.
  */
 export function dueJobs(input: PlanInput): PlannedJob[] {

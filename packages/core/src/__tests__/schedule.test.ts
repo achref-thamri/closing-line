@@ -38,21 +38,21 @@ describe("dueJobs", () => {
         expect(plan("2026-11-08T08:00:00Z", ["sync:2026-11-08"])).toEqual([]);
     });
 
-    it("polls once per kickoff slot, 35 to 5 minutes before kickoff", () => {
+    it("polls once per kickoff slot, 15 to 2 minutes before kickoff", () => {
         const done = [
             "sync:2026-11-07",
             "settle:2026-11-07T13",
             "settle:2026-11-07T15",
             "morning:soccer_epl:2026-11-07",
         ];
-        expect(plan("2026-11-07T11:54:00Z", done)).toEqual([]);
-        expect(plan("2026-11-07T11:55:00Z", done)).toEqual(["prekickoff:soccer_epl:2026-11-07T12:30:00.000Z"]);
-        expect(plan("2026-11-07T12:25:00Z", done)).toEqual([]);
-        expect(plan("2026-11-07T14:30:00Z", done)).toEqual(["prekickoff:soccer_epl:2026-11-07T15:00:00.000Z"]);
+        expect(plan("2026-11-07T12:14:00Z", done)).toEqual([]);
+        expect(plan("2026-11-07T12:15:00Z", done)).toEqual(["prekickoff:soccer_epl:2026-11-07T12:30:00.000Z"]);
+        expect(plan("2026-11-07T12:28:00Z", done)).toEqual([]);
+        expect(plan("2026-11-07T14:50:00Z", done)).toEqual(["prekickoff:soccer_epl:2026-11-07T15:00:00.000Z"]);
     });
 
     it("never replays a missed pre-kickoff poll late", () => {
-        expect(plan("2026-11-07T12:26:00Z", ["sync:2026-11-07"])).toEqual([]);
+        expect(plan("2026-11-07T12:29:00Z", ["sync:2026-11-07"])).toEqual([]);
     });
 
     it("reports weekly on Monday from 08:00 local", () => {
@@ -63,7 +63,7 @@ describe("dueJobs", () => {
     });
 
     it("leaves out leagues that are not configured", () => {
-        const keys = plan("2026-11-07T14:30:00Z", ["sync:2026-11-07"]);
+        const keys = plan("2026-11-07T14:50:00Z", ["sync:2026-11-07"]);
         expect(keys.some((key) => key.includes("la_liga"))).toBe(false);
     });
 });

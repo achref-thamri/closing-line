@@ -29,7 +29,7 @@ advance.
 ```mermaid
 flowchart LR
     S["06:00<br/>Sync fixtures<br/>(free)"] --> M["09:00 on match days<br/>Morning poll"]
-    M --> P["30 min before each kickoff<br/>Pre-kickoff poll"]
+    M --> P["15 min before each kickoff<br/>Pre-kickoff poll"]
     P --> R["Hourly<br/>Settle results<br/>(free)"]
 ```
 

@@ -110,7 +110,7 @@ export const bets = pgTable(
         selfReported: boolean("self_reported").notNull().default(false),
         status: betStatus().notNull().default("open"),
         closingFairOdds: doublePrecision("closing_fair_odds"),
-        /** Provisional from the last pre-kickoff poll until the official closing odds arrive. */
+        /** True when a better closing source may still replace the value (ADR 0006). */
         closingProvisional: boolean("closing_provisional"),
         clv: doublePrecision(),
         profitOre: integer("profit_ore"),

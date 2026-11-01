@@ -62,7 +62,7 @@ describe("tick", () => {
         const prekickoff = vi.fn(() =>
             Promise.resolve({ status: "skipped" as const, message: "daily allowance used" }),
         );
-        await tick(deps("2026-11-07T14:30:00Z", { prekickoff_poll: prekickoff }));
+        await tick(deps("2026-11-07T14:50:00Z", { prekickoff_poll: prekickoff }));
         expect(prekickoff).toHaveBeenCalledWith({
             key: "prekickoff:soccer_epl:2026-11-07T15:00:00.000Z",
             kind: "prekickoff_poll",
