@@ -1,3 +1,7 @@
 packages:
     - apps/*
     - packages/*
+
+# Install scripts are blocked unless reviewed here. esbuild's only checks its binary, which ships as a package.
+allowBuilds:
+    esbuild: false
