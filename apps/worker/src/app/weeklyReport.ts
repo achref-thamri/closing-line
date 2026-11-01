@@ -1,6 +1,6 @@
-import type { Config } from "@betting/config";
-import { statsFromTotals, totalsOf } from "@betting/core";
-import type { Repositories } from "@betting/db";
+import type { Config } from "@closing-line/config";
+import { statsFromTotals, totalsOf } from "@closing-line/core";
+import type { Repositories } from "@closing-line/db";
 
 const WEEK_MS = 7 * 86_400_000;
 /** Settled bets a player needs before its results mean much (the spec's go-live rule). */

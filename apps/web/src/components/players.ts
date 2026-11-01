@@ -1,4 +1,4 @@
-import type { Player } from "@betting/db";
+import type { Player } from "@closing-line/db";
 
 /** One colour per player, used by the cards, the chart and the table alike. */
 export function playerColour(player: Pick<Player, "kind">): string {

@@ -1,6 +1,6 @@
-import type { Config } from "@betting/config";
-import { matchFixture, settle1x2, toOutcome } from "@betting/core";
-import type { Fixture, Repositories } from "@betting/db";
+import type { Config } from "@closing-line/config";
+import { matchFixture, settle1x2, toOutcome } from "@closing-line/core";
+import type { Fixture, Repositories } from "@closing-line/db";
 import type { ResultsSource } from "../ports/results.ts";
 
 const HOUR_MS = 3_600_000;

@@ -1,4 +1,4 @@
-import type { Repositories } from "@betting/db";
+import type { Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
 import type { Notify } from "../lib/telegram.ts";
 
@@ -36,7 +36,7 @@ export async function markStarted(deps: LifecycleDeps): Promise<void> {
     if (now.getTime() - lastAlert < CRASH_ALERT_EVERY_MS) return;
     await deps.repos.state.set(KEY, { running: true, crashAlertedAt: now.toISOString() });
     await deps.notify(
-        "⚠️ Betting bot restarted unexpectedly. The previous run ended without a clean shutdown; check the server logs.",
+        "⚠️ Closing Line restarted unexpectedly. The previous run ended without a clean shutdown; check the server logs.",
     );
 }
 

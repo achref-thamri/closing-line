@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { loadConfig } from "@betting/config";
-import { createRepositories, openDatabase } from "@betting/db";
+import { loadConfig } from "@closing-line/config";
+import { createRepositories, openDatabase } from "@closing-line/db";
 import { markStarted, markStopped } from "./app/lifecycle.ts";
 import { ensurePlayers } from "./app/players.ts";
 import { compose } from "./compose.ts";

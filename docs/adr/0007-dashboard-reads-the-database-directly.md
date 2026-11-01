@@ -14,7 +14,7 @@ player's results by loading every bet the player ever made.
   the only consumer is the dashboard itself.
 - The dashboard opens the database with `migrate: false`; the worker owns the schema.
 - Per-player results come from one aggregate query (`bets.totals`, `count(*) filter` and `sum`), and the rules for
-  ROI and average CLV live once in `@betting/core` (`statsFromTotals`), shared with the in-memory path used in
+  ROI and average CLV live once in `@closing-line/core` (`statsFromTotals`), shared with the in-memory path used in
   tests. Only the bankroll chart reads rows, and only the columns it plots.
 - Without `DATABASE_URL` the dashboard runs on in-memory PGlite filled with deterministic demo data.
 - In production it is published on the server's loopback only and opened through an SSH tunnel.

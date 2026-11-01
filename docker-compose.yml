@@ -1,5 +1,6 @@
 # Production: Postgres, the worker, the dashboard and a nightly backup, on the same server as the trading bot.
 # Secrets come from .env (see .env.example); POSTGRES_PASSWORD is only needed here.
+name: closing-line
 services:
     postgres:
         image: postgres:18
@@ -26,7 +27,7 @@ services:
         build:
             context: .
             dockerfile: docker/Dockerfile
-        image: betting-worker:latest
+        image: closing-line-worker:latest
         restart: unless-stopped
         env_file: .env
         environment:
@@ -44,7 +45,7 @@ services:
         build:
             context: .
             dockerfile: docker/web.Dockerfile
-        image: betting-web:latest
+        image: closing-line-web:latest
         restart: unless-stopped
         environment:
             DATABASE_URL: postgres://betting:${POSTGRES_PASSWORD}@postgres:5432/betting

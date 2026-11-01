@@ -1,5 +1,5 @@
 {
-    "name": "@betting/web",
+    "name": "@closing-line/web",
     "private": true,
     "type": "module",
     "description": "Dashboard: leaderboard, bankroll and CLV charts, and every bet",
@@ -11,8 +11,8 @@
         "e2e": "playwright test"
     },
     "dependencies": {
-        "@betting/core": "workspace:*",
-        "@betting/db": "workspace:*",
+        "@closing-line/core": "workspace:*",
+        "@closing-line/db": "workspace:*",
         "next": "16.4.3",
         "react": "19.3.1",
         "react-dom": "19.3.1",

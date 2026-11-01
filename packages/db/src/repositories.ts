@@ -1,4 +1,4 @@
-import type { PlayerTotals } from "@betting/core";
+import type { PlayerTotals } from "@closing-line/core";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";

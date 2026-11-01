@@ -1,5 +1,5 @@
 {
-    "name": "@betting/config",
+    "name": "@closing-line/config",
     "private": true,
     "type": "module",
     "description": "Validated configuration: secrets from the environment, tunable settings from an optional JSON file",
@@ -10,7 +10,7 @@
         "typecheck": "tsc"
     },
     "dependencies": {
-        "@betting/core": "workspace:*",
+        "@closing-line/core": "workspace:*",
         "zod": "4.6.7"
     }
 }

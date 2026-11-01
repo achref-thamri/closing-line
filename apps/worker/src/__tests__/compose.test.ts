@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { parseConfig } from "@betting/config";
-import { openDatabase, type DatabaseHandle } from "@betting/db";
+import { parseConfig } from "@closing-line/config";
+import { openDatabase, type DatabaseHandle } from "@closing-line/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { compose } from "../compose.ts";
 import { silentLogger } from "../lib/logger.ts";

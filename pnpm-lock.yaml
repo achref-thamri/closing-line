@@ -208,10 +208,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@betting/core':
+      '@closing-line/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@betting/db':
+      '@closing-line/db':
         specifier: workspace:*
         version: link:../../packages/db
       next:
@@ -245,13 +245,13 @@ importers:
 
   apps/worker:
     dependencies:
-      '@betting/config':
+      '@closing-line/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@betting/core':
+      '@closing-line/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@betting/db':
+      '@closing-line/db':
         specifier: workspace:*
         version: link:../../packages/db
       pino:
@@ -263,7 +263,7 @@ importers:
 
   packages/config:
     dependencies:
-      '@betting/core':
+      '@closing-line/core':
         specifier: workspace:*
         version: link:../core
       zod:
@@ -278,7 +278,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@betting/core':
+      '@closing-line/core':
         specifier: workspace:*
         version: link:../core
       '@electric-sql/pglite':

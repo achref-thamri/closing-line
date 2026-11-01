@@ -1,5 +1,5 @@
-import type { Config } from "@betting/config";
-import type { NewPlayer, Repositories } from "@betting/db";
+import type { Config } from "@closing-line/config";
+import type { NewPlayer, Repositories } from "@closing-line/db";
 
 export const SCANNER = "scanner";
 export const FAVOURITE = "favourite";

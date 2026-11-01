@@ -1,4 +1,4 @@
-import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@betting/db";
+import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { OutOfCreditsError, type CreditBalance, type Priced } from "../../ports/odds.ts";
 import { CreditGuard } from "../creditGuard.ts";

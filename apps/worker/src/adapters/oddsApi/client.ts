@@ -1,4 +1,4 @@
-import type { Outcome } from "@betting/core";
+import type { Outcome } from "@closing-line/core";
 import { z } from "zod";
 import { HttpError } from "../../lib/errors.ts";
 import { getJson, type Fetch } from "../../lib/http.ts";

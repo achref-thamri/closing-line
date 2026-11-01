@@ -4,8 +4,8 @@ import {
     decideCredits,
     type CreditPriority,
     type CreditState,
-} from "@betting/core";
-import type { ApiUsage, Repositories } from "@betting/db";
+} from "@closing-line/core";
+import type { ApiUsage, Repositories } from "@closing-line/db";
 import { OutOfCreditsError, type CreditBalance, type OddsSource, type Priced } from "../ports/odds.ts";
 
 const PROVIDER = "odds-api";

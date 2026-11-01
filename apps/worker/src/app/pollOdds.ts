@@ -1,4 +1,4 @@
-import type { Config } from "@betting/config";
+import type { Config } from "@closing-line/config";
 import {
     availableFromTotals,
     closingLineValue,
@@ -9,8 +9,8 @@ import {
     toOutcome,
     type CreditPriority,
     type Outcome,
-} from "@betting/core";
-import type { NewOddsSnapshot, Repositories } from "@betting/db";
+} from "@closing-line/core";
+import type { NewOddsSnapshot, Repositories } from "@closing-line/db";
 import type { EventOdds, OddsSource } from "../ports/odds.ts";
 import type { CreditGuard } from "./creditGuard.ts";
 import { FAVOURITE, SCANNER } from "./players.ts";

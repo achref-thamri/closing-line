@@ -8,7 +8,7 @@ export interface Logger {
 }
 
 export function createLogger(level: string): Logger {
-    return pino({ level, base: { app: "betting-bot" } });
+    return pino({ level, base: { app: "closing-line" } });
 }
 
 export const silentLogger: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };

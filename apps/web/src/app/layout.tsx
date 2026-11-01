@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "Betting Bot",
+    title: "Closing Line",
     description: "Paper-betting leaderboard: value scanner, benchmark and humans against the closing line",
 };
 

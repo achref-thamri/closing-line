@@ -1,5 +1,5 @@
-import { settle1x2, type Outcome } from "@betting/core";
-import type { Repositories } from "@betting/db";
+import { settle1x2, type Outcome } from "@closing-line/core";
+import type { Repositories } from "@closing-line/db";
 
 const TEAMS = [
     "Arsenal",

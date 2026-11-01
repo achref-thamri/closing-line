@@ -1,4 +1,4 @@
-import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@betting/db";
+import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
 import { tick, type JobHandlers, type RunnerDeps } from "../runner.ts";

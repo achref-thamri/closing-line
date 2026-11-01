@@ -1,5 +1,5 @@
-import { dueJobs, type JobKind, type PlannedJob } from "@betting/core";
-import type { Repositories } from "@betting/db";
+import { dueJobs, type JobKind, type PlannedJob } from "@closing-line/core";
+import type { Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
 import type { Notify } from "../lib/telegram.ts";
 

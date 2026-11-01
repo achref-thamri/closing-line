@@ -1,5 +1,5 @@
-import { parseConfig } from "@betting/config";
-import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@betting/db";
+import { parseConfig } from "@closing-line/config";
+import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import { weeklyReport } from "../weeklyReport.ts";

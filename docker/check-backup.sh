@@ -5,9 +5,9 @@
 set -eu
 SCRATCH=restore_check
 
-dump=$(ls -t /backups/betting-*.sql.gz 2>/dev/null | head -n 1 || true)
+dump=$(ls -t /backups/closing-line-*.sql.gz 2>/dev/null | head -n 1 || true)
 if [ -z "$dump" ]; then
-    dump=/tmp/betting-check.sql.gz
+    dump=/tmp/closing-line-check.sql.gz
     pg_dump --no-owner | gzip > "$dump"
     echo "no nightly backup yet; made a fresh dump the same way"
 fi

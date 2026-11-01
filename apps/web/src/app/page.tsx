@@ -21,7 +21,7 @@ export default async function Home() {
         <main className="mx-auto max-w-6xl space-y-8 px-4 py-8">
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-semibold">Betting Bot</h1>
+                    <h1 className="text-2xl font-semibold">Closing Line</h1>
                     <p className="text-sm text-zinc-500">
                         Paper bets on the Premier League, measured against the closing line.
                     </p>
