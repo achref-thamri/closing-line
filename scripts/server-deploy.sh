@@ -6,7 +6,7 @@
 # so that key can run nothing else. After changing this file, copy it to the server again by hand.
 set -euo pipefail
 
-APP_DIR="$HOME/betting-bot"
+APP_DIR="$HOME/closing-line"
 SERVICES=(worker web)
 
 # A restart costs at most a minute of ticks; job windows are wider, so no deploy window is needed.

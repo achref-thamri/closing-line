@@ -1,5 +1,5 @@
-import { parseConfig } from "@betting/config";
-import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@betting/db";
+import { parseConfig } from "@closing-line/config";
+import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventOdds, Priced, Quote } from "../../ports/odds.ts";
 import type { Spent } from "../creditGuard.ts";

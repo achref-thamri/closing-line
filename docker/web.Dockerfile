@@ -10,12 +10,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY apps/web/package.json apps/web/
-RUN pnpm install --frozen-lockfile --ignore-scripts --filter "@betting/web..."
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter "@closing-line/web..."
 COPY tsconfig.base.json ./
 COPY packages/core ./packages/core
 COPY packages/db ./packages/db
 COPY apps/web ./apps/web
-RUN pnpm --filter @betting/web build
+RUN pnpm --filter @closing-line/web build
 
 FROM node:24-bookworm-slim
 ENV NODE_ENV=production \

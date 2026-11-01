@@ -11,7 +11,7 @@ COPY packages/core/package.json packages/core/
 COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/
 COPY apps/worker/package.json apps/worker/
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts --filter "@betting/worker..."
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts --filter "@closing-line/worker..."
 
 FROM node:24-bookworm-slim
 ENV NODE_ENV=production \

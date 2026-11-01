@@ -1,5 +1,11 @@
-import { bankrollSeries, statsFromTotals, totalsOf, type BankrollPoint, type PlayerStats } from "@betting/core";
-import { createRepositories, openDatabase, type BetWithFixture, type DatabaseHandle, type Player } from "@betting/db";
+import { bankrollSeries, statsFromTotals, totalsOf, type BankrollPoint, type PlayerStats } from "@closing-line/core";
+import {
+    createRepositories,
+    openDatabase,
+    type BetWithFixture,
+    type DatabaseHandle,
+    type Player,
+} from "@closing-line/db";
 import { seedDemo } from "./demo.ts";
 
 export interface PlayerSummary {

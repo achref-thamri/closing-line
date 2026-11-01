@@ -1,4 +1,4 @@
-import type { StakeRules } from "@betting/core";
+import type { StakeRules } from "@closing-line/core";
 import { z } from "zod";
 
 const emptyToUndefined = (value: unknown): unknown => (value === "" ? undefined : value);

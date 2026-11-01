@@ -1,5 +1,5 @@
-import { playerStats } from "@betting/core";
-import { createRepositories, openDatabase } from "@betting/db";
+import { playerStats } from "@closing-line/core";
+import { createRepositories, openDatabase } from "@closing-line/db";
 import { describe, expect, it } from "vitest";
 import { seedDemo } from "../demo.ts";
 

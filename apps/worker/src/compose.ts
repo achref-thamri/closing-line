@@ -1,5 +1,5 @@
-import type { Config } from "@betting/config";
-import { createRepositories, type Database } from "@betting/db";
+import type { Config } from "@closing-line/config";
+import { createRepositories, type Database } from "@closing-line/db";
 import { FootballDataClient } from "./adapters/footballData/client.ts";
 import { OddsApiClient } from "./adapters/oddsApi/client.ts";
 import { CreditGuard } from "./app/creditGuard.ts";

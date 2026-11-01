@@ -1,4 +1,4 @@
-import type { Outcome } from "@betting/core";
+import type { Outcome } from "@closing-line/core";
 
 export interface EventInfo {
     /** The Odds API event id, also the fixture id. */

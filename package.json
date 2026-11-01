@@ -1,5 +1,5 @@
 {
-    "name": "betting-bot",
+    "name": "closing-line",
     "private": true,
     "type": "module",
     "description": "Paper-betting system for European football: a human expert and a value scanner measured against the closing line",

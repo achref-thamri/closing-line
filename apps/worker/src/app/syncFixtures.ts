@@ -1,5 +1,5 @@
-import type { Config } from "@betting/config";
-import type { Repositories } from "@betting/db";
+import type { Config } from "@closing-line/config";
+import type { Repositories } from "@closing-line/db";
 import type { OddsSource } from "../ports/odds.ts";
 import type { CreditGuard } from "./creditGuard.ts";
 

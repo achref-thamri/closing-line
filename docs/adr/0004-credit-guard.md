@@ -11,7 +11,7 @@ a paid plan is a decision for the owner, not for the code.
 ## Decision
 
 Every paid call goes through `CreditGuard.spend(cost, priority, call)`. The rules are pure functions in
-`@betting/core`:
+`@closing-line/core`:
 
 - `scan` (routine polls) may spend only today's share: what was left at midnight, minus a reserve, divided by the
   days left in the month;

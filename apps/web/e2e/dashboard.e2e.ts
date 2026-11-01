@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("shows the leaderboard, the bankroll chart and the latest bets", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Betting Bot" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Closing Line" })).toBeVisible();
     await expect(page.getByText("Demo data")).toBeVisible();
 
     const cards = page.getByTestId("player-card");

@@ -59,7 +59,7 @@ jobs:
                   node-version-file: .nvmrc
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
-            - run: pnpm exec vitest run --project @betting/db
+            - run: pnpm exec vitest run --project @closing-line/db
 
     docker:
         name: Docker smoke test
@@ -114,9 +114,9 @@ jobs:
                   node-version-file: .nvmrc
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
-            - run: pnpm --filter @betting/web build
-            - run: pnpm --filter @betting/web exec playwright install --with-deps chromium
-            - run: pnpm --filter @betting/web e2e
+            - run: pnpm --filter @closing-line/web build
+            - run: pnpm --filter @closing-line/web exec playwright install --with-deps chromium
+            - run: pnpm --filter @closing-line/web e2e
             - uses: actions/upload-artifact@v7
               if: failure()
               with:

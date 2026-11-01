@@ -1,5 +1,5 @@
 {
-    "name": "@betting/core",
+    "name": "@closing-line/core",
     "private": true,
     "type": "module",
     "description": "Pure betting maths and domain rules, shared by the worker and the dashboard",

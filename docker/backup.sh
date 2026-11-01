@@ -8,10 +8,10 @@ while true; do
     next=$(date -u -d "$(date -u +%F) ${BACKUP_HOUR}:00" +%s)
     [ "$next" -gt "$now" ] || next=$((next + 86400))
     sleep $((next - now))
-    file="/backups/betting-$(date -u +%F).sql.gz"
+    file="/backups/closing-line-$(date -u +%F).sql.gz"
     if pg_dump --no-owner | gzip > "$file.tmp"; then
         mv "$file.tmp" "$file"
-        find /backups -name 'betting-*.sql.gz' -mtime +"$BACKUP_DAYS" -delete
+        find /backups -name 'closing-line-*.sql.gz' -mtime +"$BACKUP_DAYS" -delete
         echo "backup written: $file"
     else
         rm -f "$file.tmp"

@@ -1,6 +1,6 @@
-# Betting Bot
+# Closing Line
 
-[![CI](https://github.com/achref-thamri/betting-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/achref-thamri/betting-bot/actions/workflows/ci.yml)
+[![CI](https://github.com/achref-thamri/closing-line/actions/workflows/ci.yml/badge.svg)](https://github.com/achref-thamri/closing-line/actions/workflows/ci.yml)
 
 A paper-betting system for European football that answers one question with data: **can a value scanner, and
 later a human expert, beat the bookmakers?** Every player bets virtual money, and every bet is measured against the
@@ -9,7 +9,7 @@ advance.
 
 ![Dashboard with demo data: leaderboard, bankroll chart and latest bets](docs/images/dashboard-demo.png)
 
-_The dashboard running on its built-in demo data (`pnpm --filter @betting/web dev`)._
+_The dashboard running on its built-in demo data (`pnpm --filter @closing-line/web dev`)._
 
 ## Highlights
 
@@ -108,14 +108,14 @@ node --env-file=.env apps/worker/src/main.ts
 Dashboard with demo data (no database or keys needed):
 
 ```sh
-pnpm --filter @betting/web dev   # http://localhost:3300
+pnpm --filter @closing-line/web dev   # http://localhost:3300
 ```
 
-| Script                                  | What it does                                   |
-| --------------------------------------- | ---------------------------------------------- |
-| `pnpm check`                            | Everything CI runs, except Postgres and Docker |
-| `pnpm test:coverage`                    | Tests with a coverage report and thresholds    |
-| `pnpm --filter @betting/db db:generate` | SQL migration from schema changes              |
+| Script                                       | What it does                                   |
+| -------------------------------------------- | ---------------------------------------------- |
+| `pnpm check`                                 | Everything CI runs, except Postgres and Docker |
+| `pnpm test:coverage`                         | Tests with a coverage report and thresholds    |
+| `pnpm --filter @closing-line/db db:generate` | SQL migration from schema changes              |
 
 Settings (leagues, bookmakers, thresholds, stakes, credit reserve) have defaults in
 `packages/config/src/schema.ts` and can be overridden with a JSON file via `CONFIG_PATH`.

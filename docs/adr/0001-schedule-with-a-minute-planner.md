@@ -12,7 +12,7 @@ The first plan was pg-boss, a job queue in Postgres with cron schedules and dela
 
 ## Decision
 
-Every minute the worker asks a pure function, `dueJobs` in `@betting/core`, which jobs are due, given the time,
+Every minute the worker asks a pure function, `dueJobs` in `@closing-line/core`, which jobs are due, given the time,
 the upcoming fixtures and the keys of jobs that already ran. Each job has a window and a unique key (for example
 `prekickoff:soccer_epl:2026-11-08T14:00:00.000Z`). The runner claims the key in `job_runs` with an insert that does
 nothing on conflict, runs the job, and records the outcome.

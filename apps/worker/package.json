@@ -1,5 +1,5 @@
 {
-    "name": "@betting/worker",
+    "name": "@closing-line/worker",
     "private": true,
     "type": "module",
     "description": "Background jobs and the Telegram bot: scans odds, places paper bets, settles them",
@@ -7,9 +7,9 @@
         "typecheck": "tsc"
     },
     "dependencies": {
-        "@betting/config": "workspace:*",
-        "@betting/core": "workspace:*",
-        "@betting/db": "workspace:*",
+        "@closing-line/config": "workspace:*",
+        "@closing-line/core": "workspace:*",
+        "@closing-line/db": "workspace:*",
         "pino": "10.4.0",
         "zod": "4.6.7"
     }

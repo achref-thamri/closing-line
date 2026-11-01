@@ -1,4 +1,4 @@
-import type { BetWithFixture, Player } from "@betting/db";
+import type { BetWithFixture, Player } from "@closing-line/db";
 import { odds, percent, shortDate, signedKroner, kroner } from "../lib/format.ts";
 import { playerColour } from "./players.ts";
 
