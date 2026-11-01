@@ -7,6 +7,10 @@ later a human expert, beat the bookmakers?** Every player bets virtual money, an
 closing line, the market's most accurate price. Real money only follows a track record that clears rules fixed in
 advance.
 
+![Dashboard with demo data: leaderboard, bankroll chart and latest bets](docs/images/dashboard-demo.png)
+
+_The dashboard running on its built-in demo data (`pnpm --filter @betting/web dev`)._
+
 ## Highlights
 
 - **Market-based value detection.** Pinnacle's prices, with the margin removed by the power method, are the fair
