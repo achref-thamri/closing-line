@@ -4,7 +4,7 @@
     "type": "module",
     "description": "Dashboard: leaderboard, bankroll and CLV charts, and every bet",
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev --port 3300",
         "build": "next build",
         "start": "next start",
         "typecheck": "tsc",
