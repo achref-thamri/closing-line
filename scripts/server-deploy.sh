@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Deploys a tar of the repo read from stdin, then waits for the container to report healthy.
 #
-# Installed on the server as ~/bin/deploy-betting and bound to the CI deploy key in ~/.ssh/authorized_keys:
-#   command="/home/bot/bin/deploy-betting",restrict ssh-ed25519 AAAA... github-actions-deploy-betting
+# Installed on the server as ~/bin/deploy-closing-line and bound to the CI deploy key in ~/.ssh/authorized_keys:
+#   command="/home/bot/bin/deploy-closing-line",restrict ssh-ed25519 AAAA... github-actions-deploy-closing-line
 # so that key can run nothing else. After changing this file, copy it to the server again by hand.
 set -euo pipefail
 
