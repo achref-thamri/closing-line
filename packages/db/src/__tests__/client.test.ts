@@ -17,7 +17,7 @@ describe("openDatabase", () => {
         const second = await openDatabase({ kind: "pglite", dir });
         expect(await createRepositories(second.db).players.list()).toMatchObject([player]);
         await second.close();
-    });
+    }, 30_000); // Two PGlite starts from disk, slow on shared CI runners.
 
     it("can open without migrating, for readers", async () => {
         const handle = await openDatabase({ kind: "pglite" }, { migrate: false });

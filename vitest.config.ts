@@ -6,8 +6,9 @@ export default defineConfig({
         coverage: {
             provider: "v8",
             include: ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"],
-            // Table definitions are declarations (the repository tests exercise them); main.ts only starts the process.
-            exclude: ["**/__tests__/**", "packages/db/src/schema.ts", "apps/worker/src/main.ts"],
+            // Table definitions are declarations (the repository tests exercise them); main.ts only starts the process;
+            // the dashboard is covered by its Playwright tests.
+            exclude: ["**/__tests__/**", "packages/db/src/schema.ts", "apps/worker/src/main.ts", "apps/web/**"],
             reporter: ["text-summary", "html", "json-summary"],
             // The Postgres branch of the database client runs in the separate Postgres CI job.
             thresholds: { statements: 95, branches: 90, functions: 95, lines: 95 },
