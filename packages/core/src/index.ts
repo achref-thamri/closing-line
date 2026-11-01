@@ -6,6 +6,8 @@ export { devigPower, devigProportional } from "./devig.ts";
 export { impliedProbability, overround } from "./odds.ts";
 export { fairProbabilities, favourite, findValueBets, netOdds } from "./scanner.ts";
 export type { PriceQuote, ValueBet } from "./scanner.ts";
+export { playerStats } from "./metrics.ts";
+export type { MetricsBet, PlayerStats } from "./metrics.ts";
 export { dueJobs, localTime } from "./schedule.ts";
 export type { JobKind, PlanInput, PlannedJob, UpcomingFixture } from "./schedule.ts";
 export { outcomeOf, settle1x2 } from "./settlement.ts";

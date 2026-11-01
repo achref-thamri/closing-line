@@ -1,4 +1,4 @@
-export type JobKind = "sync" | "morning_poll" | "prekickoff_poll" | "settle";
+export type JobKind = "sync" | "morning_poll" | "prekickoff_poll" | "settle" | "weekly_report";
 
 export interface PlannedJob {
     /** Unique per run: a job with a key that already ran is never due again. */
@@ -30,6 +30,7 @@ const MORNING_HOURS = [9, 12] as const;
 const PREKICKOFF_OPENS_MIN = 35;
 const PREKICKOFF_CLOSES_MIN = 5;
 const SETTLE_FROM_MINUTE = 15;
+const REPORT_HOUR = 8;
 
 /**
  * The jobs due at `now`. Each job has a window and runs once inside it; a window that passed while the worker
@@ -38,6 +39,7 @@ const SETTLE_FROM_MINUTE = 15;
  * - `settle`: hourly from minute 15 (free; does nothing when no match is due).
  * - `morning_poll`: 09:00–12:00 local, per league with a match still to come that day.
  * - `prekickoff_poll`: per league and kickoff time, 35 to 5 minutes before kickoff.
+ * - `weekly_report`: Mondays from 08:00 local.
  */
 export function dueJobs(input: PlanInput): PlannedJob[] {
     const { now, timeZone } = input;
@@ -48,6 +50,9 @@ export function dueJobs(input: PlanInput): PlannedJob[] {
     if (local.minute >= SETTLE_FROM_MINUTE) {
         jobs.push({ key: `settle:${local.date}T${String(local.hour).padStart(2, "0")}`, kind: "settle" });
     }
+
+    if (local.weekday === 1 && local.hour >= REPORT_HOUR)
+        jobs.push({ key: `weekly:${local.date}`, kind: "weekly_report" });
 
     if (local.hour >= MORNING_HOURS[0] && local.hour < MORNING_HOURS[1]) {
         for (const league of input.leagues) {
@@ -75,8 +80,13 @@ export function dueJobs(input: PlanInput): PlannedJob[] {
     return jobs.filter((job) => !input.done.has(job.key));
 }
 
-/** Calendar date (YYYY-MM-DD), hour and minute of `date` in `timeZone`. */
-export function localTime(date: Date, timeZone: string): { date: string; hour: number; minute: number } {
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Calendar date (YYYY-MM-DD), weekday (0 = Sunday), hour and minute of `date` in `timeZone`. */
+export function localTime(
+    date: Date,
+    timeZone: string,
+): { date: string; weekday: number; hour: number; minute: number } {
     const parts = Object.fromEntries(
         new Intl.DateTimeFormat("en-CA", {
             timeZone,
@@ -85,6 +95,7 @@ export function localTime(date: Date, timeZone: string): { date: string; hour: n
             day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
+            weekday: "short",
             hourCycle: "h23",
         })
             .formatToParts(date)
@@ -92,6 +103,7 @@ export function localTime(date: Date, timeZone: string): { date: string; hour: n
     );
     return {
         date: `${parts.year}-${parts.month}-${parts.day}`,
+        weekday: WEEKDAYS.indexOf(parts.weekday ?? ""),
         hour: Number(parts.hour),
         minute: Number(parts.minute),
     };
