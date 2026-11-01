@@ -120,7 +120,7 @@ export function createRepositories(db: Database) {
             forPlayer(playerId: string): Promise<Bet[]> {
                 return db.select().from(bets).where(eq(bets.playerId, playerId)).orderBy(bets.createdAt);
             },
-            /** Records closing odds and CLV; official values may later replace provisional ones. */
+            /** Records closing odds and CLV; `provisional` marks values a better closing source may replace later. */
             async setClosing(
                 id: string,
                 closing: { fairOdds: number; clv: number; provisional: boolean },

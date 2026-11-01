@@ -4,7 +4,7 @@ Date: 2026-11-01. Status: accepted.
 
 ## Context
 
-Most jobs depend on fixtures, not on the clock: an odds poll 30 minutes before each kickoff slot, a morning poll only
+Most jobs depend on fixtures, not on the clock: an odds poll shortly before each kickoff slot, a morning poll only
 on match days. Fixtures move when matches are rescheduled. The worker must never replay a missed poll late, because
 odds from after the window would place bets at prices that no longer exist. Tests and local runs use PGlite.
 

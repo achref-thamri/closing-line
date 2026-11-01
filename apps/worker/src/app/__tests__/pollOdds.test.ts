@@ -129,7 +129,7 @@ describe("pollOdds", () => {
         expect(report).toMatchObject({ favouriteBets: 1, closingUpdates: 2 });
 
         const [scanner] = await repos.bets.forPlayer(SCANNER);
-        expect(scanner?.closingProvisional).toBe(true);
+        expect(scanner?.closingProvisional).toBe(false);
         expect(scanner?.closingFairOdds).toBeCloseTo(2.542, 3);
         expect(scanner?.clv).toBeCloseTo(2.75 / (scanner?.closingFairOdds ?? 1) - 1);
 
