@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
-import { apiUsage, bets, fixtures, jobRuns, oddsSnapshots, players } from "./schema.ts";
+import { apiUsage, bets, fixtures, jobRuns, oddsSnapshots, players, workerState } from "./schema.ts";
 
 export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
@@ -145,6 +145,19 @@ export function createRepositories(db: Database) {
                     .where(and(eq(bets.id, id), eq(bets.status, "open")))
                     .returning({ id: bets.id });
                 return rows.length > 0;
+            },
+        },
+
+        state: {
+            async get<T>(key: string): Promise<T | undefined> {
+                const [row] = await db.select().from(workerState).where(eq(workerState.key, key));
+                return row?.value as T | undefined;
+            },
+            async set(key: string, value: unknown): Promise<void> {
+                await db
+                    .insert(workerState)
+                    .values({ key, value })
+                    .onConflictDoUpdate({ target: workerState.key, set: { value, updatedAt: sql`now()` } });
             },
         },
 

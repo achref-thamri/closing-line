@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
     boolean,
+    jsonb,
     check,
     doublePrecision,
     index,
@@ -174,3 +175,10 @@ export const jobRuns = pgTable(
     },
     (table) => [index("job_runs_started_idx").on(table.startedAt)],
 );
+
+/** Small pieces of worker state that must survive restarts, e.g. whether the last run shut down cleanly. */
+export const workerState = pgTable("worker_state", {
+    key: text().primaryKey(),
+    value: jsonb().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

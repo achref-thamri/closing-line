@@ -22,7 +22,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state restart identity cascade",
     );
     await repos.players.ensure([
         { id: "scanner", name: "Scanner", kind: "scanner", startingBankrollOre: 1_000_000 },
@@ -216,6 +216,18 @@ describe("bets", () => {
     it("rejects a bet on an unknown fixture or with no stake", async () => {
         await expect(repos.bets.place(bet({ fixtureId: "nope" }))).rejects.toThrow();
         await expect(repos.bets.place(bet({ stakeOre: 0 }))).rejects.toThrow();
+    });
+});
+
+describe("state", () => {
+    it("stores and replaces JSON values by key", async () => {
+        expect(await repos.state.get("lifecycle")).toBeUndefined();
+        await repos.state.set("lifecycle", { running: true });
+        await repos.state.set("lifecycle", { running: false, crashAlertedAt: "2026-11-01T10:00:00.000Z" });
+        expect(await repos.state.get("lifecycle")).toEqual({
+            running: false,
+            crashAlertedAt: "2026-11-01T10:00:00.000Z",
+        });
     });
 });
 
