@@ -2,10 +2,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
     test: {
-        projects: ["packages/*"],
+        projects: ["packages/*", "apps/*"],
         coverage: {
             provider: "v8",
-            include: ["packages/*/src/**/*.ts"],
+            include: ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"],
             // Table definitions are declarations; the repository tests exercise them.
             exclude: ["**/__tests__/**", "packages/db/src/schema.ts"],
             reporter: ["text-summary", "html", "json-summary"],
