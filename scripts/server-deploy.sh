@@ -7,7 +7,7 @@
 set -euo pipefail
 
 APP_DIR="$HOME/betting-bot"
-SERVICE=worker
+SERVICES=(worker web)
 
 # A restart costs at most a minute of ticks; job windows are wider, so no deploy window is needed.
 # The lock is shared with the trading bot, so the two never build at the same time.
@@ -25,11 +25,14 @@ cp -a "$incoming/." "$APP_DIR/"
 cd "$APP_DIR"
 docker compose up -d --build --remove-orphans
 
-container=$(docker compose ps -q "$SERVICE")
 for _ in $(seq 1 36); do
-    status=$(docker inspect --format '{{.State.Health.Status}}' "$container")
-    if [[ $status == healthy ]]; then
-        echo "deployed: $SERVICE is healthy"
+    unhealthy=()
+    for service in "${SERVICES[@]}"; do
+        status=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose ps -q "$service")")
+        [[ $status == healthy ]] || unhealthy+=("$service:$status")
+    done
+    if ((${#unhealthy[@]} == 0)); then
+        echo "deployed: ${SERVICES[*]} healthy"
         # Every build leaves cache and an untagged old image behind; keep a week of cache for fast rebuilds.
         docker builder prune -f --filter until=168h >/dev/null || true
         docker image prune -f >/dev/null || true
@@ -37,6 +40,6 @@ for _ in $(seq 1 36); do
     fi
     sleep 5
 done
-echo "$SERVICE did not become healthy within 3 minutes (last status: $status)" >&2
-docker compose logs --tail=50 "$SERVICE" >&2
+echo "not healthy within 3 minutes: ${unhealthy[*]}" >&2
+docker compose logs --tail=30 "${SERVICES[@]}" >&2
 exit 1

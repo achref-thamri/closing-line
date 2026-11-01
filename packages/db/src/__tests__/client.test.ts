@@ -18,4 +18,10 @@ describe("openDatabase", () => {
         expect(await createRepositories(second.db).players.list()).toMatchObject([player]);
         await second.close();
     });
+
+    it("can open without migrating, for readers", async () => {
+        const handle = await openDatabase({ kind: "pglite" }, { migrate: false });
+        await expect(handle.db.execute("select count(*) from players")).rejects.toThrow();
+        await handle.close();
+    });
 });

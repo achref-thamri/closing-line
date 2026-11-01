@@ -41,7 +41,8 @@ flowchart LR
 4. **Settlement** matches fixtures to football-data.org results by kickoff and team names, which differ between the
    sources, and settles bets on the regular-time score. Matches called off for 48 hours are void.
 
-Notifications (value bets, settlements, credit warnings, failed jobs) go to Telegram.
+Notifications (value bets, settlements, credit warnings, failed jobs, a weekly report) go to Telegram. A
+dashboard shows the leaderboard, each player's bankroll over time and the latest bets.
 
 | Player        | Bets on                                                                    |
 | ------------- | -------------------------------------------------------------------------- |
@@ -69,6 +70,7 @@ flowchart TB
 
 ```
 apps/worker/      jobs, adapters, use cases, scheduler, entry point
+apps/web/         Next.js dashboard (server components read the database; demo data without one)
 packages/core/    pure betting maths and rules, no I/O
 packages/db/      Drizzle schema, SQL migrations, repositories
 packages/config/  zod-validated settings and secrets
@@ -82,8 +84,8 @@ know vendor APIs. Decisions and their trade-offs are in [docs/adr](docs/adr/).
 ## Tech stack
 
 TypeScript (strict, ESM, erasable syntax only) on Node 24 · pnpm workspaces + Turborepo · PostgreSQL 18 + Drizzle
-ORM · PGlite · zod · pino · Vitest + fast-check · ESLint (typescript-eslint strict) · Prettier · husky +
-lint-staged · Docker Compose · GitHub Actions.
+ORM · PGlite · zod · pino · Next.js (App Router, server components) · Tailwind CSS · Recharts · Vitest + fast-check
+· Playwright · ESLint (typescript-eslint strict) · Prettier · husky + lint-staged · Docker Compose · GitHub Actions.
 
 Node runs the TypeScript sources directly, so there is no build step: the container runs exactly what was tested.
 
@@ -99,6 +101,12 @@ cp .env.example .env             # add the API keys
 node --env-file=.env apps/worker/src/main.ts
 ```
 
+Dashboard with demo data (no database or keys needed):
+
+```sh
+pnpm --filter @betting/web dev   # http://localhost:3000
+```
+
 | Script                                  | What it does                                   |
 | --------------------------------------- | ---------------------------------------------- |
 | `pnpm check`                            | Everything CI runs, except Postgres and Docker |
@@ -110,7 +118,14 @@ Settings (leagues, bookmakers, thresholds, stakes, credit reserve) have defaults
 
 ## Deployment
 
-Docker Compose runs Postgres 18, the worker and a nightly `pg_dump` (14 days kept) on a small VPS. Merges to `main`
+Docker Compose runs Postgres 18, the worker, the dashboard and a nightly `pg_dump` (14 days kept) on a small VPS.
+The dashboard listens on the server's loopback only and opens through an SSH tunnel:
+
+```sh
+ssh -N -L 3000:localhost:3000 <server>   # then http://localhost:3000
+```
+
+Merges to `main`
 deploy after CI passes ([deploy.yml](.github/workflows/deploy.yml)): GitHub Actions streams the tree over SSH with
 a key that can only run [server-deploy.sh](scripts/server-deploy.sh), which unpacks aside, rebuilds and fails the
 deploy unless the worker reports healthy within three minutes.

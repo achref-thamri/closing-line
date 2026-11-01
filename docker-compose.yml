@@ -1,4 +1,4 @@
-# Production: Postgres, the worker and a nightly backup, on the same server as the trading bot.
+# Production: Postgres, the worker, the dashboard and a nightly backup, on the same server as the trading bot.
 # Secrets come from .env (see .env.example); POSTGRES_PASSWORD is only needed here.
 services:
     postgres:
@@ -38,6 +38,23 @@ services:
             postgres:
                 condition: service_healthy
         mem_limit: 512m
+        logging: *logging
+
+    web:
+        build:
+            context: .
+            dockerfile: docker/web.Dockerfile
+        image: betting-web:latest
+        restart: unless-stopped
+        environment:
+            DATABASE_URL: postgres://betting:${POSTGRES_PASSWORD}@postgres:5432/betting
+        # Only on the server's loopback: open it through an SSH tunnel (see the README).
+        ports:
+            - "127.0.0.1:3000:3000"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        mem_limit: 384m
         logging: *logging
 
     backup:

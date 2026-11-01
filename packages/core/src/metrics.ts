@@ -35,3 +35,23 @@ export function playerStats(bets: readonly MetricsBet[]): PlayerStats {
         averageClv: clvs.length > 0 ? clvs.reduce((total, clv) => total + clv, 0) / clvs.length : undefined,
     };
 }
+
+export interface BankrollPoint {
+    at: Date;
+    bankrollOre: number;
+}
+
+/** Bankroll after each settled bet, in settlement order, from `startingOre` at `start` (or the first settlement). */
+export function bankrollSeries(startingOre: number, start: Date, bets: readonly MetricsBet[]): BankrollPoint[] {
+    const settled = bets
+        .filter((bet): bet is MetricsBet & { settledAt: Date } => bet.status !== "open" && bet.settledAt !== null)
+        .sort((a, b) => a.settledAt.getTime() - b.settledAt.getTime());
+    const first = settled[0]?.settledAt;
+    const points: BankrollPoint[] = [{ at: first && first < start ? first : start, bankrollOre: startingOre }];
+    let bankrollOre = startingOre;
+    for (const bet of settled) {
+        bankrollOre += bet.profitOre ?? 0;
+        points.push({ at: bet.settledAt, bankrollOre });
+    }
+    return points;
+}

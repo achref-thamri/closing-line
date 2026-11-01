@@ -1,4 +1,5 @@
 import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -21,20 +22,28 @@ export interface DatabaseHandle {
     close(): Promise<void>;
 }
 
-const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url));
+// Not `new URL("../migrations", import.meta.url)`: bundlers (the dashboard's Turbopack) treat that as an asset.
+const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
 
-/** Opens the database and applies pending migrations before anything else touches it. */
-export async function openDatabase(target: DatabaseTarget): Promise<DatabaseHandle> {
+/**
+ * Opens the database and, unless `migrate` is false, applies pending migrations before anything else touches it.
+ * Only the worker migrates; the dashboard opens Postgres without migrating.
+ */
+export async function openDatabase(
+    target: DatabaseTarget,
+    options: { migrate?: boolean } = {},
+): Promise<DatabaseHandle> {
+    const migrate = options.migrate ?? true;
     if (target.kind === "postgres") {
         const client = postgres(target.url, { max: 5, onnotice: () => undefined });
         const db = drizzlePostgres(client, { schema });
-        await migratePostgres(db, { migrationsFolder });
+        if (migrate) await migratePostgres(db, { migrationsFolder });
         return { db, close: () => client.end() };
     }
 
     if (target.dir) mkdirSync(target.dir, { recursive: true });
     const client = new PGlite(target.dir);
     const db = drizzlePglite(client, { schema });
-    await migratePglite(db, { migrationsFolder });
+    if (migrate) await migratePglite(db, { migrationsFolder });
     return { db, close: () => client.close() };
 }

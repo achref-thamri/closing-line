@@ -76,9 +76,9 @@ jobs:
                   TELEGRAM_OWNER_CHAT_ID=1
                   POSTGRES_PASSWORD=ci-password
                   ENV
-            - run: docker compose build worker
-            - name: Start Postgres and the worker
-              run: docker compose up -d postgres worker
+            - run: docker compose build worker web
+            - name: Start Postgres, the worker and the dashboard
+              run: docker compose up -d postgres worker web
             - name: Wait for the worker to report healthy
               run: |
                   container=$(docker compose ps -q worker)
@@ -92,6 +92,33 @@ jobs:
                   exit 1
             - name: Migrations ran on Postgres 18
               run: docker compose exec -T postgres psql -U betting -d betting -tAc "select count(*) from players" | grep -qx 2
+            - name: The dashboard serves the real database on loopback only
+              run: |
+                  for _ in $(seq 1 30); do curl -sf http://127.0.0.1:3000 -o page.html && break; sleep 2; done
+                  grep -q "Value scanner" page.html
+                  ! grep -q "Demo data" page.html
+                  docker compose port web 3000 | grep -q "^127.0.0.1:"
             - name: Logs
               if: always()
-              run: docker compose logs --tail=50 worker
+              run: docker compose logs --tail=50 worker web
+
+    dashboard:
+        name: Dashboard end-to-end
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm --filter @betting/web build
+            - run: pnpm --filter @betting/web exec playwright install --with-deps chromium
+            - run: pnpm --filter @betting/web e2e
+            - uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: playwright-report
+                  path: apps/web/test-results

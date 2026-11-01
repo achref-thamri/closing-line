@@ -206,6 +206,18 @@ describe("bets", () => {
         expect(await repos.bets.open()).toEqual([]);
     });
 
+    it("lists recent bets with their match, newest first", async () => {
+        await repos.bets.place(bet());
+        await repos.bets.place(bet({ playerId: "friend", selection: "Draw" }));
+        const recent = await repos.bets.recent(10);
+        expect(recent.map((row) => [row.playerId, row.fixture.homeTeam, row.fixture.awayTeam])).toEqual([
+            ["friend", "Liverpool", "Arsenal"],
+            ["scanner", "Liverpool", "Arsenal"],
+        ]);
+        expect((await repos.bets.recent(10, "scanner")).map((row) => row.playerId)).toEqual(["scanner"]);
+        expect(await repos.bets.recent(1)).toHaveLength(1);
+    });
+
     it("filters open bets by fixture", async () => {
         await repos.fixtures.upsert([{ ...fixture, id: "evt2" }]);
         await repos.bets.place(bet());
