@@ -118,12 +118,21 @@ describe("bet bot", () => {
         expect(sent("answerCallbackQuery")).toHaveLength(1);
     });
 
-    it("hints at screenshots for other messages from allowed chats only", async () => {
-        const isAllowed = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-        const { bot } = setup({ isAllowed });
-        await bot.handleUpdate(message({ text: "hi" }));
-        await bot.handleUpdate(message({ text: "hi" }, 2));
-        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["Send a screenshot of the bet slip."]);
+    it("passes typed messages to the flow and reports failures", async () => {
+        const typed = vi
+            .fn()
+            .mockResolvedValueOnce([{ text: "typed card", keyboard: [[{ text: "🧠 Game read", data: "t:x:g" }]] }])
+            .mockResolvedValueOnce([])
+            .mockRejectedValueOnce(new Error("API down"));
+        const { bot } = setup({ typed });
+        await bot.handleUpdate(message({ text: "Davies over 0.5 at 3.70, 1500 kr" }));
+        await bot.handleUpdate(message({ text: "from a stranger" }, 2));
+        await bot.handleUpdate(message({ text: "Davies over 0.5 at 3.70, 1500 kr" }, 3));
+        expect(typed).toHaveBeenCalledWith(200, "Davies over 0.5 at 3.70, 1500 kr");
+        expect(sent("sendMessage").map((payload) => payload.text)).toEqual([
+            "typed card",
+            "Sorry, I could not read that. Try again in a minute.",
+        ]);
     });
 
     it("sends messages with or without buttons", async () => {

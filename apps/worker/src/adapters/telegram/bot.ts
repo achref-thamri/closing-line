@@ -93,8 +93,16 @@ export function createBetBot(options: {
             await ctx.answerCallbackQuery();
         });
 
-        bot.on("message", async (ctx) => {
-            if (await flow.isAllowed(ctx.chat.id)) await ctx.reply("Send a screenshot of the bet slip.");
+        bot.on("message:text", async (ctx) => {
+            try {
+                for (const reply of await flow.typed(ctx.chat.id, ctx.message.text)) {
+                    const keyboard = keyboardOf(reply.keyboard);
+                    await ctx.reply(reply.text, keyboard ? { reply_markup: keyboard } : {});
+                }
+            } catch (error) {
+                options.logger.error({ error: (error as Error).message }, "typed bet could not be read");
+                await ctx.reply("Sorry, I could not read that. Try again in a minute.");
+            }
         });
 
         bot.catch((error) => {

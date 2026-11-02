@@ -44,7 +44,8 @@ export interface SlipImage {
     mediaType: "image/jpeg" | "image/png" | "image/webp";
 }
 
-/** Reads the bets on a screenshot of a bet slip or bet history. */
+/** Reads bets from a screenshot of a bet slip, or from a bet typed as text. */
 export interface SlipReader {
     read(image: SlipImage): Promise<SlipDraft[]>;
+    readText(text: string): Promise<SlipDraft[]>;
 }
