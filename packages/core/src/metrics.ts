@@ -1,14 +1,14 @@
 /** The fields of a bet that results depend on. */
 export interface MetricsBet {
     stakeOre: number;
-    status: "open" | "won" | "lost" | "void";
+    status: "open" | "won" | "lost" | "void" | "cashed_out";
     profitOre: number | null;
     settledAt: Date | null;
     clv: number | null;
 }
 
 export interface PlayerStats {
-    /** Won and lost bets; void bets are counted separately and leave ROI alone. */
+    /** Won, lost and cashed-out bets; void bets are counted separately and leave ROI alone. */
     settled: number;
     won: number;
     void: number;
@@ -27,9 +27,9 @@ export interface PlayerTotals {
     won: number;
     void: number;
     open: number;
-    /** Stakes of won and lost bets. */
+    /** Stakes of won, lost and cashed-out bets. */
     stakedOre: number;
-    /** Profit of won, lost and void bets (void is zero). */
+    /** Profit of every settled bet (void is zero). */
     profitOre: number;
     /** Stakes still riding on open bets. */
     openStakeOre: number;
@@ -53,7 +53,7 @@ export function statsFromTotals(totals: PlayerTotals): PlayerStats {
 
 /** Totals for bets held in memory, matching what `bets.totals` computes in SQL. */
 export function totalsOf(bets: readonly MetricsBet[]): PlayerTotals {
-    const decided = bets.filter((bet) => bet.status === "won" || bet.status === "lost");
+    const decided = bets.filter((bet) => bet.status === "won" || bet.status === "lost" || bet.status === "cashed_out");
     const open = bets.filter((bet) => bet.status === "open");
     const clvs = bets.flatMap((bet) => (bet.clv === null ? [] : [bet.clv]));
     return {

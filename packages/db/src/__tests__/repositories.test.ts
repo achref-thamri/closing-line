@@ -46,6 +46,25 @@ function bet(overrides: Partial<NewBet> = {}): NewBet {
     };
 }
 
+/** A human's player-prop bet as read from a bet slip, on a match we do not track. */
+function slipBet(overrides: Partial<NewBet> = {}): NewBet {
+    return {
+        playerId: "friend",
+        eventName: "Bayern München – Borussia Dortmund",
+        competition: "Bundesliga",
+        market: "player_shots_on_target",
+        selection: "over",
+        playerName: "Jobe Bellingham",
+        line: 0.5,
+        stakeOre: 100_000,
+        lockedOdds: 3.4,
+        bookmaker: "nordicbet",
+        selfReported: true,
+        tag: "game_read",
+        ...overrides,
+    };
+}
+
 describe("empty batches", () => {
     it("are no-ops", async () => {
         await repos.players.ensure([]);
@@ -210,12 +229,41 @@ describe("bets", () => {
         await repos.bets.place(bet());
         await repos.bets.place(bet({ playerId: "friend", selection: "draw" }));
         const recent = await repos.bets.recent(10);
-        expect(recent.map((row) => [row.playerId, row.fixture.homeTeam, row.fixture.awayTeam])).toEqual([
+        expect(recent.map((row) => [row.playerId, row.fixture?.homeTeam, row.fixture?.awayTeam])).toEqual([
             ["friend", "Liverpool", "Arsenal"],
             ["scanner", "Liverpool", "Arsenal"],
         ]);
         expect((await repos.bets.recent(10, "scanner")).map((row) => row.playerId)).toEqual(["scanner"]);
         expect(await repos.bets.recent(1)).toHaveLength(1);
+    });
+
+    it("stores a bet from a slip on an event we do not track", async () => {
+        const placed = await repos.bets.place(
+            slipBet({
+                sport: "counter_strike",
+                eventName: "Aurora – Team Liquid",
+                market: "winner",
+                selection: "Team Liquid",
+                lockedOdds: 3.25,
+                live: true,
+            }),
+        );
+        expect(placed).toMatchObject({ fixtureId: null, sport: "counter_strike", live: true, tag: "game_read" });
+        const [listed] = await repos.bets.recent(1);
+        expect(listed).toMatchObject({ eventName: "Aurora – Team Liquid", fixture: null });
+    });
+
+    it("lets a human ladder one player across slips but logs each slip once", async () => {
+        const over05 = slipBet({ selection: "over", line: 0.5, couponId: "c1" });
+        expect(await repos.bets.place(over05)).toBeDefined();
+        expect(await repos.bets.place(slipBet({ selection: "over", line: 1.5, couponId: "c2" }))).toBeDefined();
+        expect(await repos.bets.place(slipBet({ selection: "over", line: 0.5, couponId: "c3" }))).toBeDefined();
+        expect(await repos.bets.place(over05)).toBeUndefined();
+        expect(await repos.bets.forPlayer("friend")).toHaveLength(3);
+    });
+
+    it("rejects a bet with neither a fixture nor an event name", async () => {
+        await expect(repos.bets.place(slipBet({ fixtureId: null, eventName: null }))).rejects.toThrow();
     });
 
     it("filters open bets by fixture", async () => {

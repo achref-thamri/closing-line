@@ -21,7 +21,10 @@ const timestamps = {
 export const playerKind = pgEnum("player_kind", ["human", "scanner", "shadow", "benchmark"]);
 export const fixtureStatus = pgEnum("fixture_status", ["scheduled", "finished", "void"]);
 export const snapshotKind = pgEnum("snapshot_kind", ["poll", "on_demand", "closing"]);
-export const betStatus = pgEnum("bet_status", ["open", "won", "lost", "void"]);
+export const betStatus = pgEnum("bet_status", ["open", "won", "lost", "void", "cashed_out"]);
+export const sport = pgEnum("sport", ["football", "counter_strike"]);
+/** Why a human took a bet, chosen in Telegram (spec §4). */
+export const betTag = pgEnum("bet_tag", ["lineup", "skewed_price", "game_read", "slow_live_price"]);
 export const runStatus = pgEnum("run_status", ["running", "succeeded", "skipped", "failed"]);
 
 /** Everyone with a virtual bankroll: humans, the scanner, the shadow player and benchmarks. */
@@ -89,11 +92,17 @@ export const bets = pgTable(
         playerId: text("player_id")
             .notNull()
             .references(() => players.id),
-        fixtureId: text("fixture_id")
-            .notNull()
-            .references(() => fixtures.id),
+        /** Null for bets on events we do not track (player props in other leagues, Counter-Strike). */
+        fixtureId: text("fixture_id").references(() => fixtures.id),
+        sport: sport().notNull().default("football"),
+        /** The match as written on the bet slip, e.g. "Aurora – Team Liquid", when no fixture matches. */
+        eventName: text("event_name"),
+        competition: text(),
         market: text().notNull(),
         selection: text().notNull(),
+        /** Player props: the player and the line, e.g. "Jobe Bellingham" and 1.5 shots on target. */
+        playerName: text("player_name"),
+        line: doublePrecision(),
         stakeOre: integer("stake_ore").notNull(),
         lockedOdds: doublePrecision("locked_odds").notNull(),
         bookmaker: text().notNull(),
@@ -108,6 +117,22 @@ export const bets = pgTable(
         note: text(),
         wouldBetReal: boolean("would_bet_real"),
         selfReported: boolean("self_reported").notNull().default(false),
+        tag: betTag(),
+        /** The bookmaker's id for the bet slip; stops the same slip from being logged twice. */
+        couponId: text("coupon_id"),
+        /** When the bookmaker says the bet was placed (from the slip) and when we received the slip. */
+        placedAt: timestamp("placed_at", { withTimezone: true }),
+        receivedAt: timestamp("received_at", { withTimezone: true }),
+        live: boolean().notNull().default(false),
+        /** What the other books paid for the same selection, as the human reported it. */
+        otherBooksOdds: doublePrecision("other_books_odds"),
+        /** The latest cash-out offer seen; for a cashed-out bet, what it paid. */
+        cashoutOfferOre: integer("cashout_offer_ore"),
+        /** The bookmaker's price implied by the cash-out offer: the props version of closing odds. */
+        impliedCurrentOdds: doublePrecision("implied_current_odds"),
+        /** For a cashed-out bet: how the selection itself ended, to compare cashing out with holding. */
+        heldStatus: betStatus("held_status"),
+        screenshotPath: text("screenshot_path"),
         status: betStatus().notNull().default("open"),
         closingFairOdds: doublePrecision("closing_fair_odds"),
         /** True when a better closing source may still replace the value (ADR 0006). */
@@ -118,13 +143,24 @@ export const bets = pgTable(
         settledAt: timestamp("settled_at", { withTimezone: true }),
     },
     (table) => [
-        uniqueIndex("bets_one_per_selection").on(table.playerId, table.fixtureId, table.market, table.selection),
+        uniqueIndex("bets_one_per_selection")
+            .on(table.playerId, table.fixtureId, table.market, table.selection)
+            .where(sql`not ${table.selfReported}`),
+        uniqueIndex("bets_one_per_coupon")
+            .on(table.bookmaker, table.couponId, table.market, table.selection)
+            .where(sql`${table.couponId} is not null`),
         index("bets_open_idx")
             .on(table.fixtureId)
             .where(sql`${table.status} = 'open'`),
         check("bets_stake_positive", sql`${table.stakeOre} > 0`),
         check("bets_odds_above_one", sql`${table.lockedOdds} > 1`),
         check("bets_settled_consistently", sql`(${table.status} = 'open') = (${table.settledAt} is null)`),
+        check("bets_has_event", sql`${table.fixtureId} is not null or ${table.eventName} is not null`),
+        check(
+            "bets_cashout_has_offer",
+            // Compared as text: a new enum value cannot be used in the migration that adds it.
+            sql`${table.status}::text <> 'cashed_out' or ${table.cashoutOfferOre} is not null`,
+        ),
         check("bets_h2h_selection", sql`${table.market} <> 'h2h' or ${table.selection} in ('home', 'draw', 'away')`),
     ],
 );

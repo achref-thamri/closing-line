@@ -7,12 +7,18 @@ const STATUS_STYLE: Record<BetWithFixture["status"], string> = {
     won: "text-emerald-600 dark:text-emerald-400",
     lost: "text-rose-600 dark:text-rose-400",
     void: "text-zinc-400",
+    cashed_out: "text-amber-600 dark:text-amber-400",
 };
 
 function pick(bet: BetWithFixture): string {
+    if (bet.market !== "h2h" || !bet.fixture) return [bet.playerName, bet.selection].filter(Boolean).join(" ");
     if (bet.selection === "home") return bet.fixture.homeTeam;
     if (bet.selection === "away") return bet.fixture.awayTeam;
     return "Draw";
+}
+
+function match(bet: BetWithFixture): string {
+    return bet.fixture ? `${bet.fixture.homeTeam} v ${bet.fixture.awayTeam}` : (bet.eventName ?? "");
 }
 
 export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: Map<string, Player> }) {
@@ -37,7 +43,7 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                         return (
                             <tr key={bet.id}>
                                 <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
-                                    {shortDate(bet.fixture.kickoff)}
+                                    {shortDate(bet.fixture?.kickoff ?? bet.placedAt ?? bet.createdAt)}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap">
                                     <span
@@ -46,9 +52,7 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                                     />
                                     {player?.name ?? bet.playerId}
                                 </td>
-                                <td className="px-3 py-2 whitespace-nowrap">
-                                    {bet.fixture.homeTeam} v {bet.fixture.awayTeam}
-                                </td>
+                                <td className="px-3 py-2 whitespace-nowrap">{match(bet)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap">{pick(bet)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{odds(bet.lockedOdds)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{kroner(bet.stakeOre)}</td>
