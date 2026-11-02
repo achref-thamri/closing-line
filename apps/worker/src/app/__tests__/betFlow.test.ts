@@ -2,7 +2,7 @@ import { parseConfig } from "@closing-line/config";
 import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
-import { BetFlow, parseDecimal, pickText, teamsOf, type Reply } from "../betFlow.ts";
+import { BetFlow, parseDecimal, type Reply } from "../betFlow.ts";
 
 const OWNER = 100;
 const FRIEND = 200;
@@ -266,21 +266,6 @@ describe("tip settings", () => {
 });
 
 describe("helpers", () => {
-    it("splits matches into teams", () => {
-        expect(teamsOf("Bayern – Arsenal")).toEqual(["Bayern", "Arsenal"]);
-        expect(teamsOf("Newcastle v Everton")).toEqual(["Newcastle", "Everton"]);
-        expect(teamsOf("Bayern-Dortmund")).toEqual(["Bayern", "Dortmund"]);
-        expect(teamsOf("Bayern")).toEqual([]);
-    });
-
-    it("describes picks", () => {
-        const base = { playerName: null, line: null, eventName: "Bayern – Arsenal" };
-        expect(pickText({ ...base, market: "match_result", selection: "away" })).toBe("Arsenal to win");
-        expect(pickText({ ...base, market: "match_result", selection: "draw" })).toBe("Draw");
-        expect(pickText({ ...base, eventName: "?", market: "match_result", selection: "home" })).toBe("home");
-        expect(pickText({ ...base, market: "other", selection: "Both teams to score" })).toBe("Both teams to score");
-    });
-
     it("reads decimals with a point or a comma", () => {
         expect(parseDecimal("3,70")).toBe(3.7);
         expect(parseDecimal("3.7x")).toBeUndefined();

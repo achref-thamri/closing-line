@@ -1,26 +1,6 @@
-import type { ValueOffer } from "@closing-line/core";
+import { bookName, type ValueOffer } from "@closing-line/core";
 import type { Player } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
-
-/** Display names for The Odds API's bookmaker keys; unknown keys are shown as they are. */
-export const BOOK_NAMES: Readonly<Record<string, string>> = {
-    pinnacle: "Pinnacle",
-    nordicbet: "NordicBet",
-    marathonbet: "Marathonbet",
-    betsson: "Betsson",
-    unibet_se: "Unibet",
-    leovegas_se: "LeoVegas",
-    sport888: "888sport",
-    casumo: "Casumo",
-    coolbet: "Coolbet",
-    betfair_ex_eu: "Betfair Exchange",
-    matchbook: "Matchbook",
-    williamhill: "William Hill",
-};
-
-export function bookName(bookmaker: string): string {
-    return BOOK_NAMES[bookmaker] ?? bookmaker;
-}
 
 /** A value bet the scanner found, with every bookmaker that pays enough. */
 export interface Tip {

@@ -1,7 +1,7 @@
-import { heldProfitOre, impliedOddsFromCashout, priceMove } from "@closing-line/core";
+import { bookName, heldProfitOre, impliedOddsFromCashout, pickText, priceMove } from "@closing-line/core";
 import type { Bet, Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
-import { bookName, kroner, parseKroner, pickText, type Keyboard, type Messenger, type Reply } from "./betFlow.ts";
+import { kroner, parseKroner, type Keyboard, type Messenger, type Reply } from "./betFlow.ts";
 
 type Outcome = "won" | "lost" | "void";
 interface SlipSettlement {

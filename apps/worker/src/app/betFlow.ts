@@ -1,4 +1,5 @@
 import type { Config } from "@closing-line/config";
+import { bookName, pickText, teamsOf } from "@closing-line/core";
 import type { NewBet, Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
 
@@ -68,19 +69,6 @@ const BOOKS = [
     "leovegas",
     "bet365",
 ];
-const BOOK_NAMES: Record<string, string> = {
-    nordicbet: "NordicBet",
-    bet25: "Bet25",
-    danske_spil: "Danske Spil",
-    comeon: "ComeOn",
-    betano: "Betano",
-    marathonbet: "Marathonbet",
-    campobet: "Campobet",
-    merkurbets: "MerkurBets",
-    unibet: "Unibet",
-    leovegas: "LeoVegas",
-    bet365: "bet365",
-};
 const LINES = [0.5, 1.5, 2.5, 3.5];
 
 /** A bet being entered waits this long for the next answer; then it has to be started again. */
@@ -450,24 +438,6 @@ function rows(buttons: Button[], size: number): Keyboard {
     return result;
 }
 
-/** The two sides of "Bayern – Arsenal", "Bayern v Arsenal" or "Bayern-Arsenal"; empty when it does not split. */
-export function teamsOf(eventName: string): [string, string] | [] {
-    const parts = eventName.split(/\s+(?:v|vs)\s+|\s*[–-]\s*/i).map((part) => part.trim());
-    const [home, away] = parts;
-    return parts.length === 2 && home && away ? [home, away] : [];
-}
-
-const MARKET_LABELS: Record<string, string> = {
-    player_shots_on_target: "shots on target",
-    player_shots: "shots",
-    player_fouls: "fouls",
-    player_cards: "cards",
-    player_goal: "to score",
-    corners: "corners",
-    cards: "cards",
-    match_winner: "to win",
-};
-
 type Described = Pick<
     Draft,
     "eventName" | "market" | "selection" | "playerName" | "line" | "bookmaker" | "odds" | "stakeOre"
@@ -480,39 +450,6 @@ export function describe(bet: Described): string {
         pickText(bet),
         `Odds ${bet.odds.toFixed(2)} · Stake ${kroner(bet.stakeOre)}`,
     ].join("\n");
-}
-
-/** What was backed, e.g. "Davies shots on target over 0.5", "Bayern to win" or "Draw". */
-export function pickText(bet: {
-    market: string;
-    selection: string;
-    playerName: string | null;
-    line: number | null;
-    eventName?: string | null;
-}): string {
-    if (bet.selection === "over" || bet.selection === "under") {
-        const market = MARKET_LABELS[bet.market] ?? bet.market;
-        return `${bet.playerName ?? ""} ${market} ${bet.selection}${bet.line === null ? "" : ` ${bet.line}`}`.trim();
-    }
-    if (bet.market === "match_result") {
-        const [home, away] = teamsOf(bet.eventName ?? "");
-        if (bet.selection === "draw") return "Draw";
-        if (bet.selection === "home" && home) return `${home} to win`;
-        if (bet.selection === "away" && away) return `${away} to win`;
-        return bet.selection;
-    }
-    const market = MARKET_LABELS[bet.market];
-    return market ? `${bet.selection} ${market}` : bet.selection;
-}
-
-export function bookName(book: string): string {
-    return (
-        BOOK_NAMES[book] ??
-        book
-            .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ")
-    );
 }
 
 export function kroner(ore: number): string {
