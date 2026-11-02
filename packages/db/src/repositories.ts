@@ -33,9 +33,6 @@ export function createRepositories(db: Database) {
             list(): Promise<Player[]> {
                 return db.select().from(players).orderBy(players.id);
             },
-            async setBookmakers(id: string, bookmakers: string[] | null): Promise<void> {
-                await db.update(players).set({ bookmakers }).where(eq(players.id, id));
-            },
             async setTipsMuted(id: string, tipsMuted: boolean): Promise<void> {
                 await db.update(players).set({ tipsMuted }).where(eq(players.id, id));
             },

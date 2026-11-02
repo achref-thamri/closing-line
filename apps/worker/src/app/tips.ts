@@ -36,12 +36,9 @@ export interface Tip {
     seenAt: Date;
 }
 
-/**
- * The tip as a Telegram message, showing only `books` when given (null: all). Undefined when none of
- * those books pays enough, so the person is not sent a tip they cannot place.
- */
-export function formatTip(tip: Tip, timeZone: string, books: readonly string[] | null = null): string | undefined {
-    const offers = books ? tip.offers.filter((offer) => books.includes(offer.bookmaker)) : tip.offers;
+/** The tip as a Telegram message: every book that pays enough, best first. Everyone gets the same text. */
+export function formatTip(tip: Tip, timeZone: string): string | undefined {
+    const offers = tip.offers;
     const [best] = offers;
     if (!best) return undefined;
     const percent = (edge: number) => `${(edge * 100).toFixed(1)}%`;
@@ -64,26 +61,24 @@ export function formatTip(tip: Tip, timeZone: string, books: readonly string[] |
 
 export interface TipRecipient {
     chatId: number;
-    /** Null: every tracked book. */
-    bookmakers: readonly string[] | null;
     muted: boolean;
 }
 
-/** Every human with a Telegram chat, with their settings; the owner gets every tip until they have settings. */
+/** Every human with a Telegram chat and whether they paused tips; the owner is always included. */
 export function tipRecipients(
-    players: readonly Pick<Player, "kind" | "telegramChatId" | "bookmakers" | "tipsMuted">[],
+    players: readonly Pick<Player, "kind" | "telegramChatId" | "tipsMuted">[],
     ownerChatId: number,
 ): TipRecipient[] {
     const humans = players.flatMap((player) =>
         player.kind === "human" && player.telegramChatId !== null
-            ? [{ chatId: Number(player.telegramChatId), bookmakers: player.bookmakers, muted: player.tipsMuted }]
+            ? [{ chatId: Number(player.telegramChatId), muted: player.tipsMuted }]
             : [],
     );
     if (humans.some((human) => human.chatId === ownerChatId)) return humans;
-    return [{ chatId: ownerChatId, bookmakers: null, muted: false }, ...humans];
+    return [{ chatId: ownerChatId, muted: false }, ...humans];
 }
 
-/** Sends each recipient the tip filtered to their books, skipping muted people and tips they cannot place. */
+/** Sends the same tip to every recipient who has not paused tips. */
 export function createTipSender(options: {
     recipients: () => Promise<TipRecipient[]>;
     send: (chatId: number, text: string) => Promise<void>;
@@ -91,17 +86,11 @@ export function createTipSender(options: {
     logger: Logger;
 }): (tip: Tip) => Promise<void> {
     return async (tip) => {
-        const recipients = await options.recipients();
-        let sent = 0;
-        await Promise.all(
-            recipients.map(async (recipient) => {
-                if (recipient.muted) return;
-                const text = formatTip(tip, options.timeZone, recipient.bookmakers);
-                if (!text) return;
-                sent++;
-                await options.send(recipient.chatId, text);
-            }),
-        );
+        const text = formatTip(tip, options.timeZone);
+        if (!text) return;
+        const recipients = (await options.recipients()).filter((recipient) => !recipient.muted);
+        await Promise.all(recipients.map((recipient) => options.send(recipient.chatId, text)));
+        const sent = recipients.length;
         options.logger.info({ pick: tip.pick, offers: tip.offers.length, sent }, "value tip sent");
     };
 }
