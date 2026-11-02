@@ -210,6 +210,14 @@ export class BetFlow {
         this.drafts.delete(id);
         if (!placed) return { text: `${describe(draft)}\n\nAlready logged.` };
         this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "slip bet logged");
+        if (pending.chatId !== this.ownerChatId) {
+            // Telegram chats with a bot are private, so the owner hears about other humans' bets from the bot.
+            const name = (await this.deps.repos.players.byChat(pending.chatId))?.name ?? playerId;
+            const typed = pending.screenshotPath === null ? " · typed" : "";
+            await this.deps.messenger.send(this.ownerChatId, {
+                text: `📝 ${name} logged:\n${describe(draft)}\n${TAGS[tagKey].label}${typed}`,
+            });
+        }
 
         const cap = this.deps.config.humans.maxBankrollFraction * this.deps.config.humans.startingBankroll * 100;
         const capNote = draft.stakeOre > cap ? `\nNote: the stake is above the ${kroner(cap)} cap.` : "";
