@@ -8,7 +8,7 @@ import { settleBets } from "./app/settleBets.ts";
 import { syncFixtures } from "./app/syncFixtures.ts";
 import { weeklyReport } from "./app/weeklyReport.ts";
 import type { Logger } from "./lib/logger.ts";
-import type { Notify } from "./lib/telegram.ts";
+import { createTelegramBroadcast, type Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
 
 /** Wires adapters and use cases into the scheduler's job handlers. */
@@ -32,7 +32,18 @@ export function compose(options: {
         warnAt: config.credits.warnAt,
         warn: notify,
     });
-    const pollDeps = { source: odds, guard, repos, config, now, notify };
+    // Value-bet tips go to the owner and every approved human; other alerts stay with the owner.
+    const tip = createTelegramBroadcast({
+        botToken: config.telegram.botToken,
+        logger,
+        chats: async () => [
+            config.telegram.ownerChatId,
+            ...(await repos.players.list()).flatMap((player) =>
+                player.kind === "human" && player.telegramChatId ? [Number(player.telegramChatId)] : [],
+            ),
+        ],
+    });
+    const pollDeps = { source: odds, guard, repos, config, now, notify, tip };
 
     const handlers: JobHandlers = {
         sync: async () => ({

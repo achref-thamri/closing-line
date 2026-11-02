@@ -35,6 +35,8 @@ export interface PollOddsDeps {
     >;
     now: () => Date;
     notify: (message: string) => Promise<void>;
+    /** Value-bet tips; they go to every human, not only the owner. Defaults to `notify`. */
+    tip?: (message: string) => Promise<void>;
 }
 
 export type PollReport =
@@ -110,10 +112,14 @@ async function scannerBets(deps: PollOddsDeps, event: EventOdds, fair: Record<Ou
         });
         if (!bet) continue;
         placed++;
-        await deps.notify(
+        const edgePercent = (value.edge * 100).toFixed(1);
+        await (deps.tip ?? deps.notify)(
             `🔎 Value bet: ${teamOf(event, value.selection)} @ ${value.offeredOdds.toFixed(2)} (${value.bookmaker})\n` +
                 `${event.homeTeam} v ${event.awayTeam}, ${kickoffText(event.kickoff, config.timezone)}\n` +
-                `Fair ${value.fairOdds.toFixed(2)}, edge ${(value.edge * 100).toFixed(1)}%, paper stake ${stake} kr`,
+                `Fair ${value.fairOdds.toFixed(2)}, edge ${edgePercent}%, paper stake ${stake} kr\n` +
+                `💡 Pinnacle, the sharpest bookmaker, prices this at ${value.fairOdds.toFixed(2)} once its margin is ` +
+                `removed. ${value.offeredOdds.toFixed(2)} pays ${edgePercent}% more than the bet is worth, so it wins ` +
+                `money over many bets like it, not every time.`,
         );
     }
     return placed;

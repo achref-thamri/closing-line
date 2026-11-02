@@ -48,11 +48,17 @@ describe("compose", () => {
         });
         const now = () => new Date("2026-11-01T09:00:00Z");
         const runner = compose({ config, db: handle.db, logger: silentLogger, notify: () => Promise.resolve(), now });
-        expect(runner.leagues).toEqual(["soccer_epl"]);
+        expect(runner.leagues).toEqual([
+            "soccer_epl",
+            "soccer_efl_champ",
+            "soccer_germany_bundesliga",
+            "soccer_spain_la_liga",
+        ]);
 
         expect(await runner.handlers.sync({ key: "sync", kind: "sync" })).toEqual({
             status: "succeeded",
-            message: "3 fixtures",
+            // The recording answers for each of the four default leagues.
+            message: "12 fixtures",
         });
         const poll = await runner.handlers.morning_poll({ key: "m", kind: "morning_poll", league: "soccer_epl" });
         expect(poll).toEqual({
