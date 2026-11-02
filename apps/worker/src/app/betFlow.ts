@@ -172,6 +172,12 @@ export class BetFlow {
                 text: `${describe(draft)}\n\nAlready ${statusWord(draft.status)}, so not logged: only bets sent before they settle count. Send the slip right after placing the bet; to settle a logged bet use /open.`,
             };
         }
+        // Without the match a bet cannot be grouped or checked later, so it is not logged.
+        if (draft.eventName.trim() === "") {
+            return {
+                text: `${describe(draft)}\n\nWhich match was this? Send the bet again with the match in it, e.g. "Bayern–Arsenal".`,
+            };
+        }
         const id = randomBytes(6).toString("base64url");
         this.drafts.set(id, { chatId, draft, screenshotPath, receivedAt });
         return {
