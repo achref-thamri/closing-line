@@ -243,6 +243,28 @@ describe("typed bets", () => {
     });
 });
 
+describe("daily read limit", () => {
+    it("stops reading after the day's allowance and starts again the next day", async () => {
+        await letFriendIn();
+        let clock = new Date("2026-11-08T22:00:00Z");
+        const limited = new BetFlow({
+            reader: { read: () => Promise.resolve([draft]), readText: () => Promise.resolve([draft]) },
+            repos,
+            config: { ...config, humans: { ...config.humans, dailySlipReads: 2 } },
+            messenger: { send: () => Promise.resolve() },
+            saveScreenshot: () => Promise.resolve("/data/slips/x.jpeg"),
+            logger: silentLogger,
+            now: () => clock,
+        });
+        await limited.slip(FRIEND, image);
+        await limited.typed(FRIEND, "Spiller over 0.5 at 3.60, 1250 kr");
+        expect((await limited.slip(FRIEND, image))[0]?.text).toMatch(/^You've reached today's limit of 2 slips/);
+        expect((await limited.typed(FRIEND, "Spiller over 0.5 at 3.60"))[0]?.text).toMatch(/limit/);
+        clock = new Date("2026-11-08T23:30:00Z"); // 00:30 the next day in Copenhagen
+        expect((await limited.slip(FRIEND, image))[0]?.keyboard).toBeDefined();
+    });
+});
+
 describe("tip settings", () => {
     it("turns tips off and on for a person", async () => {
         await letFriendIn();

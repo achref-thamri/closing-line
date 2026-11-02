@@ -109,6 +109,8 @@ export const settingsSchema = z
                 maxBankrollFraction: fraction.default(0.05),
                 /** Large enough that the friend's usual 3,000 kr stakes fit the cap (owner, 2026-11-02). */
                 startingBankroll: z.number().positive().default(60_000),
+                /** Claude reads per person per day (screenshots and typed bets); caps the Anthropic bill. */
+                dailySlipReads: z.int().positive().default(30),
             })
             .prefault({}),
         startingBankroll: z.number().positive().default(10_000),
