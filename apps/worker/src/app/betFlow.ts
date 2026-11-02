@@ -52,7 +52,8 @@ const DRAFT_TTL_MS = 6 * 60 * 60 * 1000;
 interface PendingDraft {
     chatId: number;
     draft: SlipDraft;
-    screenshotPath: string;
+    /** Null for a typed bet: the bettor's word, reported apart from screenshot bets. */
+    screenshotPath: string | null;
     receivedAt: Date;
 }
 
@@ -117,6 +118,23 @@ export class BetFlow {
         ]);
         if (drafts.length === 0)
             return [{ text: "I could not find a bet on that screenshot. Send the open bet slip." }];
+        return this.cards(chatId, drafts, screenshotPath, receivedAt);
+    }
+
+    /** A bet typed as text, e.g. "Davies over 0.5 shots on target, Bayern–Arsenal, NordicBet, 3.70, 1500 kr". */
+    async typed(chatId: number, text: string): Promise<Reply[]> {
+        if (!(await this.isAllowed(chatId))) return [];
+        // Every bet has odds and a stake, so a message without digits is not one; no need to ask Claude.
+        if (!/\d/.test(text)) return [{ text: TYPING_HELP }];
+        const receivedAt = this.now();
+        this.expireDrafts(receivedAt);
+        const drafts = await this.deps.reader.readText(text);
+        if (drafts.length === 0) return [{ text: `I could not find a bet in that. ${TYPING_HELP}` }];
+        return this.cards(chatId, drafts, null, receivedAt);
+    }
+
+    private cards(chatId: number, drafts: SlipDraft[], screenshotPath: string | null, receivedAt: Date): Reply[] {
+        const source = screenshotPath === null ? "\n✍️ Typed, no screenshot" : "";
         return drafts.map((draft) => {
             if (draft.status !== "open") {
                 return {
@@ -126,7 +144,7 @@ export class BetFlow {
             const id = randomBytes(6).toString("base64url");
             this.drafts.set(id, { chatId, draft, screenshotPath, receivedAt });
             return {
-                text: `${describe(draft)}\n\nWhy did you take it? Tap a reason to log the bet.`,
+                text: `${describe(draft)}${source}\n\nWhy did you take it? Tap a reason to log the bet.`,
                 keyboard: draftKeyboard(id, draft),
             };
         });
@@ -227,7 +245,9 @@ export class BetFlow {
 }
 
 const WELCOME =
-    "Send a screenshot of your bet slip right after placing a bet. I read it, show you what I found, and you log it with one tap.";
+    "Send a screenshot of your bet slip right after placing a bet, or type it. I read it, show you what I found, and you log it with one tap.";
+const TYPING_HELP =
+    'Send a screenshot of the slip, or type the bet with match, pick, bookmaker, odds and stake, e.g. "Davies over 0.5 shots on target, Bayern–Arsenal, NordicBet, 3.70, 1500 kr".';
 
 function draftKeyboard(id: string, draft: SlipDraft): Keyboard {
     const tags = Object.entries(TAGS).map(([key, { label }]) => ({ text: label, data: `t:${id}:${key}` }));

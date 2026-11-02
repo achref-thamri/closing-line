@@ -101,6 +101,17 @@ describe("ClaudeSlipReader", () => {
     });
 });
 
+describe("ClaudeSlipReader.readText", () => {
+    it("sends the typed message as text", async () => {
+        const { client, parse } = fakeClient({ stop_reason: "end_turn", parsed_output: { bets: [propBet] } });
+        expect(await new ClaudeSlipReader({ client }).readText("Spiller over 0.5 at 3.60, 1250 kr")).toHaveLength(1);
+        const params = parse.mock.calls[0]?.[0] as { messages: { content: unknown[] }[] };
+        expect(params.messages[0]?.content).toEqual([
+            { type: "text", text: "Return the bets in this message:\n\nSpiller over 0.5 at 3.60, 1250 kr" },
+        ]);
+    });
+});
+
 describe("toDraft", () => {
     it("drops bets that cannot be real", () => {
         expect(toDraft({ ...propBet, odds: 1 })).toEqual([]);

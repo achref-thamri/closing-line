@@ -38,6 +38,7 @@ let handle: DatabaseHandle;
 let repos: Repositories;
 let sent: { chatId: number; reply: Reply }[];
 let drafts: SlipDraft[];
+let typedTexts: string[];
 let flow: BetFlow;
 
 beforeAll(async () => {
@@ -53,8 +54,15 @@ beforeEach(async () => {
     await handle.db.execute("truncate players, bets restart identity cascade");
     sent = [];
     drafts = [draft];
+    typedTexts = [];
     flow = new BetFlow({
-        reader: { read: () => Promise.resolve(drafts) },
+        reader: {
+            read: () => Promise.resolve(drafts),
+            readText: (text) => {
+                typedTexts.push(text);
+                return Promise.resolve(drafts);
+            },
+        },
         repos,
         config,
         messenger: {
@@ -192,6 +200,33 @@ describe("logging a bet from a slip", () => {
         drafts = [{ ...draft, stakeOre: 400_000 }];
         const [card] = await flow.slip(FRIEND, image);
         expect((await flow.tap(FRIEND, button(card, "Lineup"))).text).toContain("above the 3,000 kr cap");
+    });
+});
+
+describe("typed bets", () => {
+    it("logs a typed bet without a screenshot", async () => {
+        await letFriendIn();
+        drafts = [{ ...draft, couponId: null, placedAtLocal: null }];
+        const [card] = await flow.typed(
+            FRIEND,
+            "Test Spiller over 0.5 shots on target, Brentford–Fulham, NordicBet, 3.60, 1250 kr",
+        );
+        expect(card?.text).toContain("✍️ Typed, no screenshot");
+        await flow.tap(FRIEND, button(card, "Game read"));
+        expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toMatchObject([
+            { screenshotPath: null, couponId: null, placedAt: null, tag: "game_read", selfReported: true },
+        ]);
+    });
+
+    it("answers chat without asking Claude, and ignores strangers", async () => {
+        await letFriendIn();
+        expect((await flow.typed(FRIEND, "hi there"))[0]?.text).toMatch(
+            /^Send a screenshot of the slip, or type the bet/,
+        );
+        expect(await flow.typed(300, "Davies over 0.5 at 3.70")).toEqual([]);
+        drafts = [];
+        expect((await flow.typed(FRIEND, "back at 7"))[0]?.text).toMatch(/^I could not find a bet in that/);
+        expect(typedTexts).toEqual(["back at 7"]);
     });
 });
 
