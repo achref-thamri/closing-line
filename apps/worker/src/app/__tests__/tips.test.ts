@@ -32,12 +32,8 @@ describe("formatTip", () => {
         );
     });
 
-    it("shows only the person's books, and nothing when none of them pays enough", () => {
-        const text = formatTip(tip, TZ, ["nordicbet", "marathonbet"]);
-        expect(text).toMatch(/^🔎 Value bet: Watford @ 3.25 at NordicBet\n/);
-        expect(text).toContain("Also: Marathonbet 3.20 (+3.2%)");
-        expect(text).not.toContain("Unibet");
-        expect(formatTip(tip, TZ, ["casumo"])).toBeUndefined();
+    it("sends nothing without an offer", () => {
+        expect(formatTip({ ...tip, offers: [] }, TZ)).toBeUndefined();
     });
 
     it("keeps unknown bookmaker keys as they are", () => {
@@ -46,7 +42,7 @@ describe("formatTip", () => {
 });
 
 describe("createTipSender", () => {
-    it("sends each person the tip at their books, skipping the muted and those who cannot place it", async () => {
+    it("sends everyone the same tip, except people who paused tips", async () => {
         const send = vi.fn((_chatId: number, _text: string) => Promise.resolve());
         const sendTip = createTipSender({
             timeZone: TZ,
@@ -54,36 +50,34 @@ describe("createTipSender", () => {
             send,
             recipients: () =>
                 Promise.resolve([
-                    { chatId: 1, bookmakers: null, muted: false },
-                    { chatId: 2, bookmakers: ["nordicbet"], muted: false },
-                    { chatId: 3, bookmakers: ["casumo"], muted: false },
-                    { chatId: 4, bookmakers: null, muted: true },
+                    { chatId: 1, muted: false },
+                    { chatId: 2, muted: false },
+                    { chatId: 4, muted: true },
                 ]),
         });
         await sendTip(tip);
-        expect(send.mock.calls.map(([chatId, text]) => [chatId, text.split("\n")[0]])).toEqual([
-            [1, "🔎 Value bet: Watford @ 3.40 at Unibet"],
-            [2, "🔎 Value bet: Watford @ 3.25 at NordicBet"],
-        ]);
+        await sendTip({ ...tip, offers: [] });
+        expect(send.mock.calls.map(([chatId]) => chatId)).toEqual([1, 2]);
+        expect(send.mock.calls[0]?.[1]).toBe(send.mock.calls[1]?.[1]);
     });
 });
 
 describe("tipRecipients", () => {
-    const human = { kind: "human" as const, bookmakers: null, tipsMuted: false };
+    const human = { kind: "human" as const, tipsMuted: false };
 
-    it("adds the owner until they have their own settings, and skips players without a chat", () => {
+    it("always includes the owner once, and skips players without a chat", () => {
         const players = [
-            { ...human, telegramChatId: "200", bookmakers: ["nordicbet"] },
+            { ...human, telegramChatId: "200" },
             { ...human, kind: "scanner" as const, telegramChatId: null },
             { ...human, telegramChatId: null },
         ];
         expect(tipRecipients(players, 100)).toEqual([
-            { chatId: 100, bookmakers: null, muted: false },
-            { chatId: 200, bookmakers: ["nordicbet"], muted: false },
+            { chatId: 100, muted: false },
+            { chatId: 200, muted: false },
         ]);
         expect(tipRecipients([...players, { ...human, telegramChatId: "100", tipsMuted: true }], 100)).toEqual([
-            { chatId: 200, bookmakers: ["nordicbet"], muted: false },
-            { chatId: 100, bookmakers: null, muted: true },
+            { chatId: 200, muted: false },
+            { chatId: 100, muted: true },
         ]);
     });
 });

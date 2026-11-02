@@ -140,27 +140,14 @@ describe("bet bot", () => {
         ]);
     });
 
-    it("handles /tips and /books", async () => {
+    it("handles /tips", async () => {
         const tips = vi.fn().mockResolvedValue({ text: "Value tips are off." });
-        const books = vi
-            .fn()
-            .mockResolvedValue({ text: "Pick", keyboard: [[{ text: "✅ NordicBet", data: "bk:nordicbet" }]] });
-        const { bot } = setup({ tips, books });
+        const { bot } = setup({ tips });
         await bot.handleUpdate(
             message({ text: "/tips off", entities: [{ type: "bot_command", offset: 0, length: 5 }] }),
         );
-        await bot.handleUpdate(
-            message({ text: "/books", entities: [{ type: "bot_command", offset: 0, length: 6 }] }, 2),
-        );
         expect(tips).toHaveBeenCalledWith(200, "Sam", "off");
-        expect(books).toHaveBeenCalledWith(200, "Sam");
-        expect(sent("sendMessage")).toEqual([
-            expect.objectContaining({ text: "Value tips are off." }),
-            expect.objectContaining({
-                text: "Pick",
-                reply_markup: { inline_keyboard: [[{ text: "✅ NordicBet", callback_data: "bk:nordicbet" }]] },
-            }),
-        ]);
+        expect(sent("sendMessage")).toEqual([expect.objectContaining({ text: "Value tips are off." })]);
     });
 
     it("lists open bets, routes settle buttons, and takes cash-out amounts before bets", async () => {

@@ -70,10 +70,6 @@ export function createBetBot(options: {
             await ctx.reply((await flow.tips(ctx.chat.id, ctx.from?.first_name ?? "Someone", ctx.match)).text);
         });
 
-        bot.command("books", async (ctx) => {
-            await sendAll(ctx, [await flow.books(ctx.chat.id, ctx.from?.first_name ?? "Someone")]);
-        });
-
         bot.command("open", async (ctx) => {
             if (await flow.isAllowed(ctx.chat.id)) await sendAll(ctx, await settle.open(ctx.chat.id));
         });

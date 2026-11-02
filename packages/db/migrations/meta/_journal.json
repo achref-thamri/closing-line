@@ -43,6 +43,13 @@
             "when": 1793644286774,
             "tag": "0005_tip_preferences",
             "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "7",
+            "when": 1793646588788,
+            "tag": "0006_drop_player_books",
+            "breakpoints": true
         }
     ]
 }

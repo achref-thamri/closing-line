@@ -34,8 +34,6 @@ export const players = pgTable("players", {
     kind: playerKind().notNull(),
     startingBankrollOre: integer("starting_bankroll_ore").notNull(),
     telegramChatId: text("telegram_chat_id"),
-    /** Books a human can bet at; value tips only show these. Null means every tracked book. */
-    bookmakers: text().array(),
     tipsMuted: boolean("tips_muted").notNull().default(false),
     ...timestamps,
 });

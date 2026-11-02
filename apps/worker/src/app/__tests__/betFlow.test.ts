@@ -277,28 +277,6 @@ describe("tip settings", () => {
         expect((await flow.tips(300, "Stranger", "off")).text).toBe("Send /start first.");
     });
 
-    it("lets a person pick their books with buttons", async () => {
-        await letFriendIn();
-        const all = await flow.books(FRIEND, "Sam");
-        expect(all.keyboard?.flat().map((each) => each.text)).toContain("✅ NordicBet");
-        expect(all.keyboard?.flat().map((each) => each.text)).not.toContain("✅ Pinnacle");
-
-        const withoutUnibet = await flow.tap(FRIEND, button(all, "Unibet"));
-        expect(withoutUnibet.keyboard?.flat().map((each) => each.text)).toContain("⬜ Unibet");
-        const chosen = (await repos.players.byChat(FRIEND))?.bookmakers;
-        expect(chosen).toHaveLength(7);
-        expect(chosen).not.toContain("unibet_se");
-
-        await flow.tap(FRIEND, button(withoutUnibet, "Unibet"));
-        expect((await repos.players.byChat(FRIEND))?.bookmakers).toBeNull();
-        await flow.tap(FRIEND, button(all, "LeoVegas"));
-        await flow.tap(FRIEND, button(all, "All books"));
-        expect((await repos.players.byChat(FRIEND))?.bookmakers).toBeNull();
-
-        expect((await flow.tap(300, "bk:nordicbet")).text).toBe("Send /books again.");
-        expect((await flow.books(300, "Stranger")).text).toBe("Send /start first.");
-    });
-
     it("keeps the owner's player named Owner", async () => {
         await flow.tips(OWNER, "Achref", "off");
         expect(await repos.players.byChat(OWNER)).toMatchObject({ id: "owner", name: "Owner", tipsMuted: true });
