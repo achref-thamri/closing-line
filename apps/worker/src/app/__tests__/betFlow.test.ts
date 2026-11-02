@@ -231,6 +231,26 @@ describe("typed bets", () => {
         ]);
     });
 
+    it("asks for the match instead of logging a bet without one", async () => {
+        await letFriendIn();
+        drafts = [
+            {
+                ...draft,
+                eventName: " ",
+                bookmaker: "betano",
+                playerName: "De Ketelaere",
+                line: 1.5,
+                odds: 4.05,
+                stakeOre: 122_500,
+            },
+        ];
+        const [card] = await flow.typed(FRIEND, "De Ketelaere over 1.5 shots on target, Betano, 4.05, 1225 kr");
+        expect(card?.keyboard).toBeUndefined();
+        expect(card?.text).toMatch(
+            /Which match was this\? Send the bet again with the match in it, e\.g\. "Bayern–Arsenal"\.$/,
+        );
+    });
+
     it("answers chat without asking Claude, and ignores strangers", async () => {
         await letFriendIn();
         expect((await flow.typed(FRIEND, "hi there"))[0]?.text).toMatch(
