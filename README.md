@@ -149,8 +149,8 @@ deploy unless the worker reports healthy within three minutes.
 
 ## Status
 
-Phase 1 (scanner, benchmark, settlement) runs on the Premier League, Championship, Bundesliga and La Liga with the
-free API plans; value-bet tips go to every approved human. Phase 2 is live in part: humans log real bets in Telegram
+Phase 1 (scanner, benchmark, settlement) runs on the Premier League, Championship, Bundesliga, La Liga, Serie A and
+Ligue 1 with the free API plans; value-bet tips go to every approved human. Phase 2 is live in part: humans log real bets in Telegram
 from slip screenshots or typed text, tagged with a reason. Next: settling those bets, cash-outs and their reports. A player qualifies for real money only after at least 300 settled
 bets over at least three months, with positive average CLV, a better ROI than the favourite benchmark, and a
 drawdown under 30%.

@@ -76,13 +76,15 @@ export const settingsSchema = z
         leagues: z
             .array(leagueSchema)
             .min(1)
-            // More leagues, more chances for value (owner, 2026-11-02). All four have Pinnacle on the free plan and
-            // free results from football-data.org; ~200 credits a month together.
+            // More leagues, more chances for value (owner, 2026-11-02; ADR 0008 picked them by back-test). All have
+            // Pinnacle on the free plan and free results from football-data.org; ~300 credits a month together.
             .default([
                 { oddsApiKey: "soccer_epl", footballDataCode: "PL", name: "Premier League" },
                 { oddsApiKey: "soccer_efl_champ", footballDataCode: "ELC", name: "Championship" },
                 { oddsApiKey: "soccer_germany_bundesliga", footballDataCode: "BL1", name: "Bundesliga" },
                 { oddsApiKey: "soccer_spain_la_liga", footballDataCode: "PD", name: "La Liga" },
+                { oddsApiKey: "soccer_italy_serie_a", footballDataCode: "SA", name: "Serie A" },
+                { oddsApiKey: "soccer_france_ligue_one", footballDataCode: "FL1", name: "Ligue 1" },
             ]),
         /** Up to 10 bookmakers cost one region's worth of credits per call. */
         bookmakers: z.array(z.string().min(1)).min(2).max(10).default(DEFAULT_BOOKMAKERS),
