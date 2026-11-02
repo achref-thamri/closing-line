@@ -23,7 +23,7 @@ export default async function Home() {
                 <div>
                     <h1 className="text-2xl font-semibold">Closing Line</h1>
                     <p className="text-sm text-zinc-500">
-                        Paper bets on the Premier League, measured against the closing line.
+                        Paper bets on European football, measured against the closing line.
                     </p>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-zinc-500">

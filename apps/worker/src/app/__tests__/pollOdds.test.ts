@@ -98,7 +98,9 @@ describe("pollOdds", () => {
         // Edge 8.2%, full Kelly 4.7%, quarter 1.17% of 10,000 kr, rounded down to 110 kr.
         expect(bet?.stakeOre).toBe(11_000);
         expect(messages).toEqual([
-            "🔎 Value bet: Arsenal @ 2.75 (unibet_se)\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 110 kr",
+            "🔎 Value bet: Arsenal @ 2.75 (unibet_se)\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 110 kr\n" +
+                "💡 Pinnacle, the sharpest bookmaker, prices this at 2.54 once its margin is removed. 2.75 pays 8.2% " +
+                "more than the bet is worth, so it wins money over many bets like it, not every time.",
         ]);
     });
 
@@ -198,7 +200,8 @@ describe("syncFixtures", () => {
             repos,
             config,
         });
-        expect(count).toBe(1);
+        // The fake source returns the same event for each of the four default leagues.
+        expect(count).toBe(4);
         expect(record).toHaveBeenCalledWith(balance);
         expect(await repos.fixtures.get(info.id)).toBeDefined();
     });

@@ -24,7 +24,12 @@ function problemsOf(run: () => unknown): string {
 describe("parseConfig", () => {
     it("fills in every default from the spec", () => {
         const config = parseConfig(env);
-        expect(config.leagues).toEqual([{ oddsApiKey: "soccer_epl", footballDataCode: "PL", name: "Premier League" }]);
+        expect(config.leagues.map((league) => [league.oddsApiKey, league.footballDataCode])).toEqual([
+            ["soccer_epl", "PL"],
+            ["soccer_efl_champ", "ELC"],
+            ["soccer_germany_bundesliga", "BL1"],
+            ["soccer_spain_la_liga", "PD"],
+        ]);
         expect(config.bookmakers).toHaveLength(10);
         expect(config.sharpBookmaker).toBe("pinnacle");
         expect(config.exchangeCommission).toEqual({ betfair_ex_eu: 0.05, matchbook: 0.02 });
