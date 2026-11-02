@@ -3,6 +3,7 @@ import { createRepositories, type Database } from "@closing-line/db";
 import { FootballDataClient } from "./adapters/footballData/client.ts";
 import { OddsApiClient } from "./adapters/oddsApi/client.ts";
 import { CreditGuard } from "./app/creditGuard.ts";
+import { bestPicks } from "./app/picks.ts";
 import { pollOdds, type PollReport } from "./app/pollOdds.ts";
 import { remindOpenBets } from "./app/reminders.ts";
 import { settleBets } from "./app/settleBets.ts";
@@ -13,6 +14,8 @@ import { createTipSender, tipRecipients } from "./app/tips.ts";
 import { createTelegramNotifier, type Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
 
+const PICKS_REFRESH_MS = 12 * 3_600_000;
+
 /** Wires adapters and use cases into the scheduler's job handlers. */
 export function compose(options: {
     config: Config;
@@ -20,7 +23,7 @@ export function compose(options: {
     logger: Logger;
     notify: Notify;
     now?: () => Date;
-}): RunnerDeps {
+}): RunnerDeps & { picks: () => Promise<string> } {
     const { config, logger, notify } = options;
     const now = options.now ?? (() => new Date());
     const repos = createRepositories(options.db);
@@ -71,7 +74,23 @@ export function compose(options: {
         },
     };
 
+    // /picks: refresh a league's odds when the stored ones are over 12 hours old, within the credit guard.
+    const picks = () =>
+        bestPicks({
+            repos,
+            config,
+            now,
+            refresh: async () => {
+                for (const league of config.leagues) {
+                    const last = await repos.odds.lastTakenAt(league.oddsApiKey);
+                    if (last && now().getTime() - last.getTime() < PICKS_REFRESH_MS) continue;
+                    await pollOdds(pollDeps, league.oddsApiKey, "scan");
+                }
+            },
+        });
+
     return {
+        picks,
         repos,
         leagues: config.leagues.map((league) => league.oddsApiKey),
         timeZone: config.timezone,

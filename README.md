@@ -51,8 +51,9 @@ flowchart LR
    sources, and settles bets on the regular-time score. Matches called off for 48 hours are void.
 
 Bettors use the same Telegram bot: the owner approves who may join, `/log` walks through a bet question by question
-and ends with reason buttons (lineup, skewed price, game read, slow live price), `/open` settles bets, and a morning
-reminder lists bets still open.
+and ends with reason buttons (lineup, skewed price, game read, slow live price), `/open` settles bets, `/picks` lists
+the best prices above fair for the coming week (refreshing odds older than 12 hours within the credit guard), and a
+morning reminder lists bets still open.
 
 Telegram also carries settlements, credit warnings, failed jobs and the Monday report, which breaks each bettor's
 results down by reason and ends with a lesson of the week. A dashboard shows the leaderboard, each player's
