@@ -120,6 +120,16 @@ pnpm --filter @closing-line/web dev   # http://localhost:3300
 Settings (leagues, bookmakers, thresholds, stakes, credit reserve) have defaults in
 `packages/config/src/schema.ts` and can be overridden with a JSON file via `CONFIG_PATH`.
 
+### Back-test
+
+`apps/backtest` replays the scanner on free football-data.co.uk season files (Pinnacle's early and closing prices
+plus four soft books) to choose the edge threshold; see [ADR 0008](docs/adr/0008-edge-threshold-from-the-back-test.md).
+
+```sh
+curl -L -o E1_2425.csv https://football-data.co.uk/mmz4281/2425/E1.csv
+pnpm --filter @closing-line/backtest backtest E1_2425.csv --edges 0.015,0.02,0.03
+```
+
 ## Deployment
 
 Docker Compose runs Postgres 18, the worker, the dashboard and a nightly `pg_dump` (14 days kept) on a small VPS.

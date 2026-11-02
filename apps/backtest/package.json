@@ -1,0 +1,13 @@
+{
+    "name": "@closing-line/backtest",
+    "private": true,
+    "type": "module",
+    "description": "Replays the value scanner on past seasons from football-data.co.uk to choose its edge threshold",
+    "scripts": {
+        "typecheck": "tsc",
+        "backtest": "node src/main.ts"
+    },
+    "dependencies": {
+        "@closing-line/core": "workspace:*"
+    }
+}
