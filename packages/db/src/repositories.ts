@@ -16,7 +16,8 @@ export type NewBet = Omit<
     "id" | "status" | "closingFairOdds" | "clv" | "profitOre" | "settledAt"
 >;
 export type ApiUsage = typeof apiUsage.$inferSelect;
-export type BetWithFixture = Bet & { fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "kickoff" | "league"> };
+/** `fixture` is null for bets on events we do not track, which carry `eventName` instead. */
+export type BetWithFixture = Bet & { fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "kickoff" | "league"> | null };
 export type JobRun = typeof jobRuns.$inferSelect;
 
 export type FixtureResult = { status: "finished"; homeGoals: number; awayGoals: number } | { status: "void" };
@@ -132,7 +133,7 @@ export function createRepositories(db: Database) {
                         },
                     })
                     .from(bets)
-                    .innerJoin(fixtures, eq(bets.fixtureId, fixtures.id))
+                    .leftJoin(fixtures, eq(bets.fixtureId, fixtures.id))
                     .where(playerId ? eq(bets.playerId, playerId) : undefined)
                     .orderBy(desc(bets.createdAt))
                     .limit(limit);
@@ -143,7 +144,7 @@ export function createRepositories(db: Database) {
              * With `settledSince`, only bets settled at or after it count (open bets are left out).
              */
             async totals(options: { settledSince?: Date } = {}): Promise<Map<string, PlayerTotals>> {
-                const decided = sql`${bets.status} in ('won', 'lost')`;
+                const decided = sql`${bets.status} in ('won', 'lost', 'cashed_out')`;
                 const count = (condition: ReturnType<typeof sql>) =>
                     sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
                 const sum = (column: ReturnType<typeof sql>, condition: ReturnType<typeof sql>) =>

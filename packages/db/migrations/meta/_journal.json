@@ -29,6 +29,13 @@
             "when": 1793524334036,
             "tag": "0003_h2h_selection",
             "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1793636203868,
+            "tag": "0004_slip_bets",
+            "breakpoints": true
         }
     ]
 }
