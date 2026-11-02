@@ -1,4 +1,4 @@
-export type JobKind = "sync" | "morning_poll" | "prekickoff_poll" | "settle" | "weekly_report";
+export type JobKind = "sync" | "morning_poll" | "prekickoff_poll" | "settle" | "weekly_report" | "remind";
 
 export interface PlannedJob {
     /** Unique per run: a job with a key that already ran is never due again. */
@@ -34,6 +34,7 @@ const PREKICKOFF_OPENS_MIN = 15;
 const PREKICKOFF_CLOSES_MIN = 2;
 const SETTLE_FROM_MINUTE = 15;
 const REPORT_HOUR = 8;
+const REMIND_HOUR = 10;
 
 /**
  * The jobs due at `now`. Each job has a window and runs once inside it; a window that passed while the worker
@@ -43,6 +44,7 @@ const REPORT_HOUR = 8;
  * - `morning_poll`: 09:00–12:00 local, per league with a match still to come that day.
  * - `prekickoff_poll`: per league and kickoff time, 15 to 2 minutes before kickoff.
  * - `weekly_report`: Mondays from 08:00 local.
+ * - `remind`: daily from 10:00 local (humans' open bets to settle).
  */
 export function dueJobs(input: PlanInput): PlannedJob[] {
     const { now, timeZone } = input;
@@ -56,6 +58,7 @@ export function dueJobs(input: PlanInput): PlannedJob[] {
 
     if (local.weekday === 1 && local.hour >= REPORT_HOUR)
         jobs.push({ key: `weekly:${local.date}`, kind: "weekly_report" });
+    if (local.hour >= REMIND_HOUR) jobs.push({ key: `remind:${local.date}`, kind: "remind" });
 
     if (local.hour >= MORNING_HOURS[0] && local.hour < MORNING_HOURS[1]) {
         for (const league of input.leagues) {

@@ -11,12 +11,12 @@ const fixtures = [
     { league: "soccer_spain_la_liga", kickoff: new Date("2026-11-07T15:00:00Z") },
 ];
 
-/** Due keys at `nowIso`; the hourly settle job is left out except where a test asks for it. */
-function plan(nowIso: string, done: string[] = [], withSettle = false): string[] {
+/** Due keys at `nowIso`; the hourly settle and daily remind jobs are left out except where a test asks for them. */
+function plan(nowIso: string, done: string[] = [], withHousekeeping = false): string[] {
     const input: PlanInput = { now: new Date(nowIso), timeZone: TZ, leagues: [EPL], fixtures, done: new Set(done) };
     return dueJobs(input)
         .map((job) => job.key)
-        .filter((key) => withSettle || !key.startsWith("settle:"));
+        .filter((key) => withHousekeeping || !(key.startsWith("settle:") || key.startsWith("remind:")));
 }
 
 describe("dueJobs", () => {
@@ -27,9 +27,17 @@ describe("dueJobs", () => {
     });
 
     it("settles once an hour from minute 15", () => {
-        expect(plan("2026-11-07T20:14:00Z", ["sync:2026-11-07"], true)).toEqual([]);
-        expect(plan("2026-11-07T20:15:00Z", ["sync:2026-11-07"], true)).toEqual(["settle:2026-11-07T21"]);
-        expect(plan("2026-11-07T20:45:00Z", ["sync:2026-11-07", "settle:2026-11-07T21"], true)).toEqual([]);
+        const done = ["sync:2026-11-07", "remind:2026-11-07"];
+        expect(plan("2026-11-07T20:14:00Z", done, true)).toEqual([]);
+        expect(plan("2026-11-07T20:15:00Z", done, true)).toEqual(["settle:2026-11-07T21"]);
+        expect(plan("2026-11-07T20:45:00Z", [...done, "settle:2026-11-07T21"], true)).toEqual([]);
+    });
+
+    it("reminds about open bets once a day from 10:00 local", () => {
+        const done = ["sync:2026-11-07", "settle:2026-11-07T10", "morning:soccer_epl:2026-11-07"];
+        expect(plan("2026-11-07T08:59:00Z", [...done, "settle:2026-11-07T09"], true)).toEqual([]);
+        expect(plan("2026-11-07T09:00:00Z", done, true)).toEqual(["remind:2026-11-07"]);
+        expect(plan("2026-11-07T20:00:00Z", [...done, "remind:2026-11-07"], true)).toEqual([]);
     });
 
     it("polls on the morning of a match day, for leagues with a match still to come", () => {

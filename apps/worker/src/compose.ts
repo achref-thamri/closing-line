@@ -4,6 +4,7 @@ import { FootballDataClient } from "./adapters/footballData/client.ts";
 import { OddsApiClient } from "./adapters/oddsApi/client.ts";
 import { CreditGuard } from "./app/creditGuard.ts";
 import { pollOdds, type PollReport } from "./app/pollOdds.ts";
+import { remindOpenBets } from "./app/reminders.ts";
 import { settleBets } from "./app/settleBets.ts";
 import { syncFixtures } from "./app/syncFixtures.ts";
 import { weeklyReport } from "./app/weeklyReport.ts";
@@ -57,6 +58,10 @@ export function compose(options: {
                 logger.warn({ unmatched: report.unmatched }, "fixtures without a result yet");
             return { status: "succeeded", message: `${report.fixtures} fixtures, ${report.settledBets} bets settled` };
         },
+        remind: async () => ({
+            status: "succeeded",
+            message: `${await remindOpenBets({ repos, send: sendTo, now })} reminded`,
+        }),
         weekly_report: async () => {
             // Everyone learns from the report, so every human gets it, tips paused or not.
             const report = await weeklyReport({ repos, config, now });
