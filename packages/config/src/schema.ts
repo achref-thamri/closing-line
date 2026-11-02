@@ -54,17 +54,20 @@ const stakeRulesSchema = z
         path: ["minStake"],
     }) satisfies z.ZodType<StakeRules>;
 
+/**
+ * Pinnacle as the reference plus books a Danish bettor can use (2026-11-02): the friend's NordicBet and Marathonbet,
+ * and Danish-facing brands. Exchanges were dropped; the friend's other books are not in The Odds API.
+ */
 const DEFAULT_BOOKMAKERS = [
     "pinnacle",
-    "betfair_ex_eu",
-    "unibet_se",
-    "betsson",
     "nordicbet",
+    "marathonbet",
+    "betsson",
+    "unibet_se",
     "leovegas_se",
-    "coolbet",
     "sport888",
-    "williamhill",
-    "matchbook",
+    "casumo",
+    "coolbet",
 ];
 
 /** Tunable settings with defaults (spec §2, §5, §6). Money is in kroner. `prefault` runs nested defaults too. */

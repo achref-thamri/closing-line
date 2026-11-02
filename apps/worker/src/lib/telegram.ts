@@ -28,16 +28,3 @@ export function createTelegramNotifier(options: {
         }
     };
 }
-
-/** Sends a message to every chat `chats()` lists at the moment of sending, e.g. all humans who may bet. */
-export function createTelegramBroadcast(options: {
-    botToken: string;
-    chats: () => Promise<number[]>;
-    logger: Logger;
-    fetch?: Fetch;
-}): Notify {
-    return async (text) => {
-        const chats = [...new Set(await options.chats())];
-        await Promise.all(chats.map((chatId) => createTelegramNotifier({ ...options, chatId })(text)));
-    };
-}

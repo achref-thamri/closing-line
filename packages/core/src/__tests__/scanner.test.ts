@@ -52,6 +52,11 @@ describe("findValueBets", () => {
         expect(bets[0]).toMatchObject({ selection: "away", bookmaker: "unibet_se", offeredOdds: 2.7, netOdds: 2.7 });
         expect(bets[0]?.edge).toBeCloseTo(2.7 * 0.39 - 1);
         expect(bets[0]?.fairOdds).toBeCloseTo(1 / 0.39);
+        // Every book above the threshold is offered, best first, so each person can use a book they have.
+        expect(bets[0]?.offers.map((offer) => [offer.bookmaker, offer.offeredOdds])).toEqual([
+            ["unibet_se", 2.7],
+            ["betsson", 2.65],
+        ]);
     });
 
     it("takes exchange commission off before judging value", () => {

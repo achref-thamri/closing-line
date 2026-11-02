@@ -30,7 +30,17 @@ describe("parseConfig", () => {
             ["soccer_germany_bundesliga", "BL1"],
             ["soccer_spain_la_liga", "PD"],
         ]);
-        expect(config.bookmakers).toHaveLength(10);
+        expect(config.bookmakers).toEqual([
+            "pinnacle",
+            "nordicbet",
+            "marathonbet",
+            "betsson",
+            "unibet_se",
+            "leovegas_se",
+            "sport888",
+            "casumo",
+            "coolbet",
+        ]);
         expect(config.sharpBookmaker).toBe("pinnacle");
         expect(config.exchangeCommission).toEqual({ betfair_ex_eu: 0.05, matchbook: 0.02 });
         expect(config.scanner).toEqual({

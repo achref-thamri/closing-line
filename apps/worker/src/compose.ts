@@ -8,7 +8,8 @@ import { settleBets } from "./app/settleBets.ts";
 import { syncFixtures } from "./app/syncFixtures.ts";
 import { weeklyReport } from "./app/weeklyReport.ts";
 import type { Logger } from "./lib/logger.ts";
-import { createTelegramBroadcast, type Notify } from "./lib/telegram.ts";
+import { createTipSender, tipRecipients } from "./app/tips.ts";
+import { createTelegramNotifier, type Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
 
 /** Wires adapters and use cases into the scheduler's job handlers. */
@@ -32,16 +33,12 @@ export function compose(options: {
         warnAt: config.credits.warnAt,
         warn: notify,
     });
-    // Value-bet tips go to the owner and every approved human; other alerts stay with the owner.
-    const tip = createTelegramBroadcast({
-        botToken: config.telegram.botToken,
+    // Value-bet tips go to the owner and every approved human, at their own books; other alerts stay with the owner.
+    const tip = createTipSender({
+        timeZone: config.timezone,
         logger,
-        chats: async () => [
-            config.telegram.ownerChatId,
-            ...(await repos.players.list()).flatMap((player) =>
-                player.kind === "human" && player.telegramChatId ? [Number(player.telegramChatId)] : [],
-            ),
-        ],
+        send: (chatId, text) => createTelegramNotifier({ botToken: config.telegram.botToken, chatId, logger })(text),
+        recipients: async () => tipRecipients(await repos.players.list(), config.telegram.ownerChatId),
     });
     const pollDeps = { source: odds, guard, repos, config, now, notify, tip };
 

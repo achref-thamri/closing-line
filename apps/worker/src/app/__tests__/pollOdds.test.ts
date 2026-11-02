@@ -6,6 +6,7 @@ import type { Spent } from "../creditGuard.ts";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import { pollOdds, type PollOddsDeps } from "../pollOdds.ts";
 import { syncFixtures } from "../syncFixtures.ts";
+import type { Tip } from "../tips.ts";
 
 const config = parseConfig({
     ODDS_API_KEY: "k",
@@ -98,10 +99,26 @@ describe("pollOdds", () => {
         // Edge 8.2%, full Kelly 4.7%, quarter 1.17% of 10,000 kr, rounded down to 110 kr.
         expect(bet?.stakeOre).toBe(11_000);
         expect(messages).toEqual([
-            "🔎 Value bet: Arsenal @ 2.75 (unibet_se)\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 110 kr\n" +
+            "🔎 Value bet: Arsenal @ 2.75 at Unibet\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 110 kr\n" +
                 "💡 Pinnacle, the sharpest bookmaker, prices this at 2.54 once its margin is removed. 2.75 pays 8.2% " +
-                "more than the bet is worth, so it wins money over many bets like it, not every time.",
+                "more than the bet is worth, so it wins money over many bets like it, not every time.\n" +
+                "Price seen 13:00; check it is still there before you bet.",
         ]);
+    });
+
+    it("hands the tip to the tip sender with every book that pays enough", async () => {
+        const tips: Tip[] = [];
+        const poll = {
+            ...deps([event(24 * 60, [...quotes("unibet_se", 2.9, 3.4, 2.75), ...quotes("nordicbet", 2.9, 3.4, 2.7)])]),
+            tip: (tip: Tip) => {
+                tips.push(tip);
+                return Promise.resolve();
+            },
+        };
+        await pollOdds(poll, "soccer_epl", "scan");
+        expect(messages).toEqual([]);
+        expect(tips).toMatchObject([{ pick: "Arsenal", paperStakeKr: 110, seenAt: now }]);
+        expect(tips[0]?.offers.map((offer) => offer.bookmaker)).toEqual(["unibet_se", "nordicbet"]);
     });
 
     it("locks exchange bets at the odds after commission", async () => {
