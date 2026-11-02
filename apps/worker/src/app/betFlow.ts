@@ -68,6 +68,8 @@ export interface BetFlowDeps {
     /** Keeps the screenshot as evidence and returns where it was stored. */
     saveScreenshot: (image: SlipImage, receivedAt: Date) => Promise<string>;
     logger: Logger;
+    /** Settles an open bet when its settled slip arrives (`SettleFlow.fromSlip`). */
+    settler?: { fromSlip(chatId: number, draft: SlipDraft): Promise<Reply | undefined> };
     now?: () => Date;
 }
 
@@ -141,21 +143,38 @@ export class BetFlow {
         return this.cards(chatId, drafts, null, receivedAt);
     }
 
-    private cards(chatId: number, drafts: SlipDraft[], screenshotPath: string | null, receivedAt: Date): Reply[] {
+    private async cards(
+        chatId: number,
+        drafts: SlipDraft[],
+        screenshotPath: string | null,
+        receivedAt: Date,
+    ): Promise<Reply[]> {
         const source = screenshotPath === null ? "\n✍️ Typed, no screenshot" : "";
-        return drafts.map((draft) => {
-            if (draft.status !== "open") {
-                return {
-                    text: `${describe(draft)}\n\nAlready ${statusWord(draft.status)}, so not logged: only bets sent before they settle count. Send the slip right after placing the bet.`,
-                };
-            }
-            const id = randomBytes(6).toString("base64url");
-            this.drafts.set(id, { chatId, draft, screenshotPath, receivedAt });
+        const replies: Reply[] = [];
+        for (const draft of drafts) replies.push(await this.card(chatId, draft, source, screenshotPath, receivedAt));
+        return replies;
+    }
+
+    private async card(
+        chatId: number,
+        draft: SlipDraft,
+        source: string,
+        screenshotPath: string | null,
+        receivedAt: Date,
+    ): Promise<Reply> {
+        if (draft.status !== "open") {
+            const settled = await this.deps.settler?.fromSlip(chatId, draft);
+            if (settled) return settled;
             return {
-                text: `${describe(draft)}${source}\n\nWhy did you take it? Tap a reason to log the bet.`,
-                keyboard: draftKeyboard(id, draft),
+                text: `${describe(draft)}\n\nAlready ${statusWord(draft.status)}, so not logged: only bets sent before they settle count. Send the slip right after placing the bet; to settle a logged bet use /open.`,
             };
-        });
+        }
+        const id = randomBytes(6).toString("base64url");
+        this.drafts.set(id, { chatId, draft, screenshotPath, receivedAt });
+        return {
+            text: `${describe(draft)}${source}\n\nWhy did you take it? Tap a reason to log the bet.`,
+            keyboard: draftKeyboard(id, draft),
+        };
     }
 
     /** `/tips on|off`: value tips for this person. */
@@ -319,6 +338,7 @@ export class BetFlow {
 
 const WELCOME =
     "Send a screenshot of your bet slip right after placing a bet, or type it. I read it, show you what I found, and you log it with one tap.\n\n" +
+    "When a bet is over, /open settles it (won, lost, void or cashed out), or send the settled slip.\n" +
     "You also get value tips. /books picks the bookmakers you can use, /tips off pauses them.";
 const WAITING = 'Still waiting for the owner to let you in. Send the bet again once you get "You\'re in!".';
 const TYPING_HELP =
@@ -337,12 +357,7 @@ function draftKeyboard(id: string, draft: SlipDraft): Keyboard {
 
 /** The card text for a bet. */
 export function describe(draft: SlipDraft): string {
-    const market = MARKET_LABELS[draft.market] || draft.marketText;
-    const line = draft.line === null ? "" : ` ${draft.line}`;
-    const pick =
-        draft.selection === "over" || draft.selection === "under"
-            ? `${draft.playerName ?? ""} ${market} ${draft.selection}${line}`.trim()
-            : `${draft.selection}${draft.playerName ? ` (${draft.playerName})` : ""} ${market}`.trim();
+    const pick = pickText({ ...draft, market: MARKET_LABELS[draft.market] ? draft.market : draft.marketText });
     const book = draft.bookmaker === "unknown" ? "Bookmaker? Tap it below" : bookName(draft.bookmaker);
     const lines = [
         `🧾 ${book} · ${draft.eventName}${draft.competition ? ` (${draft.competition})` : ""}`,
@@ -353,7 +368,16 @@ export function describe(draft: SlipDraft): string {
     return lines.join("\n");
 }
 
-function bookName(book: string): string {
+/** What was backed, e.g. "Davies shots on target over 0.5" or "Team Liquid winner". */
+export function pickText(bet: { market: string; selection: string; playerName: string | null; line: number | null }) {
+    const market = (MARKET_LABELS as Record<string, string | undefined>)[bet.market] ?? bet.market;
+    const line = bet.line === null ? "" : ` ${bet.line}`;
+    return bet.selection === "over" || bet.selection === "under"
+        ? `${bet.playerName ?? ""} ${market} ${bet.selection}${line}`.trim()
+        : `${bet.selection}${bet.playerName ? ` (${bet.playerName})` : ""} ${market}`.trim();
+}
+
+export function bookName(book: string): string {
     return book
         .split("_")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -364,6 +388,6 @@ function statusWord(status: SlipDraft["status"]): string {
     return status === "cashed_out" ? "cashed out" : status;
 }
 
-function kroner(ore: number): string {
+export function kroner(ore: number): string {
     return `${(ore / 100).toLocaleString("en-GB", { maximumFractionDigits: 2 })} kr`;
 }

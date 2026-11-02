@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Bot, InlineKeyboard, type Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import type { BetFlow, Keyboard, Messenger, Reply } from "../../app/betFlow.ts";
+import type { SettleFlow } from "../../app/settleFlow.ts";
 import type { Fetch } from "../../lib/http.ts";
 import type { Logger } from "../../lib/logger.ts";
 import type { SlipImage } from "../../ports/slips.ts";
@@ -53,7 +54,14 @@ export function createBetBot(options: {
         return { data: Buffer.from(await response.arrayBuffer()), mediaType };
     }
 
-    function attach(flow: BetFlow): void {
+    async function sendAll(ctx: Context, replies: Reply[]): Promise<void> {
+        for (const reply of replies) {
+            const keyboard = keyboardOf(reply.keyboard);
+            await ctx.reply(reply.text, keyboard ? { reply_markup: keyboard } : {});
+        }
+    }
+
+    function attach(flow: BetFlow, settle: SettleFlow): void {
         bot.command("start", async (ctx) => {
             await ctx.reply((await flow.start(ctx.chat.id, ctx.from?.first_name ?? "Someone")).text);
         });
@@ -63,9 +71,11 @@ export function createBetBot(options: {
         });
 
         bot.command("books", async (ctx) => {
-            const reply = await flow.books(ctx.chat.id, ctx.from?.first_name ?? "Someone");
-            const keyboard = keyboardOf(reply.keyboard);
-            await ctx.reply(reply.text, keyboard ? { reply_markup: keyboard } : {});
+            await sendAll(ctx, [await flow.books(ctx.chat.id, ctx.from?.first_name ?? "Someone")]);
+        });
+
+        bot.command("open", async (ctx) => {
+            if (await flow.isAllowed(ctx.chat.id)) await sendAll(ctx, await settle.open(ctx.chat.id));
         });
 
         bot.on(["message:photo", "message:document"], async (ctx) => {
@@ -81,10 +91,7 @@ export function createBetBot(options: {
             }
             await ctx.replyWithChatAction("typing");
             try {
-                for (const reply of await flow.slip(ctx.chat.id, await image)) {
-                    const keyboard = keyboardOf(reply.keyboard);
-                    await ctx.reply(reply.text, keyboard ? { reply_markup: keyboard } : {});
-                }
+                await sendAll(ctx, await flow.slip(ctx.chat.id, await image));
             } catch (error) {
                 options.logger.error({ error: (error as Error).message }, "slip could not be read");
                 await ctx.reply("Sorry, I could not read that slip. Try again in a minute.");
@@ -97,7 +104,8 @@ export function createBetBot(options: {
                 await ctx.answerCallbackQuery();
                 return;
             }
-            const reply = await flow.tap(chatId, ctx.callbackQuery.data);
+            const data = ctx.callbackQuery.data;
+            const reply = /^(st|hd):/.test(data) ? await settle.tap(chatId, data) : await flow.tap(chatId, data);
             const keyboard = keyboardOf(reply.keyboard);
             await ctx.editMessageText(reply.text, keyboard ? { reply_markup: keyboard } : {});
             await ctx.answerCallbackQuery();
@@ -105,10 +113,8 @@ export function createBetBot(options: {
 
         bot.on("message:text", async (ctx) => {
             try {
-                for (const reply of await flow.typed(ctx.chat.id, ctx.message.text)) {
-                    const keyboard = keyboardOf(reply.keyboard);
-                    await ctx.reply(reply.text, keyboard ? { reply_markup: keyboard } : {});
-                }
+                const amount = await settle.amount(ctx.chat.id, ctx.message.text);
+                await sendAll(ctx, amount ? [amount] : await flow.typed(ctx.chat.id, ctx.message.text));
             } catch (error) {
                 options.logger.error({ error: (error as Error).message }, "typed bet could not be read");
                 await ctx.reply("Sorry, I could not read that. Try again in a minute.");

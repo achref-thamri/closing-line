@@ -222,6 +222,46 @@ export function createRepositories(db: Database) {
                     })
                     .where(eq(bets.id, id));
             },
+            async get(id: string): Promise<Bet | undefined> {
+                const [row] = await db.select().from(bets).where(eq(bets.id, id));
+                return row;
+            },
+            openFor(playerId: string): Promise<Bet[]> {
+                return db
+                    .select()
+                    .from(bets)
+                    .where(and(eq(bets.playerId, playerId), eq(bets.status, "open")))
+                    .orderBy(bets.createdAt);
+            },
+            /**
+             * Settles a human's open bet once, including a cash-out with the price it implies; false when it was
+             * already settled.
+             */
+            async settleSlip(
+                id: string,
+                settlement: {
+                    status: "won" | "lost" | "void" | "cashed_out";
+                    profitOre: number;
+                    settledAt: Date;
+                    cashoutOfferOre?: number;
+                    impliedCurrentOdds?: number;
+                    clv?: number;
+                },
+            ): Promise<boolean> {
+                const rows = await db
+                    .update(bets)
+                    .set(settlement)
+                    .where(and(eq(bets.id, id), eq(bets.status, "open")))
+                    .returning({ id: bets.id });
+                return rows.length > 0;
+            },
+            /** For a cashed-out bet: how the selection itself ended. */
+            async setHeldStatus(id: string, heldStatus: "won" | "lost" | "void"): Promise<void> {
+                await db
+                    .update(bets)
+                    .set({ heldStatus })
+                    .where(and(eq(bets.id, id), eq(bets.status, "cashed_out")));
+            },
             /** Settles an open bet once; returns false when it was already settled. */
             async settle(
                 id: string,

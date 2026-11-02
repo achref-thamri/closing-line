@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BetFlow, Reply } from "../../../app/betFlow.ts";
+import type { SettleFlow } from "../../../app/settleFlow.ts";
 import { silentLogger } from "../../../lib/logger.ts";
 import { createBetBot, screenshotStore } from "../bot.ts";
 
@@ -26,14 +27,18 @@ const from = { id: 200, is_bot: false, first_name: "Sam" } as const;
 
 let calls: { method: string; payload: Record<string, unknown> }[];
 
-function setup(flow: Partial<BetFlow>, fileFetch = vi.fn().mockResolvedValue(new Response("jpeg bytes"))) {
+function setup(
+    flow: Partial<BetFlow>,
+    settle: Partial<SettleFlow> = { amount: () => Promise.resolve(undefined) },
+    fileFetch = vi.fn().mockResolvedValue(new Response("jpeg bytes")),
+) {
     const bot = createBetBot({ botToken: "1:secret", logger: silentLogger, botInfo, fetch: fileFetch });
     bot.api.config.use((_prev, method, payload) => {
         calls.push({ method, payload: payload });
         const result = method === "getFile" ? { file_id: "f", file_unique_id: "u", file_path: "photos/1.jpg" } : true;
         return Promise.resolve({ ok: true, result } as never);
     });
-    bot.attach(flow as BetFlow);
+    bot.attach(flow as BetFlow, settle as SettleFlow);
     return { bot, fileFetch };
 }
 
@@ -156,6 +161,32 @@ describe("bet bot", () => {
                 reply_markup: { inline_keyboard: [[{ text: "✅ NordicBet", callback_data: "bk:nordicbet" }]] },
             }),
         ]);
+    });
+
+    it("lists open bets, routes settle buttons, and takes cash-out amounts before bets", async () => {
+        const open = vi.fn().mockResolvedValue([{ text: "bet 1", keyboard: [[{ text: "✅ Won", data: "st:b1:w" }]] }]);
+        const settleTap = vi.fn().mockResolvedValue({ text: "✅ won +2,200 kr" });
+        const amount = vi.fn().mockResolvedValue({ text: "💰 cashed out" });
+        const typed = vi.fn();
+        const isAllowed = vi.fn().mockResolvedValue(true);
+        const { bot } = setup({ isAllowed, typed }, { open, tap: settleTap, amount });
+        await bot.handleUpdate(message({ text: "/open", entities: [{ type: "bot_command", offset: 0, length: 5 }] }));
+        await bot.handleUpdate({
+            update_id: 2,
+            callback_query: {
+                id: "q",
+                from,
+                chat_instance: "c",
+                data: "st:b1:w",
+                message: { message_id: 12, date: 0, chat, from: botInfo, text: "bet 1" },
+            },
+        });
+        await bot.handleUpdate(message({ text: "2557" }, 3));
+        expect(settleTap).toHaveBeenCalledWith(200, "st:b1:w");
+        expect(amount).toHaveBeenCalledWith(200, "2557");
+        expect(typed).not.toHaveBeenCalled();
+        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["bet 1", "💰 cashed out"]);
+        expect(sent("editMessageText")).toEqual([expect.objectContaining({ text: "✅ won +2,200 kr" })]);
     });
 
     it("sends messages with or without buttons", async () => {
