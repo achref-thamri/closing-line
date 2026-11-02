@@ -7,6 +7,7 @@ import { ClaudeSlipReader } from "./adapters/anthropic/slipReader.ts";
 import { createBetBot, screenshotStore } from "./adapters/telegram/bot.ts";
 import { BetFlow } from "./app/betFlow.ts";
 import { markStarted, markStopped } from "./app/lifecycle.ts";
+import { SettleFlow } from "./app/settleFlow.ts";
 import { ensurePlayers } from "./app/players.ts";
 import { compose } from "./compose.ts";
 import { createLogger } from "./lib/logger.ts";
@@ -34,6 +35,12 @@ await markStarted({ repos, now: () => new Date(), logger, notify });
 // The bet flow needs Claude to read slips; without a key the worker runs the scanner only.
 const betBot = config.anthropic.apiKey ? createBetBot({ botToken: config.telegram.botToken, logger }) : undefined;
 if (betBot && config.anthropic.apiKey) {
+    const settle = new SettleFlow({
+        repos,
+        messenger: betBot.messenger,
+        ownerChatId: config.telegram.ownerChatId,
+        logger,
+    });
     betBot.attach(
         new BetFlow({
             reader: new ClaudeSlipReader({ client: new Anthropic({ apiKey: config.anthropic.apiKey }) }),
@@ -43,7 +50,9 @@ if (betBot && config.anthropic.apiKey) {
             // Screenshots are evidence for the bets: kept on the data volume next to the heartbeat.
             saveScreenshot: screenshotStore(join(dirname(config.heartbeatPath), "slips")),
             logger,
+            settler: settle,
         }),
+        settle,
     );
     void betBot.start().catch((error: unknown) => {
         logger.error({ error: (error as Error).message }, "telegram bot stopped");
