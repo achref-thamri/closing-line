@@ -14,7 +14,7 @@ _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/w
 ## Highlights
 
 - **Market-based value detection.** Pinnacle's prices, with the margin removed by the power method, are the fair
-  reference. The scanner backs any bookmaker price that beats it by 3% or more, after exchange commission.
+  reference. The scanner backs any bookmaker price that beats it by 2% or more, after exchange commission.
 - **Measured against the closing line.** Each bet records the fair closing price and its closing line value (CLV),
   the standard skill signal that profit alone cannot give over a few hundred bets.
 - **A benchmark that cannot be gamed.** An "always back the favourite" player bets every match at the same moment,
@@ -50,7 +50,7 @@ dashboard shows the leaderboard, each player's bankroll over time and the latest
 
 | Player        | Bets on                                                                    |
 | ------------- | -------------------------------------------------------------------------- |
-| Value scanner | Any price at least 3% above Pinnacle's fair price; pauses after a bad week |
+| Value scanner | Any price at least 2% above Pinnacle's fair price; pauses after a bad week |
 | Favourite     | Pinnacle's favourite in every match, flat stake (benchmark)                |
 | Friend        | Phase 2: his own bets from Telegram, with his price and reasons            |
 | Friend + scan | Phase 2: the friend's bets that the scanner also rates as value            |

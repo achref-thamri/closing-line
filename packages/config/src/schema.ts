@@ -91,7 +91,8 @@ export const settingsSchema = z
             .default({ betfair_ex_eu: 0.05, matchbook: 0.02 }),
         scanner: z
             .strictObject({
-                minEdge: z.number().gt(0).lt(1).default(0.03),
+                // 2% since 2026-11-02 (owner): more tips, still clear of price noise; the record decides later.
+                minEdge: z.number().gt(0).lt(1).default(0.02),
                 maxSharpAgeMinutes: z.int().positive().default(10),
                 stake: stakeRulesSchema.prefault({}),
             })

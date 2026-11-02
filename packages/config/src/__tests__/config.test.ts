@@ -34,7 +34,7 @@ describe("parseConfig", () => {
         expect(config.sharpBookmaker).toBe("pinnacle");
         expect(config.exchangeCommission).toEqual({ betfair_ex_eu: 0.05, matchbook: 0.02 });
         expect(config.scanner).toEqual({
-            minEdge: 0.03,
+            minEdge: 0.02,
             maxSharpAgeMinutes: 10,
             stake: { kellyMultiplier: 0.25, maxBankrollFraction: 0.02, minStake: 50, maxStake: 500, step: 10 },
         });
