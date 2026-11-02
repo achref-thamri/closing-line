@@ -98,6 +98,17 @@ export function createRepositories(db: Database) {
                 if (rows.length === 0) return;
                 await db.insert(oddsSnapshots).values(rows);
             },
+            /** When the league's odds were last polled, or undefined before the first poll. */
+            async lastTakenAt(league: string): Promise<Date | undefined> {
+                const [row] = await db
+                    .select({
+                        takenAt: sql<Date>`max(${oddsSnapshots.takenAt})`.mapWith((value: string) => new Date(value)),
+                    })
+                    .from(oddsSnapshots)
+                    .innerJoin(fixtures, eq(oddsSnapshots.fixtureId, fixtures.id))
+                    .where(eq(fixtures.league, league));
+                return row?.takenAt && !Number.isNaN(row.takenAt.getTime()) ? row.takenAt : undefined;
+            },
             /** The newest price per bookmaker, market and selection for a fixture, optionally only recent ones. */
             latest(fixtureId: string, since?: Date): Promise<OddsSnapshot[]> {
                 return db

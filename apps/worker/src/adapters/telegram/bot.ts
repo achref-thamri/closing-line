@@ -7,6 +7,7 @@ import type { Logger } from "../../lib/logger.ts";
 export const COMMANDS = [
     { command: "log", description: "Log a bet you just placed" },
     { command: "open", description: "Settle your open bets" },
+    { command: "picks", description: "Best prices for the next two days" },
     { command: "tips", description: "Turn value tips on or off" },
     { command: "start", description: "Join or show the help" },
 ];
@@ -38,7 +39,8 @@ export function createBetBot(options: {
         }
     }
 
-    function attach(flow: BetFlow, settle: SettleFlow): void {
+    /** `picks` answers /picks; it reads stored odds only. */
+    function attach(flow: BetFlow, settle: SettleFlow, picks?: () => Promise<string>): void {
         bot.command("start", async (ctx) => {
             await ctx.reply((await flow.start(ctx.chat.id, ctx.from?.first_name ?? "Someone")).text);
         });
@@ -50,6 +52,10 @@ export function createBetBot(options: {
 
         bot.command("tips", async (ctx) => {
             await ctx.reply((await flow.tips(ctx.chat.id, ctx.from?.first_name ?? "Someone", ctx.match)).text);
+        });
+
+        bot.command("picks", async (ctx) => {
+            if (picks && (await flow.isAllowed(ctx.chat.id))) await ctx.reply(await picks());
         });
 
         bot.command("open", async (ctx) => {

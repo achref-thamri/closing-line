@@ -33,7 +33,7 @@ await markStarted({ repos, now: () => new Date(), logger, notify });
 // The bet flow: bettors log and settle their bets in Telegram.
 const betBot = createBetBot({ botToken: config.telegram.botToken, logger });
 const settle = new SettleFlow({ repos, messenger: betBot.messenger, ownerChatId: config.telegram.ownerChatId, logger });
-betBot.attach(new BetFlow({ repos, config, messenger: betBot.messenger, logger }), settle);
+betBot.attach(new BetFlow({ repos, config, messenger: betBot.messenger, logger }), settle, runner.picks);
 void betBot.start().catch((error: unknown) => {
     logger.error({ error: (error as Error).message }, "telegram bot stopped");
 });
