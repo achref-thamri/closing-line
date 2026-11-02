@@ -26,3 +26,4 @@ export {
     statsBy,
 } from "./slips.ts";
 export type { PositionBet, SlipStatus } from "./slips.ts";
+export { bookName, pickText, teamsOf } from "./picks.ts";

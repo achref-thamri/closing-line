@@ -1,3 +1,4 @@
+import { bookName, pickText } from "@closing-line/core";
 import type { BetWithFixture, Player } from "@closing-line/db";
 import { odds, percent, shortDate, signedKroner, kroner } from "../lib/format.ts";
 import { playerColour } from "./players.ts";
@@ -11,10 +12,13 @@ const STATUS_STYLE: Record<BetWithFixture["status"], string> = {
 };
 
 function pick(bet: BetWithFixture): string {
-    if (bet.market !== "h2h" || !bet.fixture) return [bet.playerName, bet.selection].filter(Boolean).join(" ");
-    if (bet.selection === "home") return bet.fixture.homeTeam;
-    if (bet.selection === "away") return bet.fixture.awayTeam;
-    return "Draw";
+    if (bet.market === "h2h" && bet.fixture) {
+        // The scanner's 1X2 bets: the team itself, as before.
+        if (bet.selection === "home") return bet.fixture.homeTeam;
+        if (bet.selection === "away") return bet.fixture.awayTeam;
+        return "Draw";
+    }
+    return pickText(bet);
 }
 
 /** Why a bettor took the bet, as tagged in Telegram. */
@@ -44,6 +48,7 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                         <th className="px-3 py-2 font-medium">Player</th>
                         <th className="px-3 py-2 font-medium">Match</th>
                         <th className="px-3 py-2 font-medium">Pick</th>
+                        <th className="px-3 py-2 font-medium">Bookmaker</th>
                         <th className="px-3 py-2 font-medium">Reason</th>
                         <th className="px-3 py-2 text-right font-medium">Odds</th>
                         <th className="px-3 py-2 text-right font-medium">Stake</th>
@@ -73,6 +78,7 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap">{match(bet)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap">{pick(bet)}</td>
+                                <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{bookName(bet.bookmaker)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{reason(bet)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{odds(bet.lockedOdds)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{kroner(bet.stakeOre)}</td>

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
-import { bookName, createTipSender, formatTip, tipRecipients, type Tip } from "../tips.ts";
+import { createTipSender, formatTip, tipRecipients, type Tip } from "../tips.ts";
 
 const tip: Tip = {
     homeTeam: "Hull City",
@@ -34,10 +34,6 @@ describe("formatTip", () => {
 
     it("sends nothing without an offer", () => {
         expect(formatTip({ ...tip, offers: [] }, TZ)).toBeUndefined();
-    });
-
-    it("keeps unknown bookmaker keys as they are", () => {
-        expect(bookName("some_new_book")).toBe("some_new_book");
     });
 });
 
