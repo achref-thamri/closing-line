@@ -86,6 +86,25 @@ export function dueJobs(input: PlanInput): PlannedJob[] {
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Calendar date (YYYY-MM-DD), weekday (0 = Sunday), hour and minute of `date` in `timeZone`. */
+/** The instant a wall-clock time (`YYYY-MM-DDTHH:mm`) names in a time zone; undefined when malformed. */
+export function zonedTimeToUtc(local: string, timeZone: string): Date | undefined {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+    if (!match) return undefined;
+    const [year, month, day, hour, minute] = match.slice(1).map(Number) as [number, number, number, number, number];
+    const wall = Date.UTC(year, month - 1, day, hour, minute);
+    // Correct twice: the zone's offset at the first guess can differ from the answer's around a DST change.
+    let guess = wall;
+    for (let i = 0; i < 2; i++) guess = wall - offsetMs(new Date(guess), timeZone);
+    return new Date(guess);
+}
+
+function offsetMs(date: Date, timeZone: string): number {
+    const local = localTime(date, timeZone);
+    const [year, month, day] = local.date.split("-").map(Number) as [number, number, number];
+    const asUtc = Date.UTC(year, month - 1, day, local.hour, local.minute);
+    return asUtc - Math.floor(date.getTime() / 60_000) * 60_000;
+}
+
 export function localTime(
     date: Date,
     timeZone: string,

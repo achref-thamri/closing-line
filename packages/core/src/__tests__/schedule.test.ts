@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueJobs, localTime, type PlanInput } from "../schedule.ts";
+import { dueJobs, localTime, zonedTimeToUtc, type PlanInput } from "../schedule.ts";
 
 const TZ = "Europe/Copenhagen";
 const EPL = "soccer_epl";
@@ -82,5 +82,20 @@ describe("localTime", () => {
             hour: 0,
             minute: 30,
         });
+    });
+});
+
+describe("zonedTimeToUtc", () => {
+    it("reads Copenhagen wall-clock time in summer and winter", () => {
+        expect(zonedTimeToUtc("2026-10-21T20:07", "Europe/Copenhagen")).toEqual(new Date("2026-10-21T18:07:00Z"));
+        expect(zonedTimeToUtc("2026-11-01T20:20", "Europe/Copenhagen")).toEqual(new Date("2026-11-01T19:20:00Z"));
+    });
+
+    it("handles the hour after the clocks go back", () => {
+        expect(zonedTimeToUtc("2026-10-25T03:30", "Europe/Copenhagen")).toEqual(new Date("2026-10-25T02:30:00Z"));
+    });
+
+    it("is undefined for anything but YYYY-MM-DDTHH:mm", () => {
+        expect(zonedTimeToUtc("21.10.2026 20:07", "Europe/Copenhagen")).toBeUndefined();
     });
 });
