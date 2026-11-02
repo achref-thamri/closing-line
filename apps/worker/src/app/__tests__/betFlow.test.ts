@@ -92,7 +92,7 @@ describe("access", () => {
             kind: "bettor",
             startingBankrollOre: 6_000_000,
         });
-        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Send \/bet right after placing a bet/);
+        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Send \/log right after placing a bet/);
     });
 
     it("keeps a stranger out on Deny, and only the owner decides", async () => {
@@ -162,7 +162,7 @@ describe("logging a bet step by step", () => {
     });
 
     it("takes a typed line, a typed bookmaker, and match results by team", async () => {
-        expect((await type("Newcastle v Everton", OWNER)).text).toBe("Send /bet to log a bet, or /open to settle one.");
+        expect((await type("Newcastle v Everton", OWNER)).text).toBe("Send /log to log a bet, or /open to settle one.");
 
         await tap(await flow.bet(OWNER), "Football", OWNER);
         let reply = await type("Newcastle v Everton", OWNER);
@@ -216,7 +216,7 @@ describe("logging a bet step by step", () => {
     it("re-asks on wrong input, cancels, and forgets a bet left for an hour", async () => {
         await letFriendIn();
         let reply = await flow.bet(FRIEND);
-        expect((await type("hi")).text).toBe("Tap one of the buttons above, or send /bet to start again.");
+        expect((await type("hi")).text).toBe("Tap one of the buttons above, or send /log to start again.");
         expect((await flow.tap(FRIEND, "w:tennis")).text).toBe("New bet. Which sport?");
         await tap(reply, "Football");
         expect((await type("ab")).text).toBe("Which match? E.g. Bayern – Arsenal");
@@ -224,8 +224,8 @@ describe("logging a bet step by step", () => {
         await tap(reply, "Fouls");
         expect((await type("x")).text).toBe("Which player? E.g. Davies");
         expect((await flow.tap(FRIEND, "z:1")).text).toBe("Unknown button.");
-        expect((await flow.tap(FRIEND, "x")).text).toBe("Cancelled. /bet starts a new one.");
-        expect((await type("Ajax")).text).toBe("Send /bet to log a bet, or /open to settle one.");
+        expect((await flow.tap(FRIEND, "x")).text).toBe("Cancelled. /log starts a new one.");
+        expect((await type("Ajax")).text).toBe("Send /log to log a bet, or /open to settle one.");
 
         await tap(await flow.bet(FRIEND), "Football");
         clock = new Date(clock.getTime() + 61 * 60_000);

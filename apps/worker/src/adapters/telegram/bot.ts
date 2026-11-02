@@ -4,6 +4,13 @@ import type { BetFlow, Keyboard, Messenger, Reply } from "../../app/betFlow.ts";
 import type { SettleFlow } from "../../app/settleFlow.ts";
 import type { Logger } from "../../lib/logger.ts";
 
+export const COMMANDS = [
+    { command: "log", description: "Log a bet you just placed" },
+    { command: "open", description: "Settle your open bets" },
+    { command: "tips", description: "Turn value tips on or off" },
+    { command: "start", description: "Join or show the help" },
+];
+
 function keyboardOf(rows: Keyboard | undefined): InlineKeyboard | undefined {
     if (!rows) return undefined;
     return InlineKeyboard.from(rows.map((row) => row.map((button) => InlineKeyboard.text(button.text, button.data))));
@@ -36,7 +43,8 @@ export function createBetBot(options: {
             await ctx.reply((await flow.start(ctx.chat.id, ctx.from?.first_name ?? "Someone")).text);
         });
 
-        bot.command("bet", async (ctx) => {
+        // /log is the name in the menu; /bet stays for anyone who learned it first.
+        bot.command(["log", "bet"], async (ctx) => {
             await sendAll(ctx, [await flow.bet(ctx.chat.id)]);
         });
 
@@ -50,7 +58,7 @@ export function createBetBot(options: {
 
         bot.on(["message:photo", "message:document"], async (ctx) => {
             if (await flow.isAllowed(ctx.chat.id)) {
-                await ctx.reply("Screenshots are not read. Send /bet and answer the questions instead.");
+                await ctx.reply("Screenshots are not read. Send /log and answer the questions instead.");
             }
         });
 
@@ -82,7 +90,11 @@ export function createBetBot(options: {
         attach,
         api: bot.api,
         handleUpdate: (update: Parameters<typeof bot.handleUpdate>[0]) => bot.handleUpdate(update),
-        start: () => bot.start({ drop_pending_updates: false, allowed_updates: ["message", "callback_query"] }),
+        start: async () => {
+            // The menu next to the message box lists these, so nobody has to remember them.
+            await bot.api.setMyCommands(COMMANDS);
+            await bot.start({ drop_pending_updates: false, allowed_updates: ["message", "callback_query"] });
+        },
         stop: () => bot.stop(),
     };
 }
