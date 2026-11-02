@@ -94,6 +94,11 @@ describe("access", () => {
         expect((await flow.start(FRIEND, "Sam")).text).toMatch(/owner has been asked/);
         expect(sent[0]).toMatchObject({ chatId: OWNER, reply: { text: "Sam wants to log bets with Closing Line." } });
         expect(await flow.isAllowed(FRIEND)).toBe(false);
+        // While waiting: a second /start does not ask the owner again, and bets get an explanation.
+        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Still waiting/);
+        expect((await flow.typed(FRIEND, "Davies over 0.5 at 3.70, 1500 kr"))[0]?.text).toMatch(/^Still waiting/);
+        expect((await flow.slip(FRIEND, image))[0]?.text).toMatch(/^Still waiting/);
+        expect(sent).toHaveLength(1);
 
         expect((await flow.tap(OWNER, button(sent[0]?.reply, "Allow"))).text).toBe("Sam can now log bets.");
         expect(sent[1]).toMatchObject({
