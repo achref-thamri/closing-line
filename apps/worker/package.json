@@ -11,6 +11,7 @@
         "@closing-line/config": "workspace:*",
         "@closing-line/core": "workspace:*",
         "@closing-line/db": "workspace:*",
+        "grammy": "1.46.0",
         "pino": "10.4.0",
         "zod": "4.6.7"
     }

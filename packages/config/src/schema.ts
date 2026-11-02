@@ -93,7 +93,13 @@ export const settingsSchema = z
         benchmarkStake: z.number().positive().default(100),
         /** Polls this close to kickoff record closing prices and place the benchmark bet. */
         closingWindowMinutes: z.int().positive().max(180).default(45),
-        humans: z.strictObject({ maxBankrollFraction: fraction.default(0.05) }).prefault({}),
+        humans: z
+            .strictObject({
+                maxBankrollFraction: fraction.default(0.05),
+                /** Large enough that the friend's usual 3,000 kr stakes fit the cap (owner, 2026-11-02). */
+                startingBankroll: z.number().positive().default(60_000),
+            })
+            .prefault({}),
         startingBankroll: z.number().positive().default(10_000),
         /** A player that loses this share of its bankroll in a week pauses until Monday. */
         weeklyLossPause: fraction.default(0.15),

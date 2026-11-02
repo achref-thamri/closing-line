@@ -1,7 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
+import Anthropic from "@anthropic-ai/sdk";
 import { loadConfig } from "@closing-line/config";
 import { createRepositories, openDatabase } from "@closing-line/db";
+import { ClaudeSlipReader } from "./adapters/anthropic/slipReader.ts";
+import { createBetBot, screenshotStore } from "./adapters/telegram/bot.ts";
+import { BetFlow } from "./app/betFlow.ts";
 import { markStarted, markStopped } from "./app/lifecycle.ts";
 import { ensurePlayers } from "./app/players.ts";
 import { compose } from "./compose.ts";
@@ -26,6 +30,26 @@ await ensurePlayers(repos, config);
 mkdirSync(dirname(config.heartbeatPath), { recursive: true });
 logger.info({ leagues: runner.leagues, database: config.database.kind }, "worker started");
 await markStarted({ repos, now: () => new Date(), logger, notify });
+
+// The bet flow needs Claude to read slips; without a key the worker runs the scanner only.
+const betBot = config.anthropic.apiKey ? createBetBot({ botToken: config.telegram.botToken, logger }) : undefined;
+if (betBot && config.anthropic.apiKey) {
+    betBot.attach(
+        new BetFlow({
+            reader: new ClaudeSlipReader({ client: new Anthropic({ apiKey: config.anthropic.apiKey }) }),
+            repos,
+            config,
+            messenger: betBot.messenger,
+            // Screenshots are evidence for the bets: kept on the data volume next to the heartbeat.
+            saveScreenshot: screenshotStore(join(dirname(config.heartbeatPath), "slips")),
+            logger,
+        }),
+    );
+    void betBot.start().catch((error: unknown) => {
+        logger.error({ error: (error as Error).message }, "telegram bot stopped");
+    });
+    logger.info({ slips: true }, "bet flow listening on Telegram");
+}
 
 let running: Promise<void> | undefined;
 let timer: NodeJS.Timeout | undefined;
@@ -54,6 +78,7 @@ schedule();
 async function shutdown(signal: string): Promise<void> {
     logger.info({ signal }, "shutting down");
     clearTimeout(timer);
+    await betBot?.stop();
     await running;
     await markStopped({ repos });
     await database.close();

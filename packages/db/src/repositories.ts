@@ -33,6 +33,13 @@ export function createRepositories(db: Database) {
             list(): Promise<Player[]> {
                 return db.select().from(players).orderBy(players.id);
             },
+            async byChat(chatId: number): Promise<Player | undefined> {
+                const [row] = await db
+                    .select()
+                    .from(players)
+                    .where(eq(players.telegramChatId, String(chatId)));
+                return row;
+            },
         },
 
         fixtures: {
