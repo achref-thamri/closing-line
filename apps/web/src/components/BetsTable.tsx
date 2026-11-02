@@ -17,7 +17,7 @@ function pick(bet: BetWithFixture): string {
     return "Draw";
 }
 
-/** Why a bettor took the bet, as tagged in Telegram; typed bets (no screenshot) are marked. */
+/** Why a bettor took the bet, as tagged in Telegram. */
 const REASONS: Record<NonNullable<BetWithFixture["tag"]>, string> = {
     lineup: "⚡ Lineup",
     skewed_price: "📈 Skewed price",
@@ -27,8 +27,7 @@ const REASONS: Record<NonNullable<BetWithFixture["tag"]>, string> = {
 
 function reason(bet: BetWithFixture): string {
     if (!bet.selfReported) return "";
-    const tag = bet.tag ? REASONS[bet.tag] : "";
-    return bet.screenshotPath === null ? `${tag} ✍️`.trim() : tag;
+    return bet.tag ? REASONS[bet.tag] : "";
 }
 
 function match(bet: BetWithFixture): string {

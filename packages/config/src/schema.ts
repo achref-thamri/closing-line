@@ -4,7 +4,6 @@ import { z } from "zod";
 const emptyToUndefined = (value: unknown): unknown => (value === "" ? undefined : value);
 
 const requiredSecret = z.preprocess(emptyToUndefined, z.string({ error: "is required" }).trim().min(1, "is required"));
-const optionalSecret = z.preprocess(emptyToUndefined, z.string().trim().min(1).optional());
 const chatId = z.coerce.number({ error: "must be an integer chat id" }).int();
 const fraction = z.number().gt(0).lte(1);
 
@@ -15,7 +14,6 @@ export const envSchema = z.object({
     TELEGRAM_BOT_TOKEN: requiredSecret,
     TELEGRAM_OWNER_CHAT_ID: z.preprocess(emptyToUndefined, chatId),
     /** Needed from phase 2, when the bot reads bets written in plain language. */
-    ANTHROPIC_API_KEY: optionalSecret,
     /** Postgres connection string. Without it the worker uses an embedded PGlite database in `PGLITE_DIR`. */
     DATABASE_URL: z.preprocess(emptyToUndefined, z.url({ protocol: /^postgres(ql)?$/ }).optional()),
     PGLITE_DIR: z.preprocess(emptyToUndefined, z.string().min(1).default("data/pglite")),
@@ -110,8 +108,6 @@ export const settingsSchema = z
                 maxBankrollFraction: fraction.default(0.05),
                 /** Large enough that the friend's usual 3,000 kr stakes fit the cap (owner, 2026-11-02). */
                 startingBankroll: z.number().positive().default(60_000),
-                /** Claude reads per person per day (screenshots and typed bets); caps the Anthropic bill. */
-                dailySlipReads: z.int().positive().default(30),
             })
             .prefault({}),
         startingBankroll: z.number().positive().default(10_000),

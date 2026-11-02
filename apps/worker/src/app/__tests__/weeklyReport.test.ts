@@ -176,7 +176,7 @@ describe("bettorBreakdown", () => {
         expect(lessons).toEqual([]);
     });
 
-    it("breaks results down by reason and sport, counts typed bets, and compares reasons", () => {
+    it("breaks results down by reason and sport, and compares reasons", () => {
         const bets = [
             ...times(5, { tag: "lineup" }),
             ...times(5, { tag: "game_read", status: "lost", profitOre: -100_000, screenshotPath: null }),
@@ -186,7 +186,6 @@ describe("bettorBreakdown", () => {
         expect(lines).toEqual([
             "By reason: ⚡ Lineup 5 settled, ROI +200.0% · 🧠 Game read 6 settled, ROI −50.0%",
             "By sport: Football 10 settled, ROI +50.0% · Counter-Strike 1 settled, ROI +200.0%",
-            "Typed without a screenshot: 5 of 11",
         ]);
         expect(lessons).toEqual([
             "Sam's ⚡ Lineup bets return +200.0% over 5, 🧠 Game read bets −50.0% over 6. Lean towards what works, but small samples can still be luck.",

@@ -7,9 +7,8 @@ import {
 } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
-import type { SlipDraft } from "../../ports/slips.ts";
-import type { Reply } from "../betFlow.ts";
-import { parseKroner, SettleFlow } from "../settleFlow.ts";
+import { parseKroner, type Reply } from "../betFlow.ts";
+import { SettleFlow } from "../settleFlow.ts";
 
 const OWNER = 100;
 const FRIEND = 200;
@@ -154,53 +153,6 @@ describe("cash-outs", () => {
         await flow.tap(FRIEND, `st:${bet.id}:c`);
         await flow.tap(FRIEND, `st:${bet.id}:w`);
         expect(await flow.amount(FRIEND, "2557")).toEqual({ text: "That bet is already settled." });
-    });
-});
-
-describe("settled slips", () => {
-    const draft: SlipDraft = {
-        bookmaker: "bet25",
-        sport: "football",
-        competition: null,
-        eventName: "AC Milan - Inter Milan",
-        market: "player_shots_on_target",
-        marketText: "Skud på mål",
-        playerName: "Test Spiller",
-        selection: "over",
-        line: 1.5,
-        odds: 3.1,
-        stakeOre: 166_000,
-        couponId: null,
-        placedAtLocal: null,
-        status: "won",
-        payoutOre: 514_600,
-    };
-
-    it("settles the matching open bet by odds, stake and line, or by coupon", async () => {
-        const bet = await place();
-        expect((await flow.fromSlip(FRIEND, draft))?.text).toMatch(/✅ won/);
-        expect((await repos.bets.get(bet.id))?.status).toBe("won");
-
-        const withCoupon = await place({ couponId: "c-9", lockedOdds: 2 });
-        const cashed = await flow.fromSlip(FRIEND, {
-            ...draft,
-            couponId: "c-9",
-            status: "cashed_out",
-            payoutOre: 200_000,
-        });
-        expect(cashed?.text).toMatch(/💰 cashed out \+340 kr/);
-        expect(await repos.bets.get(withCoupon.id)).toMatchObject({ status: "cashed_out", cashoutOfferOre: 200_000 });
-    });
-
-    it("leaves it alone when nothing or more than one bet matches, or the slip is open", async () => {
-        expect(await flow.fromSlip(FRIEND, draft)).toBeUndefined();
-        await place();
-        await place({ couponId: "other" });
-        await place();
-        expect(await flow.fromSlip(FRIEND, draft)).toBeUndefined();
-        expect(await flow.fromSlip(FRIEND, { ...draft, status: "open" })).toBeUndefined();
-        expect(await flow.fromSlip(999, draft)).toBeUndefined();
-        expect(await flow.fromSlip(FRIEND, { ...draft, status: "cashed_out", payoutOre: null })).toBeUndefined();
     });
 });
 

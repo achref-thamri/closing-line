@@ -1,8 +1,7 @@
 import { heldProfitOre, impliedOddsFromCashout, priceMove } from "@closing-line/core";
 import type { Bet, Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
-import type { SlipDraft } from "../ports/slips.ts";
-import { bookName, kroner, pickText, type Keyboard, type Messenger, type Reply } from "./betFlow.ts";
+import { bookName, kroner, parseKroner, pickText, type Keyboard, type Messenger, type Reply } from "./betFlow.ts";
 
 type Outcome = "won" | "lost" | "void";
 interface SlipSettlement {
@@ -24,8 +23,7 @@ export interface SettleFlowDeps {
 
 /**
  * Settling bettors' bets (spec §4): `/open` lists them with Won / Lost / Void / Cashed out buttons; a cash-out asks
- * for the amount, records the price it implies, then asks how the bet would have ended. A settled slip whose bet
- * is still open settles it directly.
+ * for the amount, records the price it implies, then asks how the bet would have ended.
  */
 export class SettleFlow {
     private readonly deps: SettleFlowDeps;
@@ -87,21 +85,6 @@ export class SettleFlow {
         const bet = await this.ownBet(chatId, betId);
         if (bet?.status !== "open") return { text: "That bet is already settled." };
         return this.cashOut(chatId, bet, Math.round(kroner * 100));
-    }
-
-    /** A settled slip (won, lost, void or cashed out) for a bet still open: settles it. */
-    async fromSlip(chatId: number, draft: SlipDraft): Promise<Reply | undefined> {
-        if (draft.status === "open") return undefined;
-        const player = await this.deps.repos.players.byChat(chatId);
-        if (!player) return undefined;
-        const matches = (await this.deps.repos.bets.openFor(player.id)).filter((bet) => sameBet(bet, draft));
-        const [bet] = matches;
-        if (!bet || matches.length > 1) return undefined;
-        if (draft.status === "cashed_out") {
-            if (draft.payoutOre === null) return undefined;
-            return this.cashOut(chatId, bet, draft.payoutOre);
-        }
-        return this.settle(chatId, bet, { status: draft.status, profitOre: heldProfitOre(bet, draft.status) });
     }
 
     private async cashOut(chatId: number, bet: Bet, offerOre: number): Promise<Reply> {
@@ -170,24 +153,6 @@ export function describeBet(bet: Bet): string {
         pickText(bet),
         `Odds ${bet.lockedOdds.toFixed(2)} · Stake ${kroner(bet.stakeOre)}`,
     ].join("\n");
-}
-
-/** The same bet on a settled slip: the same coupon, or the same odds, stake and line. */
-function sameBet(bet: Bet, draft: SlipDraft): boolean {
-    if (bet.couponId && draft.couponId) return bet.couponId === draft.couponId && bet.line === draft.line;
-    return bet.lockedOdds === draft.odds && bet.stakeOre === draft.stakeOre && bet.line === draft.line;
-}
-
-/** Reads "2557", "2557 kr", "2.557,17" (Danish) or "2,557.17" as kroner; undefined when it is not one amount. */
-export function parseKroner(text: string): number | undefined {
-    const cleaned = text.replace(/kr\.?|dkk/gi, "").replace(/\s/g, "");
-    if (!/^\d[\d.,]*$/.test(cleaned)) return undefined;
-    const lastSeparator = Math.max(cleaned.lastIndexOf(","), cleaned.lastIndexOf("."));
-    const decimals = lastSeparator >= 0 && cleaned.length - lastSeparator - 1 <= 2 ? lastSeparator : -1;
-    const whole = (decimals >= 0 ? cleaned.slice(0, decimals) : cleaned).replace(/[.,]/g, "");
-    const fraction = decimals >= 0 ? cleaned.slice(decimals + 1) : "";
-    const value = Number(`${whole}.${fraction || "0"}`);
-    return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 function statusIcon(status: string): string {

@@ -133,6 +133,7 @@ export const bets = pgTable(
         impliedCurrentOdds: doublePrecision("implied_current_odds"),
         /** For a cashed-out bet: how the selection itself ended, to compare cashing out with holding. */
         heldStatus: betStatus("held_status"),
+        /** Only on bets logged from screenshots before 2026-11-03; bets are entered step by step since. */
         screenshotPath: text("screenshot_path"),
         status: betStatus().notNull().default("open"),
         closingFairOdds: doublePrecision("closing_fair_odds"),
