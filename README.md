@@ -21,7 +21,7 @@ _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/w
   so a strategy has to beat something simple, not just break even.
 - **Never runs out of free credits.** A credit guard spreads the monthly API quota over the days left, keeps a
   reserve, warns at 70% and 90%, and pauses instead of failing when the quota is used up.
-- **A bet in a few taps.** `/bet` asks for the match, market, player, line, bookmaker, odds and stake one at a time,
+- **A bet in a few taps.** `/log` asks for the match, market, player, line, bookmaker, odds and stake one at a time,
   with buttons wherever the answers are known, and checks each answer before the next question. One more tap logs
   the reason, and `/open` settles the bet later, cash-outs included.
 - **Correct by construction.** One bet per selection for automated players (a unique index), settlement only of
@@ -50,7 +50,7 @@ flowchart LR
 4. **Settlement** matches fixtures to football-data.org results by kickoff and team names, which differ between the
    sources, and settles bets on the regular-time score. Matches called off for 48 hours are void.
 
-Bettors use the same Telegram bot: the owner approves who may join, `/bet` walks through a bet question by question
+Bettors use the same Telegram bot: the owner approves who may join, `/log` walks through a bet question by question
 and ends with reason buttons (lineup, skewed price, game read, slow live price), `/open` settles bets, and a morning
 reminder lists bets still open.
 
@@ -162,7 +162,7 @@ deploy unless the worker reports healthy within three minutes.
 
 Phase 1 (scanner, benchmark, settlement) runs on the Premier League, Championship, Bundesliga, La Liga, Serie A and
 Ligue 1 with the free API plans; value-bet tips go to every approved bettor. Phase 2 is live: bettors log real bets in Telegram with
-`/bet`, tag them with a reason and settle them with `/open`; the Monday report breaks their results down. A player qualifies for real money only after at least 300 settled
+`/log`, tag them with a reason and settle them with `/open`; the Monday report breaks their results down. A player qualifies for real money only after at least 300 settled
 bets over at least three months, with positive average CLV, a better ROI than the favourite benchmark, and a
 drawdown under 30%.
 

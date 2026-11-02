@@ -116,7 +116,7 @@ export interface BetFlowDeps {
 }
 
 /**
- * The Telegram bet flow (spec §4): the owner approves who may log bets; a bettor logs a bet with `/bet`, answering
+ * The Telegram bet flow (spec §4): the owner approves who may log bets; a bettor logs a bet with `/log`, answering
  * one question at a time (buttons where the answers are known, typed text for the match, player, odds and stake),
  * and tags it with a reason. Each answer is checked when it arrives, so a logged bet is complete.
  */
@@ -156,7 +156,7 @@ export class BetFlow {
         return { text: "Thanks! The owner has been asked to let you in. You will get a message when it is done." };
     }
 
-    /** `/bet`: starts a new bet, replacing one left half-entered. */
+    /** `/log` (or `/bet`): starts a new bet, replacing one left half-entered. */
     async bet(chatId: number): Promise<Reply> {
         if (!(await this.isAllowed(chatId))) {
             return { text: this.requests.has(chatId) ? WAITING : "Send /start first." };
@@ -170,7 +170,7 @@ export class BetFlow {
     async text(chatId: number, text: string): Promise<Reply[]> {
         if (!(await this.isAllowed(chatId))) return this.requests.has(chatId) ? [{ text: WAITING }] : [];
         const pending = this.current(chatId);
-        if (!pending) return [{ text: "Send /bet to log a bet, or /open to settle one." }];
+        if (!pending) return [{ text: "Send /log to log a bet, or /open to settle one." }];
         return [this.answer(pending, text.trim())];
     }
 
@@ -206,7 +206,7 @@ export class BetFlow {
             case "sport":
             case "market":
             case "reason":
-                return { text: "Tap one of the buttons above, or send /bet to start again." };
+                return { text: "Tap one of the buttons above, or send /log to start again." };
         }
     }
 
@@ -230,10 +230,10 @@ export class BetFlow {
         const value = separator < 0 ? "" : data.slice(separator + 1);
         if (action === "ap" || action === "dn") return this.decide(chatId, action === "ap", Number(value));
         const pending = this.current(chatId);
-        if (!pending) return { text: "This bet is no longer open. Send /bet to start again." };
+        if (!pending) return { text: "This bet is no longer open. Send /log to start again." };
         if (action === "x") {
             this.pending.delete(chatId);
-            return { text: "Cancelled. /bet starts a new one." };
+            return { text: "Cancelled. /log starts a new one." };
         }
         if (action === "t" && value in TAGS && pending.step === "reason") {
             return this.log(chatId, pending, value as TagKey);
@@ -403,7 +403,7 @@ export class BetFlow {
         }
         const cap = this.deps.config.bettors.maxBankrollFraction * this.deps.config.bettors.startingBankroll * 100;
         const capNote = draft.stakeOre > cap ? `\nNote: the stake is above the ${kroner(cap)} cap.` : "";
-        return { text: `${describe(draft)}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}\n/bet logs another.` };
+        return { text: `${describe(draft)}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}\n/log logs another.` };
     }
 
     private toBet(playerId: string, draft: Draft, tag: NewBet["tag"]): NewBet {
@@ -439,10 +439,10 @@ export class BetFlow {
 
 const CANCEL: Button = { text: "✖ Cancel", data: "x" };
 const WELCOME =
-    "Send /bet right after placing a bet. I ask for the match, market, pick, bookmaker, odds and stake one at a time, then you tap why you took it.\n\n" +
+    "Send /log right after placing a bet. I ask for the match, market, pick, bookmaker, odds and stake one at a time, then you tap why you took it.\n\n" +
     "When a bet is over, /open settles it (won, lost, void or cashed out).\n" +
     "You also get value tips, the same ones the owner gets; /tips off pauses them.";
-const WAITING = 'Still waiting for the owner to let you in. Send /bet once you get "You\'re in!".';
+const WAITING = 'Still waiting for the owner to let you in. Send /log once you get "You\'re in!".';
 
 function rows(buttons: Button[], size: number): Keyboard {
     const result: Keyboard = [];

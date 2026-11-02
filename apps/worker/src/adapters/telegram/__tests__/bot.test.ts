@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BetFlow, Reply } from "../../../app/betFlow.ts";
 import type { SettleFlow } from "../../../app/settleFlow.ts";
 import { silentLogger } from "../../../lib/logger.ts";
-import { createBetBot } from "../bot.ts";
+import { COMMANDS, createBetBot } from "../bot.ts";
 
 const botInfo = {
     id: 1,
@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 describe("bet bot", () => {
-    it("answers /start, /bet, /tips and /open", async () => {
+    it("answers /start, /log, /tips and /open", async () => {
         const isAllowed = vi.fn().mockResolvedValue(true);
         const start = vi.fn().mockResolvedValue({ text: "Welcome" });
         const bet = vi.fn().mockResolvedValue(question);
@@ -74,7 +74,7 @@ describe("bet bot", () => {
         const open = vi.fn().mockResolvedValue([{ text: "No open bets." }]);
         const bot = setup({ isAllowed, start, bet, tips }, { open });
         await bot.handleUpdate(command("/start"));
-        await bot.handleUpdate(command("/bet", 2));
+        await bot.handleUpdate(command("/log", 2));
         await bot.handleUpdate(command("/tips off", 3));
         await bot.handleUpdate(command("/open", 4));
         expect(start).toHaveBeenCalledWith(200, "Sam");
@@ -112,15 +112,23 @@ describe("bet bot", () => {
         expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["💰 cashed out", "Which market?"]);
     });
 
-    it("points bettors who send screenshots to /bet and ignores strangers' files", async () => {
+    it("points bettors who send screenshots to /log and ignores strangers' files", async () => {
         const isAllowed = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
         const bot = setup({ isAllowed });
         const photo = { photo: [{ file_id: "p", file_unique_id: "p", width: 1, height: 1 }] };
         await bot.handleUpdate(message(photo));
         await bot.handleUpdate(message(photo, 2));
         expect(sent("sendMessage").map((payload) => payload.text)).toEqual([
-            "Screenshots are not read. Send /bet and answer the questions instead.",
+            "Screenshots are not read. Send /log and answer the questions instead.",
         ]);
+    });
+
+    it("keeps /bet working and puts the commands in Telegram's menu on start", async () => {
+        const bet = vi.fn().mockResolvedValue(question);
+        const bot = setup({ bet });
+        await bot.handleUpdate(command("/bet"));
+        expect(bet).toHaveBeenCalledWith(200);
+        expect(COMMANDS.map((each) => each.command)).toEqual(["log", "open", "tips", "start"]);
     });
 
     it("sends messages with or without buttons", async () => {
