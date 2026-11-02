@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
     title: "Closing Line",
-    description: "Paper-betting leaderboard: value scanner, benchmark and humans against the closing line",
+    description: "Paper-betting leaderboard: value scanner, benchmark and bettors against the closing line",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

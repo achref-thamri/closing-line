@@ -17,7 +17,7 @@ function pick(bet: BetWithFixture): string {
     return "Draw";
 }
 
-/** Why a human took the bet, as tagged in Telegram; typed bets (no screenshot) are marked. */
+/** Why a bettor took the bet, as tagged in Telegram; typed bets (no screenshot) are marked. */
 const REASONS: Record<NonNullable<BetWithFixture["tag"]>, string> = {
     lineup: "⚡ Lineup",
     skewed_price: "📈 Skewed price",

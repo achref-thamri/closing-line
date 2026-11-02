@@ -14,7 +14,6 @@ export const envSchema = z.object({
     FOOTBALL_DATA_TOKEN: requiredSecret,
     TELEGRAM_BOT_TOKEN: requiredSecret,
     TELEGRAM_OWNER_CHAT_ID: z.preprocess(emptyToUndefined, chatId),
-    TELEGRAM_FRIEND_CHAT_ID: z.preprocess(emptyToUndefined, chatId.optional()),
     /** Needed from phase 2, when the bot reads bets written in plain language. */
     ANTHROPIC_API_KEY: optionalSecret,
     /** Postgres connection string. Without it the worker uses an embedded PGlite database in `PGLITE_DIR`. */
@@ -106,7 +105,7 @@ export const settingsSchema = z
         benchmarkStake: z.number().positive().default(100),
         /** Polls this close to kickoff record closing prices and place the benchmark bet. */
         closingWindowMinutes: z.int().positive().max(180).default(45),
-        humans: z
+        bettors: z
             .strictObject({
                 maxBankrollFraction: fraction.default(0.05),
                 /** Large enough that the friend's usual 3,000 kr stakes fit the cap (owner, 2026-11-02). */

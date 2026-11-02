@@ -231,7 +231,7 @@ export function createRepositories(db: Database) {
                     .orderBy(bets.createdAt);
             },
             /**
-             * Settles a human's open bet once, including a cash-out with the price it implies; false when it was
+             * Settles a bettor's open bet once, including a cash-out with the price it implies; false when it was
              * already settled.
              */
             async settleSlip(

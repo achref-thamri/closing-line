@@ -13,7 +13,7 @@ export const SLIP_MARKETS = [
 ] as const;
 export type SlipMarket = (typeof SLIP_MARKETS)[number];
 
-/** One bet as read from a bookmaker's bet slip, before the human confirms it. */
+/** One bet as read from a bookmaker's bet slip, before the bettor confirms it. */
 export interface SlipDraft {
     /** Bookmaker id in lower case, e.g. `nordicbet`, `bet25`, `danske_spil`; `unknown` when no brand is visible. */
     bookmaker: string;

@@ -3,7 +3,7 @@ import { createRepositories, openDatabase, type DatabaseHandle, type Repositorie
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import type { Bet } from "@closing-line/db";
-import { humanBreakdown, LESSONS, weeklyReport } from "../weeklyReport.ts";
+import { bettorBreakdown, LESSONS, weeklyReport } from "../weeklyReport.ts";
 
 const config = parseConfig({
     ODDS_API_KEY: "k",
@@ -78,9 +78,9 @@ describe("weeklyReport", () => {
         );
     });
 
-    it("adds each human's breakdown, and a lesson from the numbers once there are some", async () => {
+    it("adds each bettor's breakdown, and a lesson from the numbers once there are some", async () => {
         await repos.players.ensure([
-            { id: "tg_2", name: "Sam", kind: "human", startingBankrollOre: 6_000_000, telegramChatId: "2" },
+            { id: "tg_2", name: "Sam", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "2" },
         ]);
         for (const [tag, status] of [
             ...Array.from({ length: 5 }, () => ["lineup", "won"] as const),
@@ -116,7 +116,7 @@ describe("weeklyReport", () => {
     });
 });
 
-describe("humanBreakdown", () => {
+describe("bettorBreakdown", () => {
     let n = 0;
     function bet(overrides: Partial<Bet>): Bet {
         n++;
@@ -164,11 +164,11 @@ describe("humanBreakdown", () => {
     const times = (count: number, overrides: Partial<Bet>) => Array.from({ length: count }, () => bet(overrides));
 
     it("is empty without bets", () => {
-        expect(humanBreakdown("Sam", [])).toEqual({ lines: [], lessons: [] });
+        expect(bettorBreakdown("Sam", [])).toEqual({ lines: [], lessons: [] });
     });
 
     it("leaves out sections with nothing to show", () => {
-        const { lines, lessons } = humanBreakdown("Sam", [
+        const { lines, lessons } = bettorBreakdown("Sam", [
             bet({ tag: null }),
             bet({ tag: null, status: "cashed_out", cashoutOfferOre: 120_000, profitOre: 20_000 }),
         ]);
@@ -182,7 +182,7 @@ describe("humanBreakdown", () => {
             ...times(5, { tag: "game_read", status: "lost", profitOre: -100_000, screenshotPath: null }),
             bet({ tag: "game_read", sport: "counter_strike" }),
         ];
-        const { lines, lessons } = humanBreakdown("Sam", bets);
+        const { lines, lessons } = bettorBreakdown("Sam", bets);
         expect(lines).toEqual([
             "By reason: ⚡ Lineup 5 settled, ROI +200.0% · 🧠 Game read 6 settled, ROI −50.0%",
             "By sport: Football 10 settled, ROI +50.0% · Counter-Strike 1 settled, ROI +200.0%",
@@ -195,7 +195,7 @@ describe("humanBreakdown", () => {
 
     it("shows what cash-outs did against holding, with a lesson once there are three", () => {
         const cashed = { status: "cashed_out" as const, cashoutOfferOre: 150_000, profitOre: 50_000, clv: 0.5 };
-        const { lines, lessons } = humanBreakdown("Sam", [
+        const { lines, lessons } = bettorBreakdown("Sam", [
             ...times(3, { ...cashed, heldStatus: "won" }),
             bet({ ...cashed, heldStatus: null, clv: null }),
         ]);
@@ -204,7 +204,7 @@ describe("humanBreakdown", () => {
         expect(lessons).toEqual([
             "Sam's cash-outs cost 4,500 kr compared with holding over 3 bets: the bets kept going their way after the cash-out.",
         ]);
-        const lostAnyway = humanBreakdown("Sam", times(3, { ...cashed, heldStatus: "lost" }));
+        const lostAnyway = bettorBreakdown("Sam", times(3, { ...cashed, heldStatus: "lost" }));
         expect(lostAnyway.lessons[0]).toMatch(/^Sam's cash-outs paid 4,500 kr more than holding over 3 bets/);
     });
 });

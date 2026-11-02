@@ -48,7 +48,7 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
     await repos.players.ensure([
         { id: "scanner", name: "Value scanner", kind: "scanner", startingBankrollOre: 1_000_000 },
         { id: "favourite", name: "Always the favourite", kind: "benchmark", startingBankrollOre: 1_000_000 },
-        { id: "friend", name: "Friend (demo)", kind: "human", startingBankrollOre: 1_000_000 },
+        { id: "friend", name: "Friend (demo)", kind: "bettor", startingBankrollOre: 1_000_000 },
     ]);
 
     const firstSaturday = new Date(now.getTime() - WEEKS * 7 * DAY_MS);

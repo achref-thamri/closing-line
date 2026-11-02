@@ -63,19 +63,19 @@ describe("createTipSender", () => {
 });
 
 describe("tipRecipients", () => {
-    const human = { kind: "human" as const, tipsMuted: false };
+    const bettor = { kind: "bettor" as const, tipsMuted: false };
 
     it("always includes the owner once, and skips players without a chat", () => {
         const players = [
-            { ...human, telegramChatId: "200" },
-            { ...human, kind: "scanner" as const, telegramChatId: null },
-            { ...human, telegramChatId: null },
+            { ...bettor, telegramChatId: "200" },
+            { ...bettor, kind: "scanner" as const, telegramChatId: null },
+            { ...bettor, telegramChatId: null },
         ];
         expect(tipRecipients(players, 100)).toEqual([
             { chatId: 100, muted: false },
             { chatId: 200, muted: false },
         ]);
-        expect(tipRecipients([...players, { ...human, telegramChatId: "100", tipsMuted: true }], 100)).toEqual([
+        expect(tipRecipients([...players, { ...bettor, telegramChatId: "100", tipsMuted: true }], 100)).toEqual([
             { chatId: 200, muted: false },
             { chatId: 100, muted: true },
         ]);

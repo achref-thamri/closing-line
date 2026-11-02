@@ -64,18 +64,18 @@ export interface TipRecipient {
     muted: boolean;
 }
 
-/** Every human with a Telegram chat and whether they paused tips; the owner is always included. */
+/** Every bettor with a Telegram chat and whether they paused tips; the owner is always included. */
 export function tipRecipients(
     players: readonly Pick<Player, "kind" | "telegramChatId" | "tipsMuted">[],
     ownerChatId: number,
 ): TipRecipient[] {
-    const humans = players.flatMap((player) =>
-        player.kind === "human" && player.telegramChatId !== null
+    const bettors = players.flatMap((player) =>
+        player.kind === "bettor" && player.telegramChatId !== null
             ? [{ chatId: Number(player.telegramChatId), muted: player.tipsMuted }]
             : [],
     );
-    if (humans.some((human) => human.chatId === ownerChatId)) return humans;
-    return [{ chatId: ownerChatId, muted: false }, ...humans];
+    if (bettors.some((bettor) => bettor.chatId === ownerChatId)) return bettors;
+    return [{ chatId: ownerChatId, muted: false }, ...bettors];
 }
 
 /** Sends the same tip to every recipient who has not paused tips. */

@@ -2,7 +2,7 @@
     "name": "closing-line",
     "private": true,
     "type": "module",
-    "description": "Paper-betting system for European football: a human expert and a value scanner measured against the closing line",
+    "description": "Paper-betting system for European football: an expert bettor and a value scanner measured against the closing line",
     "license": "MIT",
     "packageManager": "pnpm@12.16.1",
     "engines": {

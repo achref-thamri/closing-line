@@ -36,7 +36,7 @@ export function compose(options: {
     });
     const sendTo = (chatId: number, text: string) =>
         createTelegramNotifier({ botToken: config.telegram.botToken, chatId, logger })(text);
-    // Value-bet tips go to the owner and every approved human, at their own books; other alerts stay with the owner.
+    // Value-bet tips go to the owner and every approved bettor; other alerts stay with the owner.
     const tip = createTipSender({
         timeZone: config.timezone,
         logger,
@@ -63,7 +63,7 @@ export function compose(options: {
             message: `${await remindOpenBets({ repos, send: sendTo, now })} reminded`,
         }),
         weekly_report: async () => {
-            // Everyone learns from the report, so every human gets it, tips paused or not.
+            // Everyone learns from the report, so every bettor gets it, tips paused or not.
             const report = await weeklyReport({ repos, config, now });
             const chats = tipRecipients(await repos.players.list(), config.telegram.ownerChatId);
             await Promise.all(chats.map(({ chatId }) => sendTo(chatId, report)));

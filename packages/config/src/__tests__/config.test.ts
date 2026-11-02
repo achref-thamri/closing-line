@@ -50,12 +50,12 @@ describe("parseConfig", () => {
             maxSharpAgeMinutes: 10,
             stake: { kellyMultiplier: 0.25, maxBankrollFraction: 0.02, minStake: 50, maxStake: 500, step: 10 },
         });
-        expect(config.humans.maxBankrollFraction).toBe(0.05);
+        expect(config.bettors.maxBankrollFraction).toBe(0.05);
         expect(config.benchmarkStake).toBe(100);
         expect(config.closingWindowMinutes).toBe(45);
         expect(config.credits).toEqual({ reserve: 50, warnAt: [0.7, 0.9] });
         expect(config.timezone).toBe("Europe/Copenhagen");
-        expect(config.telegram).toEqual({ botToken: "123:abc", ownerChatId: 42, friendChatId: undefined });
+        expect(config.telegram).toEqual({ botToken: "123:abc", ownerChatId: 42 });
         expect(config.logLevel).toBe("info");
         expect(config.heartbeatPath).toBe("data/heartbeat");
     });
@@ -69,8 +69,8 @@ describe("parseConfig", () => {
     });
 
     it("treats empty variables as unset", () => {
-        const config = parseConfig({ ...env, TELEGRAM_FRIEND_CHAT_ID: "", DATABASE_URL: "", LOG_LEVEL: "" });
-        expect(config.telegram.friendChatId).toBeUndefined();
+        const config = parseConfig({ ...env, HEALTHCHECK_PING_URL: "", DATABASE_URL: "", LOG_LEVEL: "" });
+        expect(config.healthcheckPingUrl).toBeUndefined();
         expect(config.database.kind).toBe("pglite");
         expect(config.logLevel).toBe("info");
     });
