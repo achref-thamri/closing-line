@@ -94,6 +94,7 @@ export class BetFlow {
     /** `/start`: welcomes known humans and asks the owner about anyone else. */
     async start(chatId: number, name: string): Promise<Reply> {
         if (await this.isAllowed(chatId)) return { text: WELCOME };
+        if (this.requests.has(chatId)) return { text: WAITING };
         this.requests.set(chatId, name);
         await this.deps.messenger.send(this.ownerChatId, {
             text: `${name} wants to log bets with Closing Line.`,
@@ -109,7 +110,8 @@ export class BetFlow {
 
     /** A screenshot: one card per bet on it. */
     async slip(chatId: number, image: SlipImage): Promise<Reply[]> {
-        if (!(await this.isAllowed(chatId))) return [{ text: "Send /start first." }];
+        if (!(await this.isAllowed(chatId)))
+            return [{ text: this.requests.has(chatId) ? WAITING : "Send /start first." }];
         const receivedAt = this.now();
         this.expireDrafts(receivedAt);
         const [drafts, screenshotPath] = await Promise.all([
@@ -123,7 +125,10 @@ export class BetFlow {
 
     /** A bet typed as text, e.g. "Davies over 0.5 shots on target, Bayern–Arsenal, NordicBet, 3.70, 1500 kr". */
     async typed(chatId: number, text: string): Promise<Reply[]> {
-        if (!(await this.isAllowed(chatId))) return [];
+        if (!(await this.isAllowed(chatId))) {
+            // Someone who asked to join hears why nothing happens; anyone else is ignored.
+            return this.requests.has(chatId) ? [{ text: WAITING }] : [];
+        }
         // Every bet has odds and a stake, so a message without digits is not one; no need to ask Claude.
         if (!/\d/.test(text)) return [{ text: TYPING_HELP }];
         const receivedAt = this.now();
@@ -246,6 +251,7 @@ export class BetFlow {
 
 const WELCOME =
     "Send a screenshot of your bet slip right after placing a bet, or type it. I read it, show you what I found, and you log it with one tap.";
+const WAITING = 'Still waiting for the owner to let you in. Send the bet again once you get "You\'re in!".';
 const TYPING_HELP =
     'Send a screenshot of the slip, or type the bet with match, pick, bookmaker, odds and stake, e.g. "Davies over 0.5 shots on target, Bayern–Arsenal, NordicBet, 3.70, 1500 kr".';
 
