@@ -133,6 +133,11 @@ describe("logging a bet from a slip", () => {
 
         const logged = await flow.tap(FRIEND, button(card, "Lineup"));
         expect(logged.text).toContain("✅ Logged as ⚡ Lineup.");
+        expect(sent.at(-1)).toMatchObject({
+            chatId: OWNER,
+            reply: { text: expect.stringMatching(/^📝 Sam logged:\n🧾 Nordicbet · Brentford – Fulham/) as string },
+        });
+        expect(sent.at(-1)?.reply.text).toMatch(/⚡ Lineup$/);
         expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toMatchObject([
             {
                 fixtureId: null,
@@ -162,8 +167,10 @@ describe("logging a bet from a slip", () => {
 
     it("lets the owner log bets without being approved", async () => {
         const [card] = await flow.slip(OWNER, image);
+        const before = sent.length;
         await flow.tap(OWNER, button(card, "Game read"));
         expect(await repos.bets.forPlayer("owner")).toHaveLength(1);
+        expect(sent).toHaveLength(before); // no note to themselves
     });
 
     it("refuses settled slips", async () => {
@@ -218,6 +225,7 @@ describe("typed bets", () => {
         );
         expect(card?.text).toContain("✍️ Typed, no screenshot");
         await flow.tap(FRIEND, button(card, "Game read"));
+        expect(sent.at(-1)?.reply.text).toMatch(/🧠 Game read · typed$/);
         expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toMatchObject([
             { screenshotPath: null, couponId: null, placedAt: null, tag: "game_read", selfReported: true },
         ]);
