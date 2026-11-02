@@ -71,7 +71,7 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
     return lines.join("\n");
 }
 
-/** A bettor's results by reason and sport, typed bets and cash-outs, plus the lessons their numbers support. */
+/** A bettor's results by reason and sport and their cash-outs, plus the lessons their numbers support. */
 export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: string[]; lessons: string[] } {
     const lines: string[] = [];
     const lessons: string[] = [];
@@ -81,8 +81,6 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
     if (byTag.size > 0) lines.push(`By reason: ${groupText(byTag, (tag) => TAG_LABELS[tag] ?? tag)}`);
     const bySport = statsBy(bets, (bet) => (bet.sport === "counter_strike" ? "Counter-Strike" : "Football"));
     if (bySport.size > 1) lines.push(`By sport: ${groupText(bySport, (sport) => sport)}`);
-    const typed = bets.filter((bet) => bet.screenshotPath === null).length;
-    if (typed > 0) lines.push(`Typed without a screenshot: ${typed} of ${bets.length}`);
 
     const cashed = bets.filter((bet) => bet.status === "cashed_out");
     if (cashed.length > 0) {

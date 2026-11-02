@@ -1,9 +1,6 @@
-import { randomBytes } from "node:crypto";
 import type { Config } from "@closing-line/config";
-import { localTime, zonedTimeToUtc } from "@closing-line/core";
 import type { NewBet, Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
-import type { SlipDraft, SlipImage, SlipReader } from "../ports/slips.ts";
 
 export interface Button {
     text: string;
@@ -30,59 +27,104 @@ export const TAGS = {
 } as const;
 type TagKey = keyof typeof TAGS;
 
-/** The friend's books (spec §4), offered when a slip shows no brand. */
-const BOOKS = ["nordicbet", "bet25", "danske_spil", "comeon", "betano", "marathonbet", "campobet", "merkurbets"];
+/** Markets offered as buttons: `line` asks over/under, `result` home/draw/away, `team` a side, `free` a typed pick. */
+const MARKETS = {
+    player_shots_on_target: { label: "Shots on target", kind: "line", player: true },
+    player_shots: { label: "Shots", kind: "line", player: true },
+    player_fouls: { label: "Fouls", kind: "line", player: true },
+    player_cards: { label: "Cards", kind: "line", player: true },
+    corners: { label: "Corners", kind: "line", player: false },
+    match_result: { label: "Match result", kind: "result", player: false },
+    match_winner: { label: "Winner", kind: "team", player: false },
+    other: { label: "Other", kind: "free", player: false },
+} as const;
+type MarketKey = keyof typeof MARKETS;
 
-const MARKET_LABELS: Record<SlipDraft["market"], string> = {
-    player_shots_on_target: "shots on target",
-    player_shots: "shots",
-    player_fouls: "fouls",
-    player_cards: "cards",
-    player_goal: "to score",
-    corners: "corners",
-    cards: "cards",
-    match_result: "1X2",
-    match_winner: "winner",
-    other: "",
+type Sport = "football" | "counter_strike";
+const SPORT_MARKETS: Record<Sport, MarketKey[]> = {
+    football: [
+        "player_shots_on_target",
+        "player_shots",
+        "player_fouls",
+        "player_cards",
+        "corners",
+        "match_result",
+        "other",
+    ],
+    counter_strike: ["match_winner", "other"],
 };
 
-/** Drafts wait this long for a tap; after that the slip has to be sent again. */
-const DRAFT_TTL_MS = 6 * 60 * 60 * 1000;
+/** The friend's books first (spec §4), then other books used in Denmark. */
+const BOOKS = [
+    "nordicbet",
+    "bet25",
+    "danske_spil",
+    "comeon",
+    "betano",
+    "marathonbet",
+    "campobet",
+    "merkurbets",
+    "unibet",
+    "leovegas",
+    "bet365",
+];
+const BOOK_NAMES: Record<string, string> = {
+    nordicbet: "NordicBet",
+    bet25: "Bet25",
+    danske_spil: "Danske Spil",
+    comeon: "ComeOn",
+    betano: "Betano",
+    marathonbet: "Marathonbet",
+    campobet: "Campobet",
+    merkurbets: "MerkurBets",
+    unibet: "Unibet",
+    leovegas: "LeoVegas",
+    bet365: "bet365",
+};
+const LINES = [0.5, 1.5, 2.5, 3.5];
 
-interface PendingDraft {
-    chatId: number;
-    draft: SlipDraft;
-    /** Null for a typed bet: the bettor's word, reported apart from screenshot bets. */
-    screenshotPath: string | null;
-    receivedAt: Date;
+/** A bet being entered waits this long for the next answer; then it has to be started again. */
+const DRAFT_TTL_MS = 60 * 60 * 1000;
+
+type Step = "sport" | "match" | "market" | "player" | "pick" | "book" | "odds" | "stake" | "reason";
+
+/** A complete bet as entered, one answer at a time. */
+export interface Draft {
+    sport: Sport;
+    eventName: string;
+    market: string;
+    playerName: string | null;
+    selection: string;
+    line: number | null;
+    bookmaker: string;
+    odds: number;
+    stakeOre: number;
+}
+
+interface Pending {
+    step: Step;
+    draft: Partial<Draft>;
+    updatedAt: Date;
 }
 
 export interface BetFlowDeps {
-    reader: SlipReader;
     repos: Pick<Repositories, "players" | "bets">;
-    config: Pick<Config, "bettors" | "timezone"> & {
-        telegram: { ownerChatId: number };
-    };
+    config: Pick<Config, "bettors"> & { telegram: { ownerChatId: number } };
     messenger: Messenger;
-    /** Keeps the screenshot as evidence and returns where it was stored. */
-    saveScreenshot: (image: SlipImage, receivedAt: Date) => Promise<string>;
     logger: Logger;
-    /** Settles an open bet when its settled slip arrives (`SettleFlow.fromSlip`). */
-    settler?: { fromSlip(chatId: number, draft: SlipDraft): Promise<Reply | undefined> };
     now?: () => Date;
 }
 
 /**
- * The Telegram bet flow (spec §4): the owner approves who may log bets; a bettor sends a screenshot of an
- * open bet slip, checks the card for each bet on it and logs it with a tag.
+ * The Telegram bet flow (spec §4): the owner approves who may log bets; a bettor logs a bet with `/bet`, answering
+ * one question at a time (buttons where the answers are known, typed text for the match, player, odds and stake),
+ * and tags it with a reason. Each answer is checked when it arrives, so a logged bet is complete.
  */
 export class BetFlow {
     private readonly deps: BetFlowDeps;
     private readonly now: () => Date;
-    private readonly drafts = new Map<string, PendingDraft>();
+    private readonly pending = new Map<number, Pending>();
     private readonly requests = new Map<number, string>();
-    /** Claude reads per chat today, keyed by the local date, to cap the bill. */
-    private readonly reads = new Map<number, { date: string; count: number }>();
 
     constructor(deps: BetFlowDeps) {
         this.deps = deps;
@@ -114,76 +156,58 @@ export class BetFlow {
         return { text: "Thanks! The owner has been asked to let you in. You will get a message when it is done." };
     }
 
-    /** A screenshot: one card per bet on it. */
-    async slip(chatId: number, image: SlipImage): Promise<Reply[]> {
-        if (!(await this.isAllowed(chatId)))
-            return [{ text: this.requests.has(chatId) ? WAITING : "Send /start first." }];
-        const receivedAt = this.now();
-        if (!this.takeRead(chatId, receivedAt)) return [{ text: this.limitText() }];
-        this.expireDrafts(receivedAt);
-        const [drafts, screenshotPath] = await Promise.all([
-            this.deps.reader.read(image),
-            this.deps.saveScreenshot(image, receivedAt),
-        ]);
-        if (drafts.length === 0)
-            return [{ text: "I could not find a bet on that screenshot. Send the open bet slip." }];
-        return this.cards(chatId, drafts, screenshotPath, receivedAt);
-    }
-
-    /** A bet typed as text, e.g. "Davies over 0.5 shots on target, Bayern–Arsenal, NordicBet, 3.70, 1500 kr". */
-    async typed(chatId: number, text: string): Promise<Reply[]> {
+    /** `/bet`: starts a new bet, replacing one left half-entered. */
+    async bet(chatId: number): Promise<Reply> {
         if (!(await this.isAllowed(chatId))) {
-            // Someone who asked to join hears why nothing happens; anyone else is ignored.
-            return this.requests.has(chatId) ? [{ text: WAITING }] : [];
+            return { text: this.requests.has(chatId) ? WAITING : "Send /start first." };
         }
-        // Every bet has odds and a stake, so a message without digits is not one; no need to ask Claude.
-        if (!/\d/.test(text)) return [{ text: TYPING_HELP }];
-        const receivedAt = this.now();
-        if (!this.takeRead(chatId, receivedAt)) return [{ text: this.limitText() }];
-        this.expireDrafts(receivedAt);
-        const drafts = await this.deps.reader.readText(text);
-        if (drafts.length === 0) return [{ text: `I could not find a bet in that. ${TYPING_HELP}` }];
-        return this.cards(chatId, drafts, null, receivedAt);
+        const pending: Pending = { step: "sport", draft: {}, updatedAt: this.now() };
+        this.pending.set(chatId, pending);
+        return this.ask(pending, "sport");
     }
 
-    private async cards(
-        chatId: number,
-        drafts: SlipDraft[],
-        screenshotPath: string | null,
-        receivedAt: Date,
-    ): Promise<Reply[]> {
-        const source = screenshotPath === null ? "\n✍️ Typed, no screenshot" : "";
-        const replies: Reply[] = [];
-        for (const draft of drafts) replies.push(await this.card(chatId, draft, source, screenshotPath, receivedAt));
-        return replies;
+    /** A typed message: the answer to the current question, or a hint when no bet is being entered. */
+    async text(chatId: number, text: string): Promise<Reply[]> {
+        if (!(await this.isAllowed(chatId))) return this.requests.has(chatId) ? [{ text: WAITING }] : [];
+        const pending = this.current(chatId);
+        if (!pending) return [{ text: "Send /bet to log a bet, or /open to settle one." }];
+        return [this.answer(pending, text.trim())];
     }
 
-    private async card(
-        chatId: number,
-        draft: SlipDraft,
-        source: string,
-        screenshotPath: string | null,
-        receivedAt: Date,
-    ): Promise<Reply> {
-        if (draft.status !== "open") {
-            const settled = await this.deps.settler?.fromSlip(chatId, draft);
-            if (settled) return settled;
-            return {
-                text: `${describe(draft)}\n\nAlready ${statusWord(draft.status)}, so not logged: only bets sent before they settle count. Send the slip right after placing the bet; to settle a logged bet use /open.`,
-            };
+    private answer(pending: Pending, answer: string): Reply {
+        const { draft } = pending;
+        switch (pending.step) {
+            case "match":
+                if (answer.length < 3) return { text: "Which match? E.g. Bayern – Arsenal" };
+                draft.eventName = answer;
+                return this.ask(pending, "market");
+            case "player":
+                if (answer.length < 2) return { text: "Which player? E.g. Davies" };
+                draft.playerName = answer;
+                return this.ask(pending, "pick");
+            case "pick":
+                return this.typedPick(pending, answer);
+            case "book":
+                if (answer.length < 2) return { text: "Which bookmaker?" };
+                draft.bookmaker = answer.toLowerCase().replace(/\s+/g, "_");
+                return this.ask(pending, "odds");
+            case "odds": {
+                const odds = parseDecimal(answer);
+                if (odds === undefined || odds <= 1 || odds > 1000) return { text: "The odds as a number, e.g. 3.70" };
+                draft.odds = odds;
+                return this.ask(pending, "stake");
+            }
+            case "stake": {
+                const kroner = parseKroner(answer);
+                if (kroner === undefined) return { text: "The stake in kroner, e.g. 1500" };
+                draft.stakeOre = Math.round(kroner * 100);
+                return this.ask(pending, "reason");
+            }
+            case "sport":
+            case "market":
+            case "reason":
+                return { text: "Tap one of the buttons above, or send /bet to start again." };
         }
-        // Without the match a bet cannot be grouped or checked later, so it is not logged.
-        if (draft.eventName.trim() === "") {
-            return {
-                text: `${describe(draft)}\n\nWhich match was this? Send the bet again with the match in it, e.g. "Bayern–Arsenal".`,
-            };
-        }
-        const id = randomBytes(6).toString("base64url");
-        this.drafts.set(id, { chatId, draft, screenshotPath, receivedAt });
-        return {
-            text: `${describe(draft)}${source}\n\nWhy did you take it? Tap a reason to log the bet.`,
-            keyboard: draftKeyboard(id, draft),
-        };
     }
 
     /** `/tips on|off`: value tips for this person. */
@@ -201,24 +225,139 @@ export class BetFlow {
 
     /** A button tap. Returns the new text for the message the button was on. */
     async tap(chatId: number, data: string): Promise<Reply> {
-        const [action, id = "", extra = ""] = data.split(":");
-        if (action === "ap" || action === "dn") return this.decide(chatId, action === "ap", Number(id));
-
-        const pending = this.drafts.get(id);
-        if (pending?.chatId !== chatId) return { text: "This bet has expired. Send the screenshot again." };
+        const separator = data.indexOf(":");
+        const action = separator < 0 ? data : data.slice(0, separator);
+        const value = separator < 0 ? "" : data.slice(separator + 1);
+        if (action === "ap" || action === "dn") return this.decide(chatId, action === "ap", Number(value));
+        const pending = this.current(chatId);
+        if (!pending) return { text: "This bet is no longer open. Send /bet to start again." };
         if (action === "x") {
-            this.drafts.delete(id);
-            return { text: `${describe(pending.draft)}\n\nDiscarded.` };
+            this.pending.delete(chatId);
+            return { text: "Cancelled. /bet starts a new one." };
         }
-        if (action === "b" && BOOKS.includes(extra)) {
-            pending.draft = { ...pending.draft, bookmaker: extra };
+        if (action === "t" && value in TAGS && pending.step === "reason") {
+            return this.log(chatId, pending, value as TagKey);
+        }
+        if (action !== "w") return { text: "Unknown button." };
+        return this.choose(pending, value);
+    }
+
+    /** A button answer for the current question; anything else asks the question again. */
+    private choose(pending: Pending, value: string): Reply {
+        const { draft } = pending;
+        if (pending.step === "sport" && (value === "football" || value === "counter_strike")) {
+            draft.sport = value;
+            return this.ask(pending, "match");
+        }
+        if (pending.step === "market" && value in MARKETS) {
+            draft.market = value;
+            draft.playerName = null;
+            return this.ask(pending, MARKETS[value as MarketKey].player ? "player" : "pick");
+        }
+        if (pending.step === "pick" && value !== "") {
+            const [selection = "", line] = value.split("|");
+            draft.selection = selection;
+            draft.line = line === undefined ? null : Number(line);
+            return this.ask(pending, "book");
+        }
+        if (pending.step === "book" && BOOKS.includes(value)) {
+            draft.bookmaker = value;
+            return this.ask(pending, "odds");
+        }
+        return this.ask(pending, pending.step);
+    }
+
+    /** A typed pick: "over 9.5" for line markets, the backed side or outcome otherwise. */
+    private typedPick(pending: Pending, answer: string): Reply {
+        const { draft } = pending;
+        if (MARKETS[draft.market as MarketKey].kind === "line") {
+            const match = /^(over|under|o|u)\s*(\d+(?:[.,]\d+)?)$/i.exec(answer);
+            if (!match) return { text: "Type the line like over 9.5 or under 2.5" };
+            draft.selection = match[1]?.toLowerCase().startsWith("u") ? "under" : "over";
+            draft.line = parseDecimal(match[2] ?? "") ?? null;
+        } else {
+            if (answer.length < 2) return { text: "What did you back?" };
+            draft.selection = answer;
+            draft.line = null;
+        }
+        return this.ask(pending, "book");
+    }
+
+    /** Moves to `step` and asks its question. */
+    private ask(pending: Pending, step: Step): Reply {
+        pending.step = step;
+        pending.updatedAt = this.now();
+        const { draft } = pending;
+        switch (step) {
+            case "sport":
+                return {
+                    text: "New bet. Which sport?",
+                    keyboard: [
+                        [
+                            { text: "⚽ Football", data: "w:football" },
+                            { text: "🎮 Counter-Strike", data: "w:counter_strike" },
+                        ],
+                        [CANCEL],
+                    ],
+                };
+            case "match":
+                return { text: "Which match? Type it, e.g. Bayern – Arsenal", keyboard: [[CANCEL]] };
+            case "market": {
+                const buttons = SPORT_MARKETS[draft.sport ?? "football"].map((key) => ({
+                    text: MARKETS[key].label,
+                    data: `w:${key}`,
+                }));
+                return { text: `${draft.eventName ?? ""}\nWhich market?`, keyboard: [...rows(buttons, 2), [CANCEL]] };
+            }
+            case "player":
+                return { text: "Which player? Type the name, e.g. Davies", keyboard: [[CANCEL]] };
+            case "pick":
+                return this.askPick(draft);
+            case "book": {
+                const buttons = BOOKS.map((book) => ({ text: bookName(book), data: `w:${book}` }));
+                return { text: "Which bookmaker? Tap it, or type another.", keyboard: [...rows(buttons, 3), [CANCEL]] };
+            }
+            case "odds":
+                return { text: "What odds did you get? E.g. 3.70", keyboard: [[CANCEL]] };
+            case "stake":
+                return { text: "How much did you stake, in kroner? E.g. 1500", keyboard: [[CANCEL]] };
+            case "reason": {
+                const tags = Object.entries(TAGS).map(([key, { label }]) => ({ text: label, data: `t:${key}` }));
+                return {
+                    text: `${describe(draft as Draft)}\n\nWhy did you take it? Tap a reason to log the bet.`,
+                    keyboard: [...rows(tags, 2), [CANCEL]],
+                };
+            }
+        }
+    }
+
+    private askPick(draft: Partial<Draft>): Reply {
+        const market = MARKETS[draft.market as MarketKey];
+        if (market.kind === "line") {
+            const subject = draft.playerName ? `${draft.playerName}, ${market.label.toLowerCase()}` : market.label;
+            const buttons = LINES.map((line) => ({ text: `Over ${line}`, data: `w:over|${line}` }));
             return {
-                text: `${describe(pending.draft)}\n\nWhy did you take it?`,
-                keyboard: draftKeyboard(id, pending.draft),
+                text: `${subject}: which line? Tap it, or type another (e.g. over 9.5 or under 2.5).`,
+                keyboard: [...rows(buttons, 2), [CANCEL]],
             };
         }
-        if (action === "t" && extra in TAGS) return this.log(id, pending, extra as TagKey);
-        return { text: "Unknown button." };
+        const [home, away] = teamsOf(draft.eventName ?? "");
+        if (market.kind === "result" && home && away) {
+            const sides = [
+                { text: home, data: "w:home" },
+                { text: "Draw", data: "w:draw" },
+                { text: away, data: "w:away" },
+            ];
+            return { text: "Which result?", keyboard: [sides, [CANCEL]] };
+        }
+        if (market.kind === "team" && home && away) {
+            const sides = [
+                { text: home, data: `w:${home}` },
+                { text: away, data: `w:${away}` },
+            ];
+            return { text: "Who did you back?", keyboard: [sides, [CANCEL]] };
+        }
+        return { text: "What did you back? Type it.", keyboard: [[CANCEL]] };
     }
 
     private async decide(chatId: number, allow: boolean, requester: number): Promise<Reply> {
@@ -249,126 +388,151 @@ export class BetFlow {
         return id;
     }
 
-    private async log(id: string, pending: PendingDraft, tagKey: TagKey): Promise<Reply> {
-        const { draft } = pending;
-        const playerId = await this.ensureBettor(pending.chatId, "");
-        const placed = await this.deps.repos.bets.place(this.toBet(playerId, pending, TAGS[tagKey].tag));
-        this.drafts.delete(id);
-        if (!placed) return { text: `${describe(draft)}\n\nAlready logged.` };
-        this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "slip bet logged");
-        if (pending.chatId !== this.ownerChatId) {
+    private async log(chatId: number, pending: Pending, tagKey: TagKey): Promise<Reply> {
+        const draft = pending.draft as Draft;
+        this.pending.delete(chatId);
+        const playerId = await this.ensureBettor(chatId, "");
+        await this.deps.repos.bets.place(this.toBet(playerId, draft, TAGS[tagKey].tag));
+        this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "bet logged");
+        if (chatId !== this.ownerChatId) {
             // Telegram chats with a bot are private, so the owner hears about other bettors' bets from the bot.
-            const name = (await this.deps.repos.players.byChat(pending.chatId))?.name ?? playerId;
-            const typed = pending.screenshotPath === null ? " · typed" : "";
+            const name = (await this.deps.repos.players.byChat(chatId))?.name ?? playerId;
             await this.deps.messenger.send(this.ownerChatId, {
-                text: `📝 ${name} logged:\n${describe(draft)}\n${TAGS[tagKey].label}${typed}`,
+                text: `📝 ${name} logged:\n${describe(draft)}\n${TAGS[tagKey].label}`,
             });
         }
-
         const cap = this.deps.config.bettors.maxBankrollFraction * this.deps.config.bettors.startingBankroll * 100;
         const capNote = draft.stakeOre > cap ? `\nNote: the stake is above the ${kroner(cap)} cap.` : "";
-        return { text: `${describe(draft)}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}` };
+        return { text: `${describe(draft)}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}\n/bet logs another.` };
     }
 
-    private toBet(playerId: string, pending: PendingDraft, tag: NewBet["tag"]): NewBet {
-        const { draft } = pending;
+    private toBet(playerId: string, draft: Draft, tag: NewBet["tag"]): NewBet {
+        const now = this.now();
         return {
             playerId,
             fixtureId: null,
-            sport: draft.sport === "other" ? "football" : draft.sport,
+            sport: draft.sport,
             eventName: draft.eventName,
-            competition: draft.competition,
-            market: draft.market === "other" ? draft.marketText : draft.market,
+            market: draft.market,
             selection: draft.selection,
             playerName: draft.playerName,
             line: draft.line,
             stakeOre: draft.stakeOre,
             lockedOdds: draft.odds,
             bookmaker: draft.bookmaker,
-            couponId: draft.couponId,
-            placedAt: draft.placedAtLocal
-                ? (zonedTimeToUtc(draft.placedAtLocal, this.deps.config.timezone) ?? null)
-                : null,
-            receivedAt: pending.receivedAt,
+            receivedAt: now,
             selfReported: true,
             tag,
-            screenshotPath: pending.screenshotPath,
         };
     }
 
-    /** Counts one Claude read for the chat; false once today's allowance is used up. */
-    private takeRead(chatId: number, now: Date): boolean {
-        const date = localTime(now, this.deps.config.timezone).date;
-        const today = this.reads.get(chatId);
-        const count = today?.date === date ? today.count : 0;
-        if (count >= this.deps.config.bettors.dailySlipReads) return false;
-        this.reads.set(chatId, { date, count: count + 1 });
-        return true;
-    }
-
-    private limitText(): string {
-        return `You've reached today's limit of ${this.deps.config.bettors.dailySlipReads} slips. It resets at midnight; log the rest tomorrow.`;
-    }
-
-    private expireDrafts(now: Date): void {
-        for (const [id, pending] of this.drafts) {
-            if (now.getTime() - pending.receivedAt.getTime() > DRAFT_TTL_MS) this.drafts.delete(id);
+    /** The chat's bet in progress, dropped once it has waited too long. */
+    private current(chatId: number): Pending | undefined {
+        const pending = this.pending.get(chatId);
+        if (pending && this.now().getTime() - pending.updatedAt.getTime() > DRAFT_TTL_MS) {
+            this.pending.delete(chatId);
+            return undefined;
         }
+        return pending;
     }
 }
 
+const CANCEL: Button = { text: "✖ Cancel", data: "x" };
 const WELCOME =
-    "Send a screenshot of your bet slip right after placing a bet, or type it. I read it, show you what I found, and you log it with one tap.\n\n" +
-    "When a bet is over, /open settles it (won, lost, void or cashed out), or send the settled slip.\n" +
+    "Send /bet right after placing a bet. I ask for the match, market, pick, bookmaker, odds and stake one at a time, then you tap why you took it.\n\n" +
+    "When a bet is over, /open settles it (won, lost, void or cashed out).\n" +
     "You also get value tips, the same ones the owner gets; /tips off pauses them.";
-const WAITING = 'Still waiting for the owner to let you in. Send the bet again once you get "You\'re in!".';
-const TYPING_HELP =
-    'Send a screenshot of the slip, or type the bet with match, pick, bookmaker, odds and stake, e.g. "Davies over 0.5 shots on target, Bayern–Arsenal, NordicBet, 3.70, 1500 kr".';
+const WAITING = 'Still waiting for the owner to let you in. Send /bet once you get "You\'re in!".';
 
-function draftKeyboard(id: string, draft: SlipDraft): Keyboard {
-    const tags = Object.entries(TAGS).map(([key, { label }]) => ({ text: label, data: `t:${id}:${key}` }));
-    const rows: Keyboard = [tags.slice(0, 2), tags.slice(2, 4)];
-    if (draft.bookmaker === "unknown") {
-        const books = BOOKS.map((book) => ({ text: bookName(book), data: `b:${id}:${book}` }));
-        rows.unshift(books.slice(0, 4), books.slice(4));
-    }
-    rows.push([{ text: "✖ Discard", data: `x:${id}` }]);
-    return rows;
+function rows(buttons: Button[], size: number): Keyboard {
+    const result: Keyboard = [];
+    for (let i = 0; i < buttons.length; i += size) result.push(buttons.slice(i, i + size));
+    return result;
 }
+
+/** The two sides of "Bayern – Arsenal", "Bayern v Arsenal" or "Bayern-Arsenal"; empty when it does not split. */
+export function teamsOf(eventName: string): [string, string] | [] {
+    const parts = eventName.split(/\s+(?:v|vs)\s+|\s*[–-]\s*/i).map((part) => part.trim());
+    const [home, away] = parts;
+    return parts.length === 2 && home && away ? [home, away] : [];
+}
+
+const MARKET_LABELS: Record<string, string> = {
+    player_shots_on_target: "shots on target",
+    player_shots: "shots",
+    player_fouls: "fouls",
+    player_cards: "cards",
+    player_goal: "to score",
+    corners: "corners",
+    cards: "cards",
+    match_winner: "to win",
+};
+
+type Described = Pick<
+    Draft,
+    "eventName" | "market" | "selection" | "playerName" | "line" | "bookmaker" | "odds" | "stakeOre"
+>;
 
 /** The card text for a bet. */
-export function describe(draft: SlipDraft): string {
-    const pick = pickText({ ...draft, market: MARKET_LABELS[draft.market] ? draft.market : draft.marketText });
-    const book = draft.bookmaker === "unknown" ? "Bookmaker? Tap it below" : bookName(draft.bookmaker);
-    const lines = [
-        `🧾 ${book} · ${draft.eventName}${draft.competition ? ` (${draft.competition})` : ""}`,
-        pick,
-        `Odds ${draft.odds.toFixed(2)} · Stake ${kroner(draft.stakeOre)}`,
-    ];
-    if (draft.placedAtLocal) lines.push(`Placed ${draft.placedAtLocal.replace("T", " ")}`);
-    return lines.join("\n");
+export function describe(bet: Described): string {
+    return [
+        `🧾 ${bookName(bet.bookmaker)} · ${bet.eventName}`,
+        pickText(bet),
+        `Odds ${bet.odds.toFixed(2)} · Stake ${kroner(bet.stakeOre)}`,
+    ].join("\n");
 }
 
-/** What was backed, e.g. "Davies shots on target over 0.5" or "Team Liquid winner". */
-export function pickText(bet: { market: string; selection: string; playerName: string | null; line: number | null }) {
-    const market = (MARKET_LABELS as Record<string, string | undefined>)[bet.market] ?? bet.market;
-    const line = bet.line === null ? "" : ` ${bet.line}`;
-    return bet.selection === "over" || bet.selection === "under"
-        ? `${bet.playerName ?? ""} ${market} ${bet.selection}${line}`.trim()
-        : `${bet.selection}${bet.playerName ? ` (${bet.playerName})` : ""} ${market}`.trim();
+/** What was backed, e.g. "Davies shots on target over 0.5", "Bayern to win" or "Draw". */
+export function pickText(bet: {
+    market: string;
+    selection: string;
+    playerName: string | null;
+    line: number | null;
+    eventName?: string | null;
+}): string {
+    if (bet.selection === "over" || bet.selection === "under") {
+        const market = MARKET_LABELS[bet.market] ?? bet.market;
+        return `${bet.playerName ?? ""} ${market} ${bet.selection}${bet.line === null ? "" : ` ${bet.line}`}`.trim();
+    }
+    if (bet.market === "match_result") {
+        const [home, away] = teamsOf(bet.eventName ?? "");
+        if (bet.selection === "draw") return "Draw";
+        if (bet.selection === "home" && home) return `${home} to win`;
+        if (bet.selection === "away" && away) return `${away} to win`;
+        return bet.selection;
+    }
+    const market = MARKET_LABELS[bet.market];
+    return market ? `${bet.selection} ${market}` : bet.selection;
 }
 
 export function bookName(book: string): string {
-    return book
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-}
-
-function statusWord(status: SlipDraft["status"]): string {
-    return status === "cashed_out" ? "cashed out" : status;
+    return (
+        BOOK_NAMES[book] ??
+        book
+            .split("_")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")
+    );
 }
 
 export function kroner(ore: number): string {
     return `${(ore / 100).toLocaleString("en-GB", { maximumFractionDigits: 2 })} kr`;
+}
+
+/** "3.70" or "3,70" as a number; undefined otherwise. */
+export function parseDecimal(text: string): number | undefined {
+    if (!/^\d+(?:[.,]\d+)?$/.test(text.trim())) return undefined;
+    return Number(text.trim().replace(",", "."));
+}
+
+/** Reads "2557", "2557 kr", "2.557,17" (Danish) or "2,557.17" as kroner; undefined when it is not one amount. */
+export function parseKroner(text: string): number | undefined {
+    const cleaned = text.replace(/kr\.?|dkk/gi, "").replace(/\s/g, "");
+    if (!/^\d[\d.,]*$/.test(cleaned)) return undefined;
+    const lastSeparator = Math.max(cleaned.lastIndexOf(","), cleaned.lastIndexOf("."));
+    const decimals = lastSeparator >= 0 && cleaned.length - lastSeparator - 1 <= 2 ? lastSeparator : -1;
+    const whole = (decimals >= 0 ? cleaned.slice(0, decimals) : cleaned).replace(/[.,]/g, "");
+    const fraction = decimals >= 0 ? cleaned.slice(decimals + 1) : "";
+    const value = Number(`${whole}.${fraction || "0"}`);
+    return Number.isFinite(value) && value > 0 ? value : undefined;
 }

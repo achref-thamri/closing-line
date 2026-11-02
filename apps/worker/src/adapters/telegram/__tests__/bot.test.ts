@@ -1,11 +1,8 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BetFlow, Reply } from "../../../app/betFlow.ts";
 import type { SettleFlow } from "../../../app/settleFlow.ts";
 import { silentLogger } from "../../../lib/logger.ts";
-import { createBetBot, screenshotStore } from "../bot.ts";
+import { createBetBot } from "../bot.ts";
 
 const botInfo = {
     id: 1,
@@ -27,157 +24,107 @@ const from = { id: 200, is_bot: false, first_name: "Sam" } as const;
 
 let calls: { method: string; payload: Record<string, unknown> }[];
 
-function setup(
-    flow: Partial<BetFlow>,
-    settle: Partial<SettleFlow> = { amount: () => Promise.resolve(undefined) },
-    fileFetch = vi.fn().mockResolvedValue(new Response("jpeg bytes")),
-) {
-    const bot = createBetBot({ botToken: "1:secret", logger: silentLogger, botInfo, fetch: fileFetch });
+function setup(flow: Partial<BetFlow>, settle: Partial<SettleFlow> = { amount: () => Promise.resolve(undefined) }) {
+    const bot = createBetBot({ botToken: "1:secret", logger: silentLogger, botInfo });
     bot.api.config.use((_prev, method, payload) => {
-        calls.push({ method, payload: payload });
-        const result = method === "getFile" ? { file_id: "f", file_unique_id: "u", file_path: "photos/1.jpg" } : true;
-        return Promise.resolve({ ok: true, result } as never);
+        calls.push({ method, payload });
+        return Promise.resolve({ ok: true, result: true } as never);
     });
     bot.attach(flow as BetFlow, settle as SettleFlow);
-    return { bot, fileFetch };
+    return bot;
 }
 
 function message(extra: Record<string, unknown>, updateId = 1) {
     return { update_id: updateId, message: { message_id: 10, date: 0, chat, from, ...extra } };
 }
 
+function command(name: string, updateId = 1) {
+    return message(
+        { text: name, entities: [{ type: "bot_command", offset: 0, length: name.split(" ")[0]?.length }] },
+        updateId,
+    );
+}
+
+function tapUpdate(data: string, updateId = 1) {
+    return {
+        update_id: updateId,
+        callback_query: {
+            id: "q",
+            from,
+            chat_instance: "c",
+            data,
+            message: { message_id: 11, date: 0, chat, from: botInfo, text: "question" },
+        },
+    };
+}
+
 const sent = (method: string) => calls.filter((call) => call.method === method).map((call) => call.payload);
+const question: Reply = { text: "New bet. Which sport?", keyboard: [[{ text: "⚽ Football", data: "w:football" }]] };
 
 beforeEach(() => {
     calls = [];
 });
 
 describe("bet bot", () => {
-    it("answers /start with the flow's reply", async () => {
-        const start = vi.fn().mockResolvedValue({ text: "Welcome" });
-        const { bot } = setup({ start });
-        await bot.handleUpdate(message({ text: "/start", entities: [{ type: "bot_command", offset: 0, length: 6 }] }));
-        expect(start).toHaveBeenCalledWith(200, "Sam");
-        expect(sent("sendMessage")).toEqual([expect.objectContaining({ chat_id: 200, text: "Welcome" })]);
-    });
-
-    it("downloads the largest photo and sends one card per bet with its buttons", async () => {
-        const cards: Reply[] = [
-            { text: "card 1", keyboard: [[{ text: "⚡ Lineup", data: "t:abc:l" }]] },
-            { text: "settled" },
-        ];
-        const slip = vi.fn().mockResolvedValue(cards);
-        const { bot, fileFetch } = setup({ slip });
-        await bot.handleUpdate(
-            message({
-                photo: [
-                    { file_id: "small", file_unique_id: "s", width: 90, height: 160 },
-                    { file_id: "large", file_unique_id: "l", width: 1080, height: 1920 },
-                ],
-            }),
-        );
-        expect(sent("getFile")).toEqual([{ file_id: "large" }]);
-        expect(fileFetch).toHaveBeenCalledWith(
-            "https://api.telegram.org/file/bot1:secret/photos/1.jpg",
-            expect.anything(),
-        );
-        expect(slip).toHaveBeenCalledWith(200, { data: Buffer.from("jpeg bytes"), mediaType: "image/jpeg" });
-        expect(sent("sendMessage")).toEqual([
-            expect.objectContaining({
-                text: "card 1",
-                reply_markup: { inline_keyboard: [[{ text: "⚡ Lineup", callback_data: "t:abc:l" }]] },
-            }),
-            expect.objectContaining({ text: "settled" }),
-        ]);
-    });
-
-    it("takes screenshots sent as files, refuses other files, and reports failures", async () => {
-        const slip = vi.fn().mockRejectedValue(new Error("API down"));
-        const { bot } = setup({ slip });
-        await bot.handleUpdate(message({ document: { file_id: "d", file_unique_id: "d", mime_type: "image/png" } }));
-        expect(slip).toHaveBeenCalledWith(200, expect.objectContaining({ mediaType: "image/png" }));
-        await bot.handleUpdate(
-            message({ document: { file_id: "p", file_unique_id: "p", mime_type: "application/pdf" } }, 2),
-        );
-        expect(sent("sendMessage").map((payload) => payload.text)).toEqual([
-            "Sorry, I could not read that slip. Try again in a minute.",
-            "Send the bet slip as a photo or screenshot.",
-        ]);
-    });
-
-    it("edits the card when a button is tapped", async () => {
-        const tap = vi.fn().mockResolvedValue({ text: "✅ Logged" });
-        const { bot } = setup({ tap });
-        await bot.handleUpdate({
-            update_id: 3,
-            callback_query: {
-                id: "q",
-                from,
-                chat_instance: "c",
-                data: "t:abc:l",
-                message: { message_id: 11, date: 0, chat, from: botInfo, text: "card" },
-            },
-        });
-        expect(tap).toHaveBeenCalledWith(200, "t:abc:l");
-        expect(sent("editMessageText")).toEqual([expect.objectContaining({ message_id: 11, text: "✅ Logged" })]);
-        expect(sent("answerCallbackQuery")).toHaveLength(1);
-    });
-
-    it("passes typed messages to the flow and reports failures", async () => {
-        const typed = vi
-            .fn()
-            .mockResolvedValueOnce([{ text: "typed card", keyboard: [[{ text: "🧠 Game read", data: "t:x:g" }]] }])
-            .mockResolvedValueOnce([])
-            .mockRejectedValueOnce(new Error("API down"));
-        const { bot } = setup({ typed });
-        await bot.handleUpdate(message({ text: "Davies over 0.5 at 3.70, 1500 kr" }));
-        await bot.handleUpdate(message({ text: "from a stranger" }, 2));
-        await bot.handleUpdate(message({ text: "Davies over 0.5 at 3.70, 1500 kr" }, 3));
-        expect(typed).toHaveBeenCalledWith(200, "Davies over 0.5 at 3.70, 1500 kr");
-        expect(sent("sendMessage").map((payload) => payload.text)).toEqual([
-            "typed card",
-            "Sorry, I could not read that. Try again in a minute.",
-        ]);
-    });
-
-    it("handles /tips", async () => {
-        const tips = vi.fn().mockResolvedValue({ text: "Value tips are off." });
-        const { bot } = setup({ tips });
-        await bot.handleUpdate(
-            message({ text: "/tips off", entities: [{ type: "bot_command", offset: 0, length: 5 }] }),
-        );
-        expect(tips).toHaveBeenCalledWith(200, "Sam", "off");
-        expect(sent("sendMessage")).toEqual([expect.objectContaining({ text: "Value tips are off." })]);
-    });
-
-    it("lists open bets, routes settle buttons, and takes cash-out amounts before bets", async () => {
-        const open = vi.fn().mockResolvedValue([{ text: "bet 1", keyboard: [[{ text: "✅ Won", data: "st:b1:w" }]] }]);
-        const settleTap = vi.fn().mockResolvedValue({ text: "✅ won +2,200 kr" });
-        const amount = vi.fn().mockResolvedValue({ text: "💰 cashed out" });
-        const typed = vi.fn();
+    it("answers /start, /bet, /tips and /open", async () => {
         const isAllowed = vi.fn().mockResolvedValue(true);
-        const { bot } = setup({ isAllowed, typed }, { open, tap: settleTap, amount });
-        await bot.handleUpdate(message({ text: "/open", entities: [{ type: "bot_command", offset: 0, length: 5 }] }));
-        await bot.handleUpdate({
-            update_id: 2,
-            callback_query: {
-                id: "q",
-                from,
-                chat_instance: "c",
-                data: "st:b1:w",
-                message: { message_id: 12, date: 0, chat, from: botInfo, text: "bet 1" },
-            },
-        });
-        await bot.handleUpdate(message({ text: "2557" }, 3));
+        const start = vi.fn().mockResolvedValue({ text: "Welcome" });
+        const bet = vi.fn().mockResolvedValue(question);
+        const tips = vi.fn().mockResolvedValue({ text: "Value tips are off." });
+        const open = vi.fn().mockResolvedValue([{ text: "No open bets." }]);
+        const bot = setup({ isAllowed, start, bet, tips }, { open });
+        await bot.handleUpdate(command("/start"));
+        await bot.handleUpdate(command("/bet", 2));
+        await bot.handleUpdate(command("/tips off", 3));
+        await bot.handleUpdate(command("/open", 4));
+        expect(start).toHaveBeenCalledWith(200, "Sam");
+        expect(tips).toHaveBeenCalledWith(200, "Sam", "off");
+        expect(sent("sendMessage")).toEqual([
+            expect.objectContaining({ text: "Welcome" }),
+            expect.objectContaining({
+                text: "New bet. Which sport?",
+                reply_markup: { inline_keyboard: [[{ text: "⚽ Football", callback_data: "w:football" }]] },
+            }),
+            expect.objectContaining({ text: "Value tips are off." }),
+            expect.objectContaining({ text: "No open bets." }),
+        ]);
+    });
+
+    it("routes button taps and edits the question in place", async () => {
+        const tap = vi.fn().mockResolvedValue({ text: "Which match?" });
+        const settleTap = vi.fn().mockResolvedValue({ text: "✅ won" });
+        const bot = setup({ tap }, { tap: settleTap });
+        await bot.handleUpdate(tapUpdate("w:football"));
+        await bot.handleUpdate(tapUpdate("st:b1:w", 2));
+        expect(tap).toHaveBeenCalledWith(200, "w:football");
         expect(settleTap).toHaveBeenCalledWith(200, "st:b1:w");
-        expect(amount).toHaveBeenCalledWith(200, "2557");
-        expect(typed).not.toHaveBeenCalled();
-        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["bet 1", "💰 cashed out"]);
-        expect(sent("editMessageText")).toEqual([expect.objectContaining({ text: "✅ won +2,200 kr" })]);
+        expect(sent("editMessageText").map((payload) => payload.text)).toEqual(["Which match?", "✅ won"]);
+        expect(sent("answerCallbackQuery")).toHaveLength(2);
+    });
+
+    it("gives typed text to a waiting cash-out first, then to the bet being entered", async () => {
+        const amount = vi.fn().mockResolvedValueOnce({ text: "💰 cashed out" }).mockResolvedValueOnce(undefined);
+        const text = vi.fn().mockResolvedValue([{ text: "Which market?" }]);
+        const bot = setup({ text }, { amount });
+        await bot.handleUpdate(message({ text: "2557" }));
+        await bot.handleUpdate(message({ text: "Bayern – Arsenal" }, 2));
+        expect(text).toHaveBeenCalledWith(200, "Bayern – Arsenal");
+        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["💰 cashed out", "Which market?"]);
+    });
+
+    it("points bettors who send screenshots to /bet and ignores strangers' files", async () => {
+        const isAllowed = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+        const bot = setup({ isAllowed });
+        const photo = { photo: [{ file_id: "p", file_unique_id: "p", width: 1, height: 1 }] };
+        await bot.handleUpdate(message(photo));
+        await bot.handleUpdate(message(photo, 2));
+        expect(sent("sendMessage").map((payload) => payload.text)).toEqual([
+            "Screenshots are not read. Send /bet and answer the questions instead.",
+        ]);
     });
 
     it("sends messages with or without buttons", async () => {
-        const { bot } = setup({});
+        const bot = setup({});
         await bot.messenger.send(100, { text: "plain" });
         await bot.messenger.send(100, { text: "ask", keyboard: [[{ text: "✅ Allow", data: "ap:200" }]] });
         expect(sent("sendMessage")).toEqual([
@@ -188,24 +135,5 @@ describe("bet bot", () => {
                 reply_markup: { inline_keyboard: [[{ text: "✅ Allow", callback_data: "ap:200" }]] },
             },
         ]);
-    });
-});
-
-describe("screenshotStore", () => {
-    let dir: string;
-    beforeEach(async () => {
-        dir = await mkdtemp(join(tmpdir(), "slips-"));
-    });
-    afterEach(async () => {
-        await rm(dir, { recursive: true, force: true });
-    });
-
-    it("keeps each screenshot in a folder per day", async () => {
-        const path = await screenshotStore(dir)(
-            { data: Buffer.from("png"), mediaType: "image/png" },
-            new Date("2026-11-08T14:15:00Z"),
-        );
-        expect(path).toMatch(new RegExp(`^${dir}/2026-11-08/1794147300000-\\w+\\.png$`));
-        expect(await readFile(path, "utf8")).toBe("png");
     });
 });

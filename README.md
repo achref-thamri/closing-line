@@ -21,10 +21,11 @@ _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/w
   so a strategy has to beat something simple, not just break even.
 - **Never runs out of free credits.** A credit guard spreads the monthly API quota over the days left, keeps a
   reserve, warns at 70% and 90%, and pauses instead of failing when the quota is used up.
-- **Bets from a screenshot.** A bettor sends the bookmaker's bet slip (or types the bet); Claude reads it into a card,
-  one tap logs it with a reason, and `/open` settles it later, cash-outs included.
-- **Correct by construction.** One bet per selection for automated players and one per slip coupon for bettors
-  (unique indexes), settlement only of open bets,
+- **A bet in a few taps.** `/bet` asks for the match, market, player, line, bookmaker, odds and stake one at a time,
+  with buttons wherever the answers are known, and checks each answer before the next question. One more tap logs
+  the reason, and `/open` settles the bet later, cash-outs included.
+- **Correct by construction.** One bet per selection for automated players (a unique index), settlement only of
+  open bets,
   jobs that run at most once and never late, money in integer øre, and check constraints for data that must never
   exist.
 - **Tested at every level.** Property-based tests for the maths, use cases on a real Postgres engine in-process
@@ -49,9 +50,9 @@ flowchart LR
 4. **Settlement** matches fixtures to football-data.org results by kickoff and team names, which differ between the
    sources, and settles bets on the regular-time score. Matches called off for 48 hours are void.
 
-Bettors use the same Telegram bot: the owner approves who may join, a slip screenshot or typed bet becomes a card
-with reason buttons (lineup, skewed price, game read, slow live price), `/open` settles bets, and a morning reminder
-lists bets still open. Claude reads at most 30 slips per bettor a day.
+Bettors use the same Telegram bot: the owner approves who may join, `/bet` walks through a bet question by question
+and ends with reason buttons (lineup, skewed price, game read, slow live price), `/open` settles bets, and a morning
+reminder lists bets still open.
 
 Telegram also carries settlements, credit warnings, failed jobs and the Monday report, which breaks each bettor's
 results down by reason and ends with a lesson of the week. A dashboard shows the leaderboard, each player's
@@ -75,8 +76,8 @@ flowchart TB
         a5[BetFlow] ~~~ a6[SettleFlow] ~~~ a7[tips] ~~~ a8[weeklyReport]
     end
     app --> core["packages/core: pure<br/>devig · value · staking · settlement · slips · credits · schedule"]
-    app --> ports["ports<br/>OddsSource · ResultsSource · SlipReader"]
-    adapters["adapters<br/>The Odds API · football-data.org · Claude · Telegram"] -. implement .-> ports
+    app --> ports["ports<br/>OddsSource · ResultsSource"]
+    adapters["adapters<br/>The Odds API · football-data.org · Telegram"] -. implement .-> ports
     app --> db["packages/db<br/>Drizzle schema · migrations · repositories"]
     db --> pg[("PostgreSQL 18<br/>PGlite in tests")]
 ```
@@ -98,7 +99,7 @@ know vendor APIs. Decisions and their trade-offs are in [docs/adr](docs/adr/).
 ## Tech stack
 
 TypeScript (strict, ESM, erasable syntax only) on Node 24 · pnpm workspaces + Turborepo · PostgreSQL 18 + Drizzle
-ORM · PGlite · zod · pino · grammY · Anthropic SDK (Claude reads bet slips) · Next.js (App Router, server components) · Tailwind CSS · Recharts · Vitest + fast-check
+ORM · PGlite · zod · pino · grammY · Next.js (App Router, server components) · Tailwind CSS · Recharts · Vitest + fast-check
 · Playwright · ESLint (typescript-eslint strict) · Prettier · husky + lint-staged · Docker Compose · GitHub Actions.
 
 Node runs the TypeScript sources directly, so there is no build step: the container runs exactly what was tested.
@@ -160,8 +161,8 @@ deploy unless the worker reports healthy within three minutes.
 ## Status
 
 Phase 1 (scanner, benchmark, settlement) runs on the Premier League, Championship, Bundesliga, La Liga, Serie A and
-Ligue 1 with the free API plans; value-bet tips go to every approved bettor. Phase 2 is live in part: bettors log real bets in Telegram
-from slip screenshots or typed text, tagged with a reason. Next: settling those bets, cash-outs and their reports. A player qualifies for real money only after at least 300 settled
+Ligue 1 with the free API plans; value-bet tips go to every approved bettor. Phase 2 is live: bettors log real bets in Telegram with
+`/bet`, tag them with a reason and settle them with `/open`; the Monday report breaks their results down. A player qualifies for real money only after at least 300 settled
 bets over at least three months, with positive average CLV, a better ROI than the favourite benchmark, and a
 drawdown under 30%.
 

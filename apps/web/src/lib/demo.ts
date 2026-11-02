@@ -109,12 +109,11 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
                     stakeOre: demoBet.stakeOre,
                     lockedOdds,
                     bookmaker: demoBet.playerId === "favourite" ? "pinnacle" : next() < 0.5 ? "unibet_se" : "betsson",
-                    // The friend's bets come from Telegram with a reason; some are typed rather than screenshots.
+                    // The friend's bets come from Telegram with a reason.
                     ...(demoBet.playerId === "friend"
                         ? {
                               selfReported: true,
                               tag: DEMO_TAGS[Math.floor(next() * DEMO_TAGS.length)] ?? "game_read",
-                              screenshotPath: next() < 0.7 ? "demo.jpeg" : null,
                           }
                         : {}),
                     sharpFairOddsAtBet: fairOdds,
