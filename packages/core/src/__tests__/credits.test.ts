@@ -24,7 +24,7 @@ describe("decideCredits", () => {
         });
     });
 
-    it("lets a human bet use the reserve, down to zero", () => {
+    it("lets a bettor's bet use the reserve, down to zero", () => {
         expect(decideCredits({ ...fresh, remaining: 1 }, 1, "bet", RESERVE).allowed).toBe(true);
         expect(decideCredits({ ...fresh, remaining: 0 }, 1, "bet", RESERVE)).toEqual({
             allowed: false,

@@ -26,7 +26,7 @@ beforeEach(async () => {
     );
     await repos.players.ensure([
         { id: "scanner", name: "Scanner", kind: "scanner", startingBankrollOre: 1_000_000 },
-        { id: "friend", name: "Friend", kind: "human", startingBankrollOre: 1_000_000 },
+        { id: "friend", name: "Friend", kind: "bettor", startingBankrollOre: 1_000_000 },
     ]);
     await repos.fixtures.upsert([fixture]);
 });
@@ -46,7 +46,7 @@ function bet(overrides: Partial<NewBet> = {}): NewBet {
     };
 }
 
-/** A human's player-prop bet as read from a bet slip, on a match we do not track. */
+/** A bettor's player-prop bet as read from a bet slip, on a match we do not track. */
 function slipBet(overrides: Partial<NewBet> = {}): NewBet {
     return {
         playerId: "friend",
@@ -190,7 +190,7 @@ describe("bets", () => {
         expect(first && second && first.id < second.id).toBe(true);
     });
 
-    it("stores a human bet with its own price and reasons", async () => {
+    it("stores a bettor's bet with its own price and reasons", async () => {
         await repos.bets.place(
             bet({
                 playerId: "friend",
@@ -253,7 +253,7 @@ describe("bets", () => {
         expect(listed).toMatchObject({ eventName: "Aurora – Team Liquid", fixture: null });
     });
 
-    it("lets a human ladder one player across slips but logs each slip once", async () => {
+    it("lets a bettor ladder one player across slips but logs each slip once", async () => {
         const over05 = slipBet({ selection: "over", line: 0.5, couponId: "c1" });
         expect(await repos.bets.place(over05)).toBeDefined();
         expect(await repos.bets.place(slipBet({ selection: "over", line: 1.5, couponId: "c2" }))).toBeDefined();

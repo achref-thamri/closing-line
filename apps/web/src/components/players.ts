@@ -4,12 +4,12 @@ import type { Player } from "@closing-line/db";
 export function playerColour(player: Pick<Player, "kind">): string {
     if (player.kind === "scanner") return "var(--color-scanner)";
     if (player.kind === "benchmark") return "var(--color-favourite)";
-    return "var(--color-human)";
+    return "var(--color-bettor)";
 }
 
 export const KIND_LABEL: Record<Player["kind"], string> = {
     scanner: "Scanner",
     benchmark: "Benchmark",
-    human: "Human",
+    bettor: "Bettor",
     shadow: "Shadow",
 };

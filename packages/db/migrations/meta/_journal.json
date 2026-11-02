@@ -50,6 +50,13 @@
             "when": 1793646588788,
             "tag": "0006_drop_player_books",
             "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "7",
+            "when": 1793649736922,
+            "tag": "0007_rename_human_to_bettor",
+            "breakpoints": true
         }
     ]
 }

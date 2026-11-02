@@ -17,8 +17,8 @@ afterAll(async () => {
 beforeEach(async () => {
     await handle.db.execute("truncate players, bets restart identity cascade");
     await repos.players.ensure([
-        { id: "tg_2", name: "Sam", kind: "human", startingBankrollOre: 6_000_000, telegramChatId: "2" },
-        { id: "owner", name: "Owner", kind: "human", startingBankrollOre: 6_000_000, telegramChatId: "1" },
+        { id: "tg_2", name: "Sam", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "2" },
+        { id: "owner", name: "Owner", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "1" },
         { id: "scanner", name: "Scanner", kind: "scanner", startingBankrollOre: 1_000_000 },
     ]);
 });
@@ -37,7 +37,7 @@ function slipBet(playerId: string) {
 }
 
 describe("remindOpenBets", () => {
-    it("nudges humans whose bets have been open over 12 hours", async () => {
+    it("nudges bettors whose bets have been open over 12 hours", async () => {
         await slipBet("tg_2");
         await slipBet("tg_2");
         await slipBet("owner");

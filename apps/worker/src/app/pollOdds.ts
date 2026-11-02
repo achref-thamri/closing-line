@@ -36,7 +36,7 @@ export interface PollOddsDeps {
     >;
     now: () => Date;
     notify: (message: string) => Promise<void>;
-    /** Value-bet tips, sent to each human at their own books. Without it the owner gets them through `notify`. */
+    /** Value-bet tips, the same for every bettor. Without it the owner gets them through `notify`. */
     tip?: (tip: Tip) => Promise<void>;
 }
 

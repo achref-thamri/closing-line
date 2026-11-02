@@ -60,7 +60,7 @@ interface PendingDraft {
 export interface BetFlowDeps {
     reader: SlipReader;
     repos: Pick<Repositories, "players" | "bets">;
-    config: Pick<Config, "humans" | "timezone"> & {
+    config: Pick<Config, "bettors" | "timezone"> & {
         telegram: { ownerChatId: number };
     };
     messenger: Messenger;
@@ -73,7 +73,7 @@ export interface BetFlowDeps {
 }
 
 /**
- * The Telegram bet flow (spec §4): the owner approves who may log bets; a human sends a screenshot of an
+ * The Telegram bet flow (spec §4): the owner approves who may log bets; a bettor sends a screenshot of an
  * open bet slip, checks the card for each bet on it and logs it with a tag.
  */
 export class BetFlow {
@@ -97,7 +97,7 @@ export class BetFlow {
         return chatId === this.ownerChatId || (await this.deps.repos.players.byChat(chatId)) !== undefined;
     }
 
-    /** `/start`: welcomes known humans and asks the owner about anyone else. */
+    /** `/start`: welcomes known bettors and asks the owner about anyone else. */
     async start(chatId: number, name: string): Promise<Reply> {
         if (await this.isAllowed(chatId)) return { text: WELCOME };
         if (this.requests.has(chatId)) return { text: WAITING };
@@ -183,7 +183,7 @@ export class BetFlow {
     /** `/tips on|off`: value tips for this person. */
     async tips(chatId: number, name: string, argument: string): Promise<Reply> {
         if (!(await this.isAllowed(chatId))) return { text: "Send /start first." };
-        const playerId = await this.ensureHuman(chatId, name);
+        const playerId = await this.ensureBettor(chatId, name);
         const word = argument.trim().toLowerCase();
         if (word !== "on" && word !== "off") {
             const muted = (await this.deps.repos.players.byChat(chatId))?.tipsMuted ?? false;
@@ -220,12 +220,12 @@ export class BetFlow {
         const name = this.requests.get(requester) ?? `Telegram ${requester}`;
         this.requests.delete(requester);
         if (!allow) return { text: `${name} was not let in.` };
-        await this.ensureHuman(requester, name);
+        await this.ensureBettor(requester, name);
         await this.deps.messenger.send(requester, { text: `You're in! ${WELCOME}` });
         return { text: `${name} can now log bets.` };
     }
 
-    private async ensureHuman(chatId: number, name: string): Promise<string> {
+    private async ensureBettor(chatId: number, name: string): Promise<string> {
         // The owner's player row is named "Owner" whatever their Telegram name is.
         if (chatId === this.ownerChatId) name = "Owner";
         const existing = await this.deps.repos.players.byChat(chatId);
@@ -235,8 +235,8 @@ export class BetFlow {
             {
                 id,
                 name,
-                kind: "human",
-                startingBankrollOre: Math.round(this.deps.config.humans.startingBankroll * 100),
+                kind: "bettor",
+                startingBankrollOre: Math.round(this.deps.config.bettors.startingBankroll * 100),
                 telegramChatId: String(chatId),
             },
         ]);
@@ -245,13 +245,13 @@ export class BetFlow {
 
     private async log(id: string, pending: PendingDraft, tagKey: TagKey): Promise<Reply> {
         const { draft } = pending;
-        const playerId = await this.ensureHuman(pending.chatId, "");
+        const playerId = await this.ensureBettor(pending.chatId, "");
         const placed = await this.deps.repos.bets.place(this.toBet(playerId, pending, TAGS[tagKey].tag));
         this.drafts.delete(id);
         if (!placed) return { text: `${describe(draft)}\n\nAlready logged.` };
         this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "slip bet logged");
         if (pending.chatId !== this.ownerChatId) {
-            // Telegram chats with a bot are private, so the owner hears about other humans' bets from the bot.
+            // Telegram chats with a bot are private, so the owner hears about other bettors' bets from the bot.
             const name = (await this.deps.repos.players.byChat(pending.chatId))?.name ?? playerId;
             const typed = pending.screenshotPath === null ? " · typed" : "";
             await this.deps.messenger.send(this.ownerChatId, {
@@ -259,7 +259,7 @@ export class BetFlow {
             });
         }
 
-        const cap = this.deps.config.humans.maxBankrollFraction * this.deps.config.humans.startingBankroll * 100;
+        const cap = this.deps.config.bettors.maxBankrollFraction * this.deps.config.bettors.startingBankroll * 100;
         const capNote = draft.stakeOre > cap ? `\nNote: the stake is above the ${kroner(cap)} cap.` : "";
         return { text: `${describe(draft)}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}` };
     }
@@ -295,13 +295,13 @@ export class BetFlow {
         const date = localTime(now, this.deps.config.timezone).date;
         const today = this.reads.get(chatId);
         const count = today?.date === date ? today.count : 0;
-        if (count >= this.deps.config.humans.dailySlipReads) return false;
+        if (count >= this.deps.config.bettors.dailySlipReads) return false;
         this.reads.set(chatId, { date, count: count + 1 });
         return true;
     }
 
     private limitText(): string {
-        return `You've reached today's limit of ${this.deps.config.humans.dailySlipReads} slips. It resets at midnight; log the rest tomorrow.`;
+        return `You've reached today's limit of ${this.deps.config.bettors.dailySlipReads} slips. It resets at midnight; log the rest tomorrow.`;
     }
 
     private expireDrafts(now: Date): void {

@@ -95,7 +95,7 @@ describe("positions", () => {
         expect(positionKey(spelledDifferently)).toBe(positionKey(base));
     });
 
-    it("keeps other players, markets, matches and humans apart", () => {
+    it("keeps other players, markets, matches and bettors apart", () => {
         const keys = [
             base,
             { ...base, playerName: "Serhou Guirassy" },

@@ -9,7 +9,7 @@ export type LogLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 export interface Config extends Settings {
     oddsApi: { apiKey: string };
     footballData: { token: string };
-    telegram: { botToken: string; ownerChatId: number; friendChatId: number | undefined };
+    telegram: { botToken: string; ownerChatId: number };
     anthropic: { apiKey: string | undefined };
     database: { kind: "postgres"; url: string } | { kind: "pglite"; dir: string };
     /** External dead man's switch (e.g. healthchecks.io), pinged while the worker runs. */
@@ -39,7 +39,6 @@ export function parseConfig(env: Record<string, string | undefined>, settings: u
         telegram: {
             botToken: e.TELEGRAM_BOT_TOKEN,
             ownerChatId: e.TELEGRAM_OWNER_CHAT_ID,
-            friendChatId: e.TELEGRAM_FRIEND_CHAT_ID,
         },
         anthropic: { apiKey: e.ANTHROPIC_API_KEY },
         database: e.DATABASE_URL ? { kind: "postgres", url: e.DATABASE_URL } : { kind: "pglite", dir: e.PGLITE_DIR },

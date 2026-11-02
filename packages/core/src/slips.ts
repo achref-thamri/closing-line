@@ -1,6 +1,6 @@
 import { playerStats, type MetricsBet, type PlayerStats } from "./metrics.ts";
 
-/** How a human's bet from a slip ended: the selection's own result, or cashed out early. */
+/** How a bettor's bet from a slip ended: the selection's own result, or cashed out early. */
 export type SlipStatus = "won" | "lost" | "void" | "cashed_out";
 
 /** Profit of a bet that ran to the end. Money is in øre so totals add up exactly. */
@@ -48,7 +48,7 @@ export function cashoutGainOre(
     return bet.cashoutOfferOre - bet.stakeOre - heldProfitOre(bet, heldStatus);
 }
 
-/** The fields that make two bets one position: the same human backing the same player in the same market. */
+/** The fields that make two bets one position: the same bettor backing the same player in the same market. */
 export interface PositionBet {
     playerId: string;
     fixtureId: string | null;

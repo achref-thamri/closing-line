@@ -18,16 +18,16 @@ const timestamps = {
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 };
 
-export const playerKind = pgEnum("player_kind", ["human", "scanner", "shadow", "benchmark"]);
+export const playerKind = pgEnum("player_kind", ["bettor", "scanner", "shadow", "benchmark"]);
 export const fixtureStatus = pgEnum("fixture_status", ["scheduled", "finished", "void"]);
 export const snapshotKind = pgEnum("snapshot_kind", ["poll", "on_demand", "closing"]);
 export const betStatus = pgEnum("bet_status", ["open", "won", "lost", "void", "cashed_out"]);
 export const sport = pgEnum("sport", ["football", "counter_strike"]);
-/** Why a human took a bet, chosen in Telegram (spec §4). */
+/** Why a bettor took a bet, chosen in Telegram (spec §4). */
 export const betTag = pgEnum("bet_tag", ["lineup", "skewed_price", "game_read", "slow_live_price"]);
 export const runStatus = pgEnum("run_status", ["running", "succeeded", "skipped", "failed"]);
 
-/** Everyone with a virtual bankroll: humans, the scanner, the shadow player and benchmarks. */
+/** Everyone with a virtual bankroll: bettors, the scanner, the shadow player and benchmarks. */
 export const players = pgTable("players", {
     id: text().primaryKey(),
     name: text().notNull(),
@@ -107,7 +107,7 @@ export const bets = pgTable(
         stakeOre: integer("stake_ore").notNull(),
         lockedOdds: doublePrecision("locked_odds").notNull(),
         bookmaker: text().notNull(),
-        /** The player's own price, entered before seeing the odds (humans only). */
+        /** The player's own price, entered before seeing the odds (bettors only). */
         fairPriceEntered: doublePrecision("fair_price_entered"),
         sharpFairOddsAtBet: doublePrecision("sharp_fair_odds_at_bet"),
         edgeAtBet: doublePrecision("edge_at_bet"),
@@ -125,7 +125,7 @@ export const bets = pgTable(
         placedAt: timestamp("placed_at", { withTimezone: true }),
         receivedAt: timestamp("received_at", { withTimezone: true }),
         live: boolean().notNull().default(false),
-        /** What the other books paid for the same selection, as the human reported it. */
+        /** What the other books paid for the same selection, as the bettor reported it. */
         otherBooksOdds: doublePrecision("other_books_odds"),
         /** The latest cash-out offer seen; for a cashed-out bet, what it paid. */
         cashoutOfferOre: integer("cashout_offer_ore"),
@@ -166,7 +166,7 @@ export const bets = pgTable(
     ],
 );
 
-/** Games a human priced but chose not to bet: training data without selection bias. */
+/** Games a bettor priced but chose not to bet: training data without selection bias. */
 export const passes = pgTable("passes", {
     id: uuid().primaryKey(),
     playerId: text("player_id")

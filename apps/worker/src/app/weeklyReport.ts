@@ -30,7 +30,7 @@ export interface WeeklyReportDeps {
     now: () => Date;
 }
 
-/** One message: every player's week and all-time results, humans' breakdowns, a lesson, and the credit balance. */
+/** One message: every player's week and all-time results, bettors' breakdowns, a lesson, and the credit balance. */
 export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
     const now = deps.now();
     const weekStart = new Date(now.getTime() - WEEK_MS);
@@ -54,8 +54,8 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
             `All time: ${all.settled} settled (${all.won} won), ROI ${percent(all.roi)}, CLV ${percent(all.averageClv)}, ` +
                 `bankroll ${kroner(player.startingBankrollOre + all.profitOre)}, ${all.open} open`,
         );
-        if (player.kind === "human") {
-            const breakdown = humanBreakdown(player.name, await deps.repos.bets.forPlayer(player.id));
+        if (player.kind === "bettor") {
+            const breakdown = bettorBreakdown(player.name, await deps.repos.bets.forPlayer(player.id));
             lines.push(...breakdown.lines);
             lessons.push(...breakdown.lessons);
         }
@@ -71,8 +71,8 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
     return lines.join("\n");
 }
 
-/** A human's results by reason and sport, typed bets and cash-outs, plus the lessons their numbers support. */
-export function humanBreakdown(name: string, bets: readonly Bet[]): { lines: string[]; lessons: string[] } {
+/** A bettor's results by reason and sport, typed bets and cash-outs, plus the lessons their numbers support. */
+export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: string[]; lessons: string[] } {
     const lines: string[] = [];
     const lessons: string[] = [];
     if (bets.length === 0) return { lines, lessons };

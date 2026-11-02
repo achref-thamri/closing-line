@@ -108,7 +108,7 @@ describe("access", () => {
         expect(await repos.players.byChat(FRIEND)).toMatchObject({
             id: `tg_${FRIEND}`,
             name: "Sam",
-            kind: "human",
+            kind: "bettor",
             startingBankrollOre: 6_000_000,
         });
         expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Send a screenshot/);
@@ -250,7 +250,7 @@ describe("daily read limit", () => {
         const limited = new BetFlow({
             reader: { read: () => Promise.resolve([draft]), readText: () => Promise.resolve([draft]) },
             repos,
-            config: { ...config, humans: { ...config.humans, dailySlipReads: 2 } },
+            config: { ...config, bettors: { ...config.bettors, dailySlipReads: 2 } },
             messenger: { send: () => Promise.resolve() },
             saveScreenshot: () => Promise.resolve("/data/slips/x.jpeg"),
             logger: silentLogger,

@@ -2,7 +2,7 @@
  * Why a paid API call is made, highest priority last:
  * - `scan`: routine polls, the first to be dropped;
  * - `closing`: closing prices for matches with open bets;
- * - `bet`: a human placing a bet, which may use the reserve too.
+ * - `bet`: a bettor placing a bet, which may use the reserve too.
  */
 export type CreditPriority = "scan" | "closing" | "bet";
 

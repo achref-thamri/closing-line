@@ -4,7 +4,7 @@
     --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --color-scanner: oklch(0.62 0.17 255);
     --color-favourite: oklch(0.7 0.15 60);
-    --color-human: oklch(0.65 0.17 150);
+    --color-bettor: oklch(0.65 0.17 150);
 }
 
 body {

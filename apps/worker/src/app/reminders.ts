@@ -9,12 +9,12 @@ export interface RemindDeps {
     now: () => Date;
 }
 
-/** Nudges each human with bets logged over 12 hours ago and still open to settle them; returns how many were nudged. */
+/** Nudges each bettor with bets logged over 12 hours ago and still open to settle them; returns how many were nudged. */
 export async function remindOpenBets(deps: RemindDeps): Promise<number> {
     const cutoff = deps.now().getTime() - OPEN_FOR_MS;
     let reminded = 0;
     for (const player of await deps.repos.players.list()) {
-        if (player.kind !== "human" || player.telegramChatId === null) continue;
+        if (player.kind !== "bettor" || player.telegramChatId === null) continue;
         const due = (await deps.repos.bets.openFor(player.id)).filter((bet) => bet.createdAt.getTime() <= cutoff);
         if (due.length === 0) continue;
         const bets = due.length === 1 ? "1 open bet" : `${due.length} open bets`;

@@ -23,7 +23,7 @@ export interface SettleFlowDeps {
 }
 
 /**
- * Settling humans' bets (spec §4): `/open` lists them with Won / Lost / Void / Cashed out buttons; a cash-out asks
+ * Settling bettors' bets (spec §4): `/open` lists them with Won / Lost / Void / Cashed out buttons; a cash-out asks
  * for the amount, records the price it implies, then asks how the bet would have ended. A settled slip whose bet
  * is still open settles it directly.
  */

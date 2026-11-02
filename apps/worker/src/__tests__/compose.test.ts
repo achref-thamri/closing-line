@@ -76,14 +76,14 @@ describe("compose", () => {
         );
     });
 
-    it("sends the weekly report to the owner and every human", async () => {
+    it("sends the weekly report to the owner and every bettor", async () => {
         const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
         const db = createRepositories(handle.db);
         await db.players.ensure([
             {
                 id: "tg_2",
                 name: "Sam",
-                kind: "human",
+                kind: "bettor",
                 startingBankrollOre: 6_000_000,
                 telegramChatId: "2",
                 tipsMuted: true,

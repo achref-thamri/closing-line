@@ -44,7 +44,7 @@ const REMIND_HOUR = 10;
  * - `morning_poll`: 09:00–12:00 local, per league with a match still to come that day.
  * - `prekickoff_poll`: per league and kickoff time, 15 to 2 minutes before kickoff.
  * - `weekly_report`: Mondays from 08:00 local.
- * - `remind`: daily from 10:00 local (humans' open bets to settle).
+ * - `remind`: daily from 10:00 local (bettors' open bets to settle).
  */
 export function dueJobs(input: PlanInput): PlannedJob[] {
     const { now, timeZone } = input;
