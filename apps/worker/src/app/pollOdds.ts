@@ -14,6 +14,7 @@ import type { NewOddsSnapshot, Repositories } from "@closing-line/db";
 import type { EventOdds, OddsSource } from "../ports/odds.ts";
 import type { CreditGuard } from "./creditGuard.ts";
 import { FAVOURITE, SCANNER } from "./players.ts";
+import { formatTip, type Tip } from "./tips.ts";
 
 const WEEK_MS = 7 * 86_400_000;
 
@@ -35,8 +36,8 @@ export interface PollOddsDeps {
     >;
     now: () => Date;
     notify: (message: string) => Promise<void>;
-    /** Value-bet tips; they go to every human, not only the owner. Defaults to `notify`. */
-    tip?: (message: string) => Promise<void>;
+    /** Value-bet tips, sent to each human at their own books. Without it the owner gets them through `notify`. */
+    tip?: (tip: Tip) => Promise<void>;
 }
 
 export type PollReport =
@@ -112,15 +113,18 @@ async function scannerBets(deps: PollOddsDeps, event: EventOdds, fair: Record<Ou
         });
         if (!bet) continue;
         placed++;
-        const edgePercent = (value.edge * 100).toFixed(1);
-        await (deps.tip ?? deps.notify)(
-            `🔎 Value bet: ${teamOf(event, value.selection)} @ ${value.offeredOdds.toFixed(2)} (${value.bookmaker})\n` +
-                `${event.homeTeam} v ${event.awayTeam}, ${kickoffText(event.kickoff, config.timezone)}\n` +
-                `Fair ${value.fairOdds.toFixed(2)}, edge ${edgePercent}%, paper stake ${stake} kr\n` +
-                `💡 Pinnacle, the sharpest bookmaker, prices this at ${value.fairOdds.toFixed(2)} once its margin is ` +
-                `removed. ${value.offeredOdds.toFixed(2)} pays ${edgePercent}% more than the bet is worth, so it wins ` +
-                `money over many bets like it, not every time.`,
-        );
+        const tip: Tip = {
+            homeTeam: event.homeTeam,
+            awayTeam: event.awayTeam,
+            kickoff: event.kickoff,
+            pick: teamOf(event, value.selection),
+            fairOdds: value.fairOdds,
+            offers: value.offers,
+            paperStakeKr: stake,
+            seenAt: deps.now(),
+        };
+        if (deps.tip) await deps.tip(tip);
+        else await deps.notify(formatTip(tip, config.timezone) ?? "");
     }
     return placed;
 }
@@ -181,8 +185,4 @@ function teamOf(event: EventOdds, selection: Outcome): string {
     if (selection === "home") return event.homeTeam;
     if (selection === "away") return event.awayTeam;
     return "Draw";
-}
-
-function kickoffText(kickoff: Date, timeZone: string): string {
-    return kickoff.toLocaleString("en-GB", { timeZone, weekday: "short", hour: "2-digit", minute: "2-digit" });
 }

@@ -3,6 +3,7 @@ import type { Config } from "@closing-line/config";
 import { zonedTimeToUtc } from "@closing-line/core";
 import type { NewBet, Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
+import { bookName as trackedBookName } from "./tips.ts";
 import type { SlipDraft, SlipImage, SlipReader } from "../ports/slips.ts";
 
 export interface Button {
@@ -60,7 +61,9 @@ interface PendingDraft {
 export interface BetFlowDeps {
     reader: SlipReader;
     repos: Pick<Repositories, "players" | "bets">;
-    config: Pick<Config, "humans" | "timezone"> & { telegram: { ownerChatId: number } };
+    config: Pick<Config, "humans" | "timezone" | "bookmakers" | "sharpBookmaker"> & {
+        telegram: { ownerChatId: number };
+    };
     messenger: Messenger;
     /** Keeps the screenshot as evidence and returns where it was stored. */
     saveScreenshot: (image: SlipImage, receivedAt: Date) => Promise<string>;
@@ -155,10 +158,65 @@ export class BetFlow {
         });
     }
 
+    /** `/tips on|off`: value tips for this person. */
+    async tips(chatId: number, name: string, argument: string): Promise<Reply> {
+        if (!(await this.isAllowed(chatId))) return { text: "Send /start first." };
+        const playerId = await this.ensureHuman(chatId, name);
+        const word = argument.trim().toLowerCase();
+        if (word !== "on" && word !== "off") {
+            const muted = (await this.deps.repos.players.byChat(chatId))?.tipsMuted ?? false;
+            return { text: `Value tips are ${muted ? "off" : "on"}. Send /tips on or /tips off.` };
+        }
+        await this.deps.repos.players.setTipsMuted(playerId, word === "off");
+        return { text: word === "off" ? "Value tips are off. /tips on brings them back." : "Value tips are on." };
+    }
+
+    /** `/books`: which bookmakers this person can bet at; tips show only those. */
+    async books(chatId: number, name: string): Promise<Reply> {
+        if (!(await this.isAllowed(chatId))) return { text: "Send /start first." };
+        await this.ensureHuman(chatId, name);
+        return this.booksReply(chatId);
+    }
+
+    private trackedBooks(): string[] {
+        return this.deps.config.bookmakers.filter((book) => book !== this.deps.config.sharpBookmaker);
+    }
+
+    private async booksReply(chatId: number): Promise<Reply> {
+        const chosen = (await this.deps.repos.players.byChat(chatId))?.bookmakers ?? null;
+        const buttons = this.trackedBooks().map((book) => ({
+            text: `${chosen === null || chosen.includes(book) ? "✅" : "⬜"} ${trackedBookName(book)}`,
+            data: `bk:${book}`,
+        }));
+        const rows: Keyboard = [];
+        for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
+        rows.push([{ text: "All books", data: "bk:all" }]);
+        return {
+            text:
+                "Tap the bookmakers you can bet at. Tips only show prices at ✅ books, and you get no tip when none of " +
+                "them pays enough.",
+            keyboard: rows,
+        };
+    }
+
+    private async toggleBook(chatId: number, book: string): Promise<Reply> {
+        const player = await this.deps.repos.players.byChat(chatId);
+        if (!player) return { text: "Send /books again." };
+        const tracked = this.trackedBooks();
+        if (book === "all") await this.deps.repos.players.setBookmakers(player.id, null);
+        else if (tracked.includes(book)) {
+            const current = player.bookmakers ?? tracked;
+            const next = current.includes(book) ? current.filter((each) => each !== book) : [...current, book];
+            await this.deps.repos.players.setBookmakers(player.id, next.length === tracked.length ? null : next);
+        }
+        return this.booksReply(chatId);
+    }
+
     /** A button tap. Returns the new text for the message the button was on. */
     async tap(chatId: number, data: string): Promise<Reply> {
         const [action, id = "", extra = ""] = data.split(":");
         if (action === "ap" || action === "dn") return this.decide(chatId, action === "ap", Number(id));
+        if (action === "bk") return this.toggleBook(chatId, id);
 
         const pending = this.drafts.get(id);
         if (pending?.chatId !== chatId) return { text: "This bet has expired. Send the screenshot again." };
@@ -188,6 +246,8 @@ export class BetFlow {
     }
 
     private async ensureHuman(chatId: number, name: string): Promise<string> {
+        // The owner's player row is named "Owner" whatever their Telegram name is.
+        if (chatId === this.ownerChatId) name = "Owner";
         const existing = await this.deps.repos.players.byChat(chatId);
         if (existing) return existing.id;
         const id = chatId === this.ownerChatId ? "owner" : `tg_${chatId}`;
@@ -205,7 +265,7 @@ export class BetFlow {
 
     private async log(id: string, pending: PendingDraft, tagKey: TagKey): Promise<Reply> {
         const { draft } = pending;
-        const playerId = await this.ensureHuman(pending.chatId, "Owner");
+        const playerId = await this.ensureHuman(pending.chatId, "");
         const placed = await this.deps.repos.bets.place(this.toBet(playerId, pending, TAGS[tagKey].tag));
         this.drafts.delete(id);
         if (!placed) return { text: `${describe(draft)}\n\nAlready logged.` };
@@ -258,7 +318,8 @@ export class BetFlow {
 }
 
 const WELCOME =
-    "Send a screenshot of your bet slip right after placing a bet, or type it. I read it, show you what I found, and you log it with one tap.";
+    "Send a screenshot of your bet slip right after placing a bet, or type it. I read it, show you what I found, and you log it with one tap.\n\n" +
+    "You also get value tips. /books picks the bookmakers you can use, /tips off pauses them.";
 const WAITING = 'Still waiting for the owner to let you in. Send the bet again once you get "You\'re in!".';
 const TYPING_HELP =
     'Send a screenshot of the slip, or type the bet with match, pick, bookmaker, odds and stake, e.g. "Davies over 0.5 shots on target, Bayern–Arsenal, NordicBet, 3.70, 1500 kr".';

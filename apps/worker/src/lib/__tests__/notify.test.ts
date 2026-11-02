@@ -6,7 +6,7 @@ import { isHealthy } from "../../healthcheck.ts";
 import type { Fetch } from "../http.ts";
 import { createLogger, silentLogger, type Logger } from "../logger.ts";
 import { createPinger } from "../ping.ts";
-import { createTelegramBroadcast, createTelegramNotifier } from "../telegram.ts";
+import { createTelegramNotifier } from "../telegram.ts";
 
 function spyLogger(): { logger: Logger; warn: ReturnType<typeof vi.fn> } {
     const warn = vi.fn();
@@ -32,18 +32,6 @@ describe("createTelegramNotifier", () => {
             [{ status: 403 }, "telegram message refused"],
             [{ error: "TypeError" }, "telegram message failed"],
         ]);
-    });
-});
-
-describe("createTelegramBroadcast", () => {
-    it("sends once to every chat listed at sending time", async () => {
-        const fetch = vi.fn<Fetch>().mockResolvedValue(new Response("{}"));
-        const chats = vi.fn().mockResolvedValue([1, 2, 1]);
-        await createTelegramBroadcast({ botToken: "123:abc", chats, logger: silentLogger, fetch })("tip");
-        const sentTo = fetch.mock.calls.map(
-            ([, init]) => (JSON.parse(init?.body as string) as { chat_id: number }).chat_id,
-        );
-        expect(sentTo).toEqual([1, 2]);
     });
 });
 

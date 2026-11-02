@@ -135,6 +135,29 @@ describe("bet bot", () => {
         ]);
     });
 
+    it("handles /tips and /books", async () => {
+        const tips = vi.fn().mockResolvedValue({ text: "Value tips are off." });
+        const books = vi
+            .fn()
+            .mockResolvedValue({ text: "Pick", keyboard: [[{ text: "✅ NordicBet", data: "bk:nordicbet" }]] });
+        const { bot } = setup({ tips, books });
+        await bot.handleUpdate(
+            message({ text: "/tips off", entities: [{ type: "bot_command", offset: 0, length: 5 }] }),
+        );
+        await bot.handleUpdate(
+            message({ text: "/books", entities: [{ type: "bot_command", offset: 0, length: 6 }] }, 2),
+        );
+        expect(tips).toHaveBeenCalledWith(200, "Sam", "off");
+        expect(books).toHaveBeenCalledWith(200, "Sam");
+        expect(sent("sendMessage")).toEqual([
+            expect.objectContaining({ text: "Value tips are off." }),
+            expect.objectContaining({
+                text: "Pick",
+                reply_markup: { inline_keyboard: [[{ text: "✅ NordicBet", callback_data: "bk:nordicbet" }]] },
+            }),
+        ]);
+    });
+
     it("sends messages with or without buttons", async () => {
         const { bot } = setup({});
         await bot.messenger.send(100, { text: "plain" });

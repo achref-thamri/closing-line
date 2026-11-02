@@ -58,6 +58,16 @@ export function createBetBot(options: {
             await ctx.reply((await flow.start(ctx.chat.id, ctx.from?.first_name ?? "Someone")).text);
         });
 
+        bot.command("tips", async (ctx) => {
+            await ctx.reply((await flow.tips(ctx.chat.id, ctx.from?.first_name ?? "Someone", ctx.match)).text);
+        });
+
+        bot.command("books", async (ctx) => {
+            const reply = await flow.books(ctx.chat.id, ctx.from?.first_name ?? "Someone");
+            const keyboard = keyboardOf(reply.keyboard);
+            await ctx.reply(reply.text, keyboard ? { reply_markup: keyboard } : {});
+        });
+
         bot.on(["message:photo", "message:document"], async (ctx) => {
             const photo = ctx.message.photo?.at(-1);
             const document = ctx.message.document;

@@ -36,6 +36,13 @@
             "when": 1793636203868,
             "tag": "0004_slip_bets",
             "breakpoints": true
+        },
+        {
+            "idx": 5,
+            "version": "7",
+            "when": 1793644286774,
+            "tag": "0005_tip_preferences",
+            "breakpoints": true
         }
     ]
 }
