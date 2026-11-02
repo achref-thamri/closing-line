@@ -17,6 +17,20 @@ function pick(bet: BetWithFixture): string {
     return "Draw";
 }
 
+/** Why a human took the bet, as tagged in Telegram; typed bets (no screenshot) are marked. */
+const REASONS: Record<NonNullable<BetWithFixture["tag"]>, string> = {
+    lineup: "⚡ Lineup",
+    skewed_price: "📈 Skewed price",
+    game_read: "🧠 Game read",
+    slow_live_price: "⏱ Slow live",
+};
+
+function reason(bet: BetWithFixture): string {
+    if (!bet.selfReported) return "";
+    const tag = bet.tag ? REASONS[bet.tag] : "";
+    return bet.screenshotPath === null ? `${tag} ✍️`.trim() : tag;
+}
+
 function match(bet: BetWithFixture): string {
     return bet.fixture ? `${bet.fixture.homeTeam} v ${bet.fixture.awayTeam}` : (bet.eventName ?? "");
 }
@@ -31,9 +45,15 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                         <th className="px-3 py-2 font-medium">Player</th>
                         <th className="px-3 py-2 font-medium">Match</th>
                         <th className="px-3 py-2 font-medium">Pick</th>
+                        <th className="px-3 py-2 font-medium">Reason</th>
                         <th className="px-3 py-2 text-right font-medium">Odds</th>
                         <th className="px-3 py-2 text-right font-medium">Stake</th>
-                        <th className="px-3 py-2 text-right font-medium">CLV</th>
+                        <th
+                            className="px-3 py-2 text-right font-medium"
+                            title="Closing line value; for player props, the price move read from a cash-out"
+                        >
+                            CLV / move
+                        </th>
                         <th className="px-3 py-2 text-right font-medium">Result</th>
                     </tr>
                 </thead>
@@ -54,6 +74,7 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap">{match(bet)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap">{pick(bet)}</td>
+                                <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{reason(bet)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{odds(bet.lockedOdds)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{kroner(bet.stakeOre)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{percent(bet.clv ?? undefined)}</td>

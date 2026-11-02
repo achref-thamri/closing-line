@@ -37,6 +37,8 @@ function random(seed: number): () => number {
     };
 }
 
+const DEMO_TAGS = ["lineup", "skewed_price", "game_read"] as const;
+
 /**
  * Fills an empty database with ten weeks of made-up Premier League bets for every player, so the dashboard can be
  * shown without real data or API keys. The value scanner and the friend get a small real edge; the favourite none.
@@ -107,6 +109,14 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
                     stakeOre: demoBet.stakeOre,
                     lockedOdds,
                     bookmaker: demoBet.playerId === "favourite" ? "pinnacle" : next() < 0.5 ? "unibet_se" : "betsson",
+                    // The friend's bets come from Telegram with a reason; some are typed rather than screenshots.
+                    ...(demoBet.playerId === "friend"
+                        ? {
+                              selfReported: true,
+                              tag: DEMO_TAGS[Math.floor(next() * DEMO_TAGS.length)] ?? "game_read",
+                              screenshotPath: next() < 0.7 ? "demo.jpeg" : null,
+                          }
+                        : {}),
                     sharpFairOddsAtBet: fairOdds,
                     edgeAtBet: demoBet.edge,
                 });
