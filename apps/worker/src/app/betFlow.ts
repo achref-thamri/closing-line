@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Config } from "@closing-line/config";
-import { zonedTimeToUtc } from "@closing-line/core";
+import { localTime, zonedTimeToUtc } from "@closing-line/core";
 import type { NewBet, Repositories } from "@closing-line/db";
 import type { Logger } from "../lib/logger.ts";
 import { bookName as trackedBookName } from "./tips.ts";
@@ -82,6 +82,8 @@ export class BetFlow {
     private readonly now: () => Date;
     private readonly drafts = new Map<string, PendingDraft>();
     private readonly requests = new Map<number, string>();
+    /** Claude reads per chat today, keyed by the local date, to cap the bill. */
+    private readonly reads = new Map<number, { date: string; count: number }>();
 
     constructor(deps: BetFlowDeps) {
         this.deps = deps;
@@ -118,6 +120,7 @@ export class BetFlow {
         if (!(await this.isAllowed(chatId)))
             return [{ text: this.requests.has(chatId) ? WAITING : "Send /start first." }];
         const receivedAt = this.now();
+        if (!this.takeRead(chatId, receivedAt)) return [{ text: this.limitText() }];
         this.expireDrafts(receivedAt);
         const [drafts, screenshotPath] = await Promise.all([
             this.deps.reader.read(image),
@@ -137,6 +140,7 @@ export class BetFlow {
         // Every bet has odds and a stake, so a message without digits is not one; no need to ask Claude.
         if (!/\d/.test(text)) return [{ text: TYPING_HELP }];
         const receivedAt = this.now();
+        if (!this.takeRead(chatId, receivedAt)) return [{ text: this.limitText() }];
         this.expireDrafts(receivedAt);
         const drafts = await this.deps.reader.readText(text);
         if (drafts.length === 0) return [{ text: `I could not find a bet in that. ${TYPING_HELP}` }];
@@ -327,6 +331,20 @@ export class BetFlow {
             tag,
             screenshotPath: pending.screenshotPath,
         };
+    }
+
+    /** Counts one Claude read for the chat; false once today's allowance is used up. */
+    private takeRead(chatId: number, now: Date): boolean {
+        const date = localTime(now, this.deps.config.timezone).date;
+        const today = this.reads.get(chatId);
+        const count = today?.date === date ? today.count : 0;
+        if (count >= this.deps.config.humans.dailySlipReads) return false;
+        this.reads.set(chatId, { date, count: count + 1 });
+        return true;
+    }
+
+    private limitText(): string {
+        return `You've reached today's limit of ${this.deps.config.humans.dailySlipReads} slips. It resets at midnight; log the rest tomorrow.`;
     }
 
     private expireDrafts(now: Date): void {
