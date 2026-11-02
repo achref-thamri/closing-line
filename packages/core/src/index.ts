@@ -15,3 +15,14 @@ export type { ResultCandidate } from "./teams.ts";
 export { kellyFraction, kellyStake } from "./staking.ts";
 export type { StakeRules } from "./staking.ts";
 export { closingLineValue, edge } from "./value.ts";
+export {
+    cashoutGainOre,
+    groupPositions,
+    heldProfitOre,
+    impliedOddsFromCashout,
+    positionKey,
+    priceMove,
+    skew,
+    statsBy,
+} from "./slips.ts";
+export type { PositionBet, SlipStatus } from "./slips.ts";
