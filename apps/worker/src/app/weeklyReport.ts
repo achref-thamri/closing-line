@@ -1,10 +1,28 @@
 import type { Config } from "@closing-line/config";
-import { statsFromTotals, totalsOf } from "@closing-line/core";
-import type { Repositories } from "@closing-line/db";
+import { heldProfitOre, statsBy, statsFromTotals, totalsOf, type PlayerStats } from "@closing-line/core";
+import type { Bet, Repositories } from "@closing-line/db";
+import { TAGS } from "./betFlow.ts";
 
 const WEEK_MS = 7 * 86_400_000;
 /** Settled bets a player needs before its results mean much (the spec's go-live rule). */
 const BETS_TO_JUDGE = 300;
+/** Settled bets per reason before comparing reasons is worth a lesson. */
+const LESSON_MIN_BETS = 5;
+
+const TAG_LABELS: Record<string, string> = Object.fromEntries(
+    Object.values(TAGS).map(({ tag, label }) => [tag, label]),
+);
+
+/** General lessons, one a week in turn, until the results themselves teach something. */
+export const LESSONS = [
+    "Value is not the same as winning. A bet at 3.00 that is really worth 2.80 still loses about two times in three; judge tips over a hundred bets, not one weekend.",
+    "When the odds drop after you bet, the market agrees with you. Beating the closing price over many bets is the best sign of skill, long before the profit shows.",
+    "Keep stakes small: a few percent of your betting money per bet. Ten losses in a row happen even with good bets.",
+    "A bookmaker's odds add up to more than 100%; the extra is their margin. Comparing books before you bet is the cheapest edge there is.",
+    "Small samples lie. Twenty bets can show +40% or −40% by luck alone; wait for hundreds before trusting a result.",
+    "Cashing out usually costs money: the cash-out price carries an extra margin. Cash out when your reason for the bet has changed, not because you are nervous.",
+    "Over 0.5 and over 1.5 shots on the same player is one opinion, not two. Size laddered bets together, as one position.",
+];
 
 export interface WeeklyReportDeps {
     repos: Pick<Repositories, "players" | "bets" | "apiUsage">;
@@ -12,7 +30,7 @@ export interface WeeklyReportDeps {
     now: () => Date;
 }
 
-/** One message with every player's week and all-time results, and the API credit balance. */
+/** One message: every player's week and all-time results, humans' breakdowns, a lesson, and the credit balance. */
 export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
     const now = deps.now();
     const weekStart = new Date(now.getTime() - WEEK_MS);
@@ -23,6 +41,7 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
     const allTotals = await deps.repos.bets.totals();
     const weekTotals = await deps.repos.bets.totals({ settledSince: weekStart });
     const none = totalsOf([]);
+    const lessons: string[] = [];
 
     for (const player of await deps.repos.players.list()) {
         const week = statsFromTotals(weekTotals.get(player.id) ?? none);
@@ -35,7 +54,14 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
             `All time: ${all.settled} settled (${all.won} won), ROI ${percent(all.roi)}, CLV ${percent(all.averageClv)}, ` +
                 `bankroll ${kroner(player.startingBankrollOre + all.profitOre)}, ${all.open} open`,
         );
+        if (player.kind === "human") {
+            const breakdown = humanBreakdown(player.name, await deps.repos.bets.forPlayer(player.id));
+            lines.push(...breakdown.lines);
+            lessons.push(...breakdown.lessons);
+        }
     }
+
+    lines.push("", "📚 Lesson of the week", lessons[0] ?? LESSONS[weekNumber(now) % LESSONS.length] ?? "");
 
     const usage = await deps.repos.apiUsage.latest("odds-api");
     if (usage) lines.push("", `Odds API: ${usage.used} credits used this month, ${usage.remaining} left.`);
@@ -43,6 +69,73 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         lines.push(`Too early to judge: ${mostSettled} of ${BETS_TO_JUDGE} settled bets so far.`);
     }
     return lines.join("\n");
+}
+
+/** A human's results by reason and sport, typed bets and cash-outs, plus the lessons their numbers support. */
+export function humanBreakdown(name: string, bets: readonly Bet[]): { lines: string[]; lessons: string[] } {
+    const lines: string[] = [];
+    const lessons: string[] = [];
+    if (bets.length === 0) return { lines, lessons };
+
+    const byTag = statsBy(bets, (bet) => bet.tag);
+    if (byTag.size > 0) lines.push(`By reason: ${groupText(byTag, (tag) => TAG_LABELS[tag] ?? tag)}`);
+    const bySport = statsBy(bets, (bet) => (bet.sport === "counter_strike" ? "Counter-Strike" : "Football"));
+    if (bySport.size > 1) lines.push(`By sport: ${groupText(bySport, (sport) => sport)}`);
+    const typed = bets.filter((bet) => bet.screenshotPath === null).length;
+    if (typed > 0) lines.push(`Typed without a screenshot: ${typed} of ${bets.length}`);
+
+    const cashed = bets.filter((bet) => bet.status === "cashed_out");
+    if (cashed.length > 0) {
+        const moves = cashed.flatMap((bet) => (bet.clv === null ? [] : [bet.clv]));
+        const answered = cashed.flatMap((bet) =>
+            bet.heldStatus === null || bet.heldStatus === "open" || bet.heldStatus === "cashed_out"
+                ? []
+                : [{ bet, held: bet.heldStatus }],
+        );
+        const gain = answered.reduce(
+            (total, { bet, held }) => total + (bet.cashoutOfferOre ?? 0) - bet.stakeOre - heldProfitOre(bet, held),
+            0,
+        );
+        const move = moves.length > 0 ? `, price moved ${percent(average(moves))} on average` : "";
+        const versus = answered.length > 0 ? `; against holding: ${money(gain)} over ${answered.length}` : "";
+        lines.push(`Cash-outs: ${cashed.length}${move}${versus}`);
+        if (answered.length >= 3) {
+            lessons.push(
+                gain >= 0
+                    ? `${name}'s cash-outs paid ${kroner(gain)} more than holding over ${answered.length} bets: so far cashing out has protected money.`
+                    : `${name}'s cash-outs cost ${kroner(-gain)} compared with holding over ${answered.length} bets: the bets kept going their way after the cash-out.`,
+            );
+        }
+    }
+
+    const ranked = [...byTag]
+        .filter(([, stats]) => stats.settled >= LESSON_MIN_BETS)
+        .sort((a, b) => (b[1].roi ?? 0) - (a[1].roi ?? 0));
+    const [best, worst] = [ranked[0], ranked.at(-1)];
+    if (ranked.length >= 2 && best && worst) {
+        const label = (tag: string) => TAG_LABELS[tag] ?? tag;
+        lessons.unshift(
+            `${name}'s ${label(best[0])} bets return ${percent(best[1].roi)} over ${best[1].settled}, ` +
+                `${label(worst[0])} bets ${percent(worst[1].roi)} over ${worst[1].settled}. ` +
+                "Lean towards what works, but small samples can still be luck.",
+        );
+    }
+    return { lines, lessons };
+}
+
+function groupText(groups: Map<string, PlayerStats>, label: (key: string) => string): string {
+    return [...groups]
+        .map(([key, stats]) => `${label(key)} ${stats.settled} settled, ROI ${percent(stats.roi)}`)
+        .join(" · ");
+}
+
+function average(values: number[]): number {
+    return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+/** Whole weeks since the epoch, to rotate the general lessons. */
+function weekNumber(date: Date): number {
+    return Math.floor(date.getTime() / WEEK_MS);
 }
 
 function money(ore: number): string {
