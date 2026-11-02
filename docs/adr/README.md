@@ -11,3 +11,4 @@ Each record states the context, the decision and its consequences, so later chan
 | [0005](0005-typescript-without-a-build-step.md)       | Run TypeScript without a build step                                |
 | [0006](0006-closing-line-from-our-own-snapshot.md)    | The closing line from our own last Pinnacle snapshot               |
 | [0007](0007-dashboard-reads-the-database-directly.md) | The dashboard reads the database directly, with SQL doing the sums |
+| [0008](0008-edge-threshold-from-the-back-test.md)     | A 2% edge threshold, chosen by back-testing past seasons           |
