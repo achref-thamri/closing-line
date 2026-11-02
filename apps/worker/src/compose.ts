@@ -33,11 +33,13 @@ export function compose(options: {
         warnAt: config.credits.warnAt,
         warn: notify,
     });
+    const sendTo = (chatId: number, text: string) =>
+        createTelegramNotifier({ botToken: config.telegram.botToken, chatId, logger })(text);
     // Value-bet tips go to the owner and every approved human, at their own books; other alerts stay with the owner.
     const tip = createTipSender({
         timeZone: config.timezone,
         logger,
-        send: (chatId, text) => createTelegramNotifier({ botToken: config.telegram.botToken, chatId, logger })(text),
+        send: (chatId, text) => sendTo(chatId, text),
         recipients: async () => tipRecipients(await repos.players.list(), config.telegram.ownerChatId),
     });
     const pollDeps = { source: odds, guard, repos, config, now, notify, tip };
@@ -56,7 +58,10 @@ export function compose(options: {
             return { status: "succeeded", message: `${report.fixtures} fixtures, ${report.settledBets} bets settled` };
         },
         weekly_report: async () => {
-            await notify(await weeklyReport({ repos, config, now }));
+            // Everyone learns from the report, so every human gets it, tips paused or not.
+            const report = await weeklyReport({ repos, config, now });
+            const chats = tipRecipients(await repos.players.list(), config.telegram.ownerChatId);
+            await Promise.all(chats.map(({ chatId }) => sendTo(chatId, report)));
             return { status: "succeeded" };
         },
     };

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseConfig } from "@closing-line/config";
-import { openDatabase, type DatabaseHandle } from "@closing-line/db";
+import { createRepositories, openDatabase, type DatabaseHandle } from "@closing-line/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { compose } from "../compose.ts";
 import { silentLogger } from "../lib/logger.ts";
@@ -72,6 +72,29 @@ describe("compose", () => {
         await expect(runner.handlers.prekickoff_poll({ key: "p", kind: "prekickoff_poll" })).rejects.toThrow(
             "poll job without a league",
         );
+    });
+
+    it("sends the weekly report to the owner and every human", async () => {
+        const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+        const db = createRepositories(handle.db);
+        await db.players.ensure([
+            {
+                id: "tg_2",
+                name: "Sam",
+                kind: "human",
+                startingBankrollOre: 6_000_000,
+                telegramChatId: "2",
+                tipsMuted: true,
+            },
+        ]);
+        const runner = compose({ config, db: handle.db, logger: silentLogger, notify: () => Promise.resolve() });
+        expect(await runner.handlers.weekly_report({ key: "w", kind: "weekly_report" })).toEqual({
+            status: "succeeded",
+        });
+        const chats = fetch.mock.calls.map(
+            ([, init]) => (JSON.parse(init?.body as string) as { chat_id: number }).chat_id,
+        );
+        expect(chats.sort()).toEqual([1, 2]);
     });
 
     it("reports a poll the credit guard refused as skipped", async () => {
