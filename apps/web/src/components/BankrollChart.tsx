@@ -6,12 +6,17 @@ export interface ChartSeries {
     id: string;
     name: string;
     colour: string;
-    points: { t: number; kr: number }[];
+    /** Bankroll as a change from the start: 0.05 is 5% up. */
+    points: { t: number; growth: number }[];
 }
 
 const dateLabel = (t: number) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const percentLabel = (growth: number) => `${(growth * 100).toFixed(1)}%`;
 
-/** Bankroll over time, one line per player, stepping at each settled bet. */
+/**
+ * Bankroll growth over time, one line per player, stepping at each settled bet. Growth rather than kroner, because
+ * players start with different bankrolls.
+ */
 export function BankrollChart({ series }: { series: ChartSeries[] }) {
     const times = series.flatMap((line) => line.points.map((point) => point.t));
     const ticks = evenTicks(Math.min(...times), Math.max(...times), 6);
@@ -28,21 +33,17 @@ export function BankrollChart({ series }: { series: ChartSeries[] }) {
                         ticks={ticks}
                         tickFormatter={dateLabel}
                     />
-                    <YAxis
-                        tickFormatter={(kr: number) => kr.toLocaleString("en-GB")}
-                        width={64}
-                        domain={["auto", "auto"]}
-                    />
+                    <YAxis tickFormatter={percentLabel} width={64} domain={["auto", "auto"]} />
                     <Tooltip
                         labelFormatter={(t) => dateLabel(Number(t))}
-                        formatter={(kr) => `${Number(kr).toLocaleString("en-GB")} kr`}
+                        formatter={(growth) => percentLabel(Number(growth))}
                     />
                     <Legend />
                     {series.map((line) => (
                         <Line
                             key={line.id}
                             data={line.points}
-                            dataKey="kr"
+                            dataKey="growth"
                             name={line.name}
                             stroke={line.colour}
                             strokeWidth={2}

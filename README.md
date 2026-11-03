@@ -60,8 +60,9 @@ the best prices above fair for the coming week (refreshing odds older than 12 ho
 morning reminder lists bets still open.
 
 Telegram also carries settlements, credit warnings, failed jobs and the Monday report, which breaks each bettor's
-results down by reason and ends with a lesson of the week. A dashboard shows the leaderboard, each player's
-bankroll over time and the latest bets.
+results down by reason and ends with a lesson of the week. A dashboard shows the leaderboard, ranked by bankroll
+growth since the start (bettors and the automated players start with different bankrolls), each player's growth
+over time and the latest bets.
 
 | Player        | Bets on                                                                           |
 | ------------- | --------------------------------------------------------------------------------- |

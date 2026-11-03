@@ -14,7 +14,10 @@ export default async function Home() {
         id: player.id,
         name: player.name,
         colour: playerColour(player),
-        points: points.map((point) => ({ t: point.at.getTime(), kr: Math.round(point.bankrollOre / 100) })),
+        points: points.map((point) => ({
+            t: point.at.getTime(),
+            growth: point.bankrollOre / player.startingBankrollOre - 1,
+        })),
     }));
 
     return (
@@ -48,7 +51,7 @@ export default async function Home() {
             </section>
 
             <section className="space-y-3">
-                <h2 className="font-semibold">Bankroll</h2>
+                <h2 className="font-semibold">Bankroll growth</h2>
                 {dashboard.players.some((summary) => summary.stats.settled + summary.stats.void > 0) ? (
                     <BankrollChart series={series} />
                 ) : (
