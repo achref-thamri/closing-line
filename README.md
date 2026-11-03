@@ -15,8 +15,8 @@ _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/w
 
 - **Market-based value detection.** Pinnacle's prices, with the margin removed by the power method, are the fair
   reference. The scanner backs any bookmaker price that beats it by 2% or more, after exchange commission.
-- **Measured against the closing line.** Each bet records the fair closing price and its closing line value (CLV),
-  the standard skill signal that profit alone cannot give over a few hundred bets.
+- **Measured against the closing line.** Each match-result bet records the fair closing price and its closing line
+  value (CLV), the standard skill signal that profit alone cannot give over a few hundred bets.
 - **A benchmark that cannot be gamed.** An "always back the favourite" player bets every match at the same moment,
   so a strategy has to beat something simple, not just break even.
 - **Never runs out of free credits.** A credit guard spreads the monthly API quota over the days left, keeps a
@@ -24,9 +24,9 @@ _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/w
 - **A bet in a few taps.** `/log` asks for the match, market, player, line, bookmaker, odds and stake one at a time,
   with buttons wherever the answers are known, and checks each answer before the next question. One more tap logs
   the reason, and `/open` settles the bet later, cash-outs included. A typed match that names a fixture we track is
-  linked to it, so a match-result bet gets a closing price and CLV and settles itself, like the scanner's.
-  Every tip has "I bet this" buttons, one per bookmaker: a tap fills in the bet, so only the odds and stake are left. A bet half entered survives a deploy or restart
-  ([ADR 0009](docs/adr/0009-chat-state-in-the-database.md)).
+  linked to it, so a match-result bet gets a closing price and CLV and settles itself, like the scanner's. Every tip
+  has "I bet this" buttons, one per bookmaker: a tap fills in the bet, so only the odds and stake are left. A bet
+  half entered survives a deploy or restart ([ADR 0009](docs/adr/0009-chat-state-in-the-database.md)).
 - **Correct by construction.** One bet per selection for automated players (a unique index), settlement only of
   open bets,
   jobs that run at most once and never late, money in integer øre, and check constraints for data that must never
@@ -48,7 +48,7 @@ flowchart LR
 2. **Each poll** fetches match-result odds from nine bookmakers in one call (Pinnacle plus books a Danish bettor can
    use), stores every price, and lets the scanner bet on value with quarter-Kelly stakes. Each value bet goes out as a
    tip listing every book that pays enough.
-3. **The pre-kickoff poll** also records the fair closing price and CLV of every open bet, and places the
+3. **The pre-kickoff poll** also records the fair closing price and CLV of every open match-result bet, and places the
    favourite benchmark bet.
 4. **Settlement** matches fixtures to football-data.org results by kickoff and team names, which differ between the
    sources, and settles bets on the regular-time score. Matches called off for 48 hours are void.
@@ -63,11 +63,11 @@ Telegram also carries settlements, credit warnings, failed jobs and the Monday r
 results down by reason and ends with a lesson of the week. A dashboard shows the leaderboard, each player's
 bankroll over time and the latest bets.
 
-| Player        | Bets on                                                                          |
-| ------------- | -------------------------------------------------------------------------------- |
-| Value scanner | Any price at least 2% above Pinnacle's fair price; pauses after a bad week       |
-| Favourite     | Pinnacle's favourite in every match, flat stake (benchmark)                      |
-| Bettors       | Their real bets, logged in Telegram from slips with a reason, often player props |
+| Player        | Bets on                                                                           |
+| ------------- | --------------------------------------------------------------------------------- |
+| Value scanner | Any price at least 2% above Pinnacle's fair price; pauses after a bad week        |
+| Favourite     | Pinnacle's favourite in every match, flat stake (benchmark)                       |
+| Bettors       | Their real bets, logged in Telegram with `/log` or from a tip, often player props |
 
 ## Architecture
 
@@ -159,18 +159,21 @@ ssh -N -L 3300:localhost:3000 <server>   # then http://localhost:3300
 `docker/check-backup.sh` proves a backup restores: it loads the newest dump into a scratch database and compares
 row counts with the live one (`docker compose exec -T backup sh -s < docker/check-backup.sh`).
 
-Merges to `main`
-deploy after CI passes ([deploy.yml](.github/workflows/deploy.yml)): GitHub Actions streams the tree over SSH with
-a key that can only run [server-deploy.sh](scripts/server-deploy.sh), which unpacks aside, rebuilds and fails the
-deploy unless the worker reports healthy within three minutes.
+Merges to `main` deploy after CI passes ([deploy.yml](.github/workflows/deploy.yml)): GitHub Actions streams the
+tree over SSH with a key that can only run [server-deploy.sh](scripts/server-deploy.sh), which unpacks aside,
+removes files deleted from the repo since the last deploy, rebuilds and fails the deploy unless the worker reports
+healthy within three minutes. The workflows run with a read-only token and actions pinned to commit SHAs, which
+Dependabot keeps current. Deploys rebuild the worker and dashboard but never pull Postgres: take a minor release
+with `docker compose pull postgres && docker compose up -d postgres`, and a major one only by dump and restore.
 
 ## Status
 
 Phase 1 (scanner, benchmark, settlement) runs on the Premier League, Championship, Bundesliga, La Liga, Serie A and
-Ligue 1 with the free API plans; value-bet tips go to every approved bettor. Phase 2 is live: bettors log real bets in Telegram with
-`/log`, tag them with a reason and settle them with `/open`; the Monday report breaks their results down. A player qualifies for real money only after at least 300 settled
-bets over at least three months, with positive average CLV, a better ROI than the favourite benchmark, and a
-drawdown under 30%.
+Ligue 1 with the free API plans; value-bet tips go to every approved bettor. Phase 2 is live: bettors log real bets
+in Telegram with `/log` or a tip's "I bet this", tag them with a reason and settle them with `/open` (match results
+on tracked fixtures settle themselves); the Monday report breaks their results down. A player qualifies for real
+money only after at least 300 settled bets over at least three months, with positive average CLV, a better ROI than
+the favourite benchmark, and a drawdown under 30%.
 
 Not betting advice. This is a personal project.
 
