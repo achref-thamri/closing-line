@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "players_telegram_chat_id_unique" ON "players" USING btree ("telegram_chat_id");
