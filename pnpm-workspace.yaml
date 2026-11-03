@@ -5,3 +5,8 @@ packages:
 # Install scripts are blocked unless reviewed here. esbuild's only checks its binary, which ships as a package.
 allowBuilds:
     esbuild: false
+
+# drizzle-kit (dev only) still loads @esbuild-kit, which pins esbuild 0.18 (GHSA-67mh-4wv8-2f99, a dev-server bug we
+# never hit). 0.25 has the same transform API. Remove once drizzle-kit drops @esbuild-kit.
+overrides:
+    "@esbuild-kit/core-utils>esbuild": ^0.25.0
