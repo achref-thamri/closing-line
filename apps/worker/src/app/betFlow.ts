@@ -174,7 +174,7 @@ export class BetFlow implements ButtonHandler {
         const { draft } = pending;
         switch (pending.step) {
             case "match":
-                if (answer.length < 3) return { text: "Which match? E.g. Bayern – Arsenal" };
+                if (answer.length < 3) return { text: "Which match? E.g. Bayern v Arsenal" };
                 return this.match(pending, answer);
             case "player":
                 if (answer.length < 2) return { text: "Which player? E.g. Davies" };
@@ -307,7 +307,7 @@ export class BetFlow implements ButtonHandler {
             step: "odds",
             draft: {
                 sport: "football",
-                eventName: `${fixture.homeTeam} – ${fixture.awayTeam}`,
+                eventName: `${fixture.homeTeam} v ${fixture.awayTeam}`,
                 fixtureId,
                 market: "match_result",
                 playerName: null,
@@ -334,7 +334,7 @@ export class BetFlow implements ButtonHandler {
                 : [];
         const fixture = fixtureNamed(answer, fixtures);
         draft.fixtureId = fixture?.id ?? null;
-        draft.eventName = fixture ? `${fixture.homeTeam} – ${fixture.awayTeam}` : answer;
+        draft.eventName = fixture ? `${fixture.homeTeam} v ${fixture.awayTeam}` : answer;
         const reply = this.ask(pending, "market");
         if (!fixture) return reply;
         const kickoff = fixture.kickoff.toLocaleString("en-GB", {
@@ -380,7 +380,7 @@ export class BetFlow implements ButtonHandler {
                     ],
                 };
             case "match":
-                return { text: "Which match? Type it, e.g. Bayern – Arsenal", keyboard: [[CANCEL]] };
+                return { text: "Which match? Type it, e.g. Bayern v Arsenal", keyboard: [[CANCEL]] };
             case "market": {
                 const buttons = SPORT_MARKETS[draft.sport ?? "football"].map((key) => ({
                     text: MARKETS[key].label,

@@ -77,7 +77,7 @@ at, passes included ([ADR 0010](docs/adr/0010-record-every-decision.md)), all-ti
 prices and the scanner's results by league and by time before kickoff (each once there is enough data), and ends
 with a lesson of the week. A dashboard shows the leaderboard, ranked by bankroll
 growth since the start (bettors and the automated players start with different bankrolls), each player's growth
-over time and every bet, 50 to a page, with how many are open and settled.
+over time and every bet, 50 to a page, for everyone or one player, with how many are open and settled.
 
 | Player        | Bets on                                                                           |
 | ------------- | --------------------------------------------------------------------------------- |

@@ -39,6 +39,8 @@ export interface Dashboard {
     /** 1-based, already clamped to the pages that exist. */
     page: number;
     pages: number;
+    /** The player the table is filtered to, when the id names one. */
+    player: string | undefined;
     bets: BetWithFixture[];
     credits: { used: number; remaining: number } | undefined;
 }
@@ -68,7 +70,7 @@ function database(): Promise<DatabaseHandle> {
     return cache.closingLineDatabase;
 }
 
-export async function loadDashboard(requestedPage?: string): Promise<Dashboard> {
+export async function loadDashboard(requestedPage?: string, requestedPlayer?: string): Promise<Dashboard> {
     const repos = createRepositories((await database()).db);
     const totals = await repos.bets.totals();
     const players = await Promise.all(
@@ -86,8 +88,13 @@ export async function loadDashboard(requestedPage?: string): Promise<Dashboard> 
     );
     // Bettors start with 60,000 kr and the automated players with 10,000 kr, so kroner would rank bettors first.
     players.sort(byGrowth);
+    const player = players.find((summary) => summary.player.id === requestedPlayer)?.player.id;
     const betCounts = { total: 0, open: 0, settled: 0 };
-    for (const { stats } of players) {
+    for (const {
+        player: { id },
+        stats,
+    } of players) {
+        if (player && id !== player) continue;
         betCounts.open += stats.open;
         betCounts.settled += stats.settled + stats.void;
     }
@@ -100,7 +107,8 @@ export async function loadDashboard(requestedPage?: string): Promise<Dashboard> 
         betCounts,
         page,
         pages,
-        bets: await repos.bets.recent(BETS_PER_PAGE, undefined, (page - 1) * BETS_PER_PAGE),
+        player,
+        bets: await repos.bets.recent(BETS_PER_PAGE, player, (page - 1) * BETS_PER_PAGE),
         credits: usage && { used: usage.used, remaining: usage.remaining },
     };
 }

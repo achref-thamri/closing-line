@@ -94,7 +94,9 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                                 <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{bookName(bet.bookmaker)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{reason(bet, player)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{odds(bet.lockedOdds)}</td>
-                                <td className="px-3 py-2 text-right tabular-nums">{kroner(bet.stakeOre)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
+                                    {kroner(bet.stakeOre)}
+                                </td>
                                 <td className="px-3 py-2 text-right tabular-nums">{percent(bet.clv ?? undefined)}</td>
                                 <td
                                     className={`px-3 py-2 text-right tabular-nums whitespace-nowrap ${STATUS_STYLE[bet.status]}`}

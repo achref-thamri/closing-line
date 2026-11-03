@@ -25,12 +25,28 @@ test("pages through the bets, 50 at a time", async ({ page }) => {
     await expect(pages).toContainText("Page 1 of");
 
     await pages.getByRole("link", { name: "Older →" }).click();
-    await expect(page).toHaveURL(/\?page=2$/);
+    await expect(page).toHaveURL(/\?page=2#bets$/);
     await expect(pages).toContainText("Page 2 of");
     await expect(page.getByTestId("bet-counts")).toContainText("showing 51–");
 
     await pages.getByRole("link", { name: "← Newer" }).click();
     await expect(pages).toContainText("Page 1 of");
+});
+
+test("shows one player's bets and keeps the choice when paging", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("navigation", { name: "Show bets of" }).getByRole("link", { name: "Value scanner" }).click();
+    await expect(page).toHaveURL(/\?player=scanner#bets$/);
+
+    const players = page.getByTestId("bets-table").locator("tbody tr td:nth-child(2)");
+    await expect(players.first()).toHaveText("Value scanner");
+    expect(new Set(await players.allTextContents())).toEqual(new Set(["Value scanner"]));
+
+    const older = page.getByRole("navigation", { name: "Bet pages" }).getByRole("link", { name: "Older →" });
+    if ((await older.count()) > 0) {
+        await older.click();
+        await expect(page).toHaveURL(/\?player=scanner&page=2#bets$/);
+    }
 });
 
 test("has no horizontal scroll on the page itself", async ({ page }) => {
