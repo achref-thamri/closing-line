@@ -1,14 +1,18 @@
 import { BankrollChart } from "../components/BankrollChart.tsx";
 import { BetsTable } from "../components/BetsTable.tsx";
+import { Pagination } from "../components/Pagination.tsx";
 import { PlayerCard } from "../components/PlayerCard.tsx";
 import { playerColour } from "../components/players.ts";
-import { loadDashboard } from "../lib/data.ts";
+import { BETS_PER_PAGE, loadDashboard } from "../lib/data.ts";
 
 // Always read fresh data: the worker settles bets during the day.
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-    const dashboard = await loadDashboard();
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[]>> }) {
+    const { page: requestedPage } = await searchParams;
+    const dashboard = await loadDashboard(typeof requestedPage === "string" ? requestedPage : undefined);
+    const { betCounts, page, pages } = dashboard;
+    const first = (page - 1) * BETS_PER_PAGE + 1;
     const players = new Map(dashboard.players.map((summary) => [summary.player.id, summary.player]));
     const series = dashboard.players.map(({ player, series: points }) => ({
         id: player.id,
@@ -59,12 +63,25 @@ export default async function Home() {
                 )}
             </section>
 
-            <section className="space-y-3">
-                <h2 className="font-semibold">Latest bets</h2>
-                {dashboard.recentBets.length === 0 ? (
+            <section className="space-y-3" id="bets">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="font-semibold">Bets</h2>
+                    {betCounts.total > 0 && (
+                        <p className="text-sm text-zinc-500" data-testid="bet-counts">
+                            {betCounts.total.toLocaleString("en-GB")} bets · {betCounts.open.toLocaleString("en-GB")}{" "}
+                            open · {betCounts.settled.toLocaleString("en-GB")} settled
+                            {pages > 1 &&
+                                ` · showing ${first.toLocaleString("en-GB")}–${(first + dashboard.bets.length - 1).toLocaleString("en-GB")}`}
+                        </p>
+                    )}
+                </div>
+                {dashboard.bets.length === 0 ? (
                     <p className="text-sm text-zinc-500">No bets yet.</p>
                 ) : (
-                    <BetsTable bets={dashboard.recentBets} players={players} />
+                    <>
+                        <BetsTable bets={dashboard.bets} players={players} />
+                        <Pagination page={page} pages={pages} />
+                    </>
                 )}
             </section>
         </main>
