@@ -29,10 +29,15 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await handle.db.execute("truncate players, bets restart identity cascade");
+    await handle.db.execute("truncate players, bets, chat_sessions restart identity cascade");
     sent = [];
     clock = new Date("2026-11-08T14:15:00Z");
-    flow = new BetFlow({
+    flow = newFlow();
+});
+
+/** A fresh flow on the same database, as after a restart. */
+function newFlow(): BetFlow {
+    return new BetFlow({
         repos,
         config,
         messenger: {
@@ -44,7 +49,7 @@ beforeEach(async () => {
         logger: silentLogger,
         now: () => clock,
     });
-});
+}
 
 /** The callback data of the first button whose label contains `label`. */
 function button(reply: Reply | undefined, label: string): string {
@@ -244,6 +249,33 @@ describe("logging a bet step by step", () => {
         await type("5", OWNER);
         reply = await type("4000", OWNER);
         expect((await tap(reply, "Lineup", OWNER)).text).toContain("Note: the stake is above the 3,000 kr cap.");
+    });
+});
+
+describe("restarts", () => {
+    it("carries on with a bet half entered before a restart", async () => {
+        await letFriendIn();
+        await tap(await flow.bet(FRIEND), "Football");
+        const asked = await type("Bayern – Arsenal");
+
+        flow = newFlow();
+        const pick = await tap(asked, "Match result");
+        expect(pick.text).toBe("Which result?");
+        expect(button(pick, "Bayern")).toBe("w:home");
+    });
+
+    it("remembers a join request across a restart", async () => {
+        await flow.start(FRIEND, "Sam");
+        flow = newFlow();
+        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Still waiting/);
+        expect((await flow.tap(OWNER, button(sent[0]?.reply, "Allow"))).text).toBe("Sam can now log bets.");
+    });
+
+    it("drops a stored draft it cannot read", async () => {
+        await letFriendIn();
+        await repos.chats.put(FRIEND, "bet_draft", { step: "toss", draft: {} }, clock);
+        expect((await type("Bayern – Arsenal")).text).toBe("Send /log to log a bet, or /open to settle one.");
+        expect(await repos.chats.get(FRIEND, "bet_draft")).toBeUndefined();
     });
 });
 

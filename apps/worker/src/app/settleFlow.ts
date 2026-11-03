@@ -1,5 +1,6 @@
 import { bookName, heldProfitOre, impliedOddsFromCashout, pickText, priceMove } from "@closing-line/core";
 import type { Bet, Repositories } from "@closing-line/db";
+import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
 import { kroner, parseKroner, type Keyboard, type Messenger, type Reply } from "./betFlow.ts";
 
@@ -12,9 +13,10 @@ interface SlipSettlement {
     clv?: number;
 }
 const OUTCOME_KEYS: Record<string, Outcome> = { w: "won", l: "lost", v: "void" };
+const storedCashout = z.object({ betId: z.string() });
 
 export interface SettleFlowDeps {
-    repos: Pick<Repositories, "players" | "bets">;
+    repos: Pick<Repositories, "players" | "bets" | "chats">;
     messenger: Messenger;
     ownerChatId: number;
     logger: Logger;
@@ -23,13 +25,12 @@ export interface SettleFlowDeps {
 
 /**
  * Settling bettors' bets (spec §4): `/open` lists them with Won / Lost / Void / Cashed out buttons; a cash-out asks
- * for the amount, records the price it implies, then asks how the bet would have ended.
+ * for the amount, records the price it implies, then asks how the bet would have ended. The bet waiting for its
+ * cash-out amount is stored in the database, so a restart in between does not lose it.
  */
 export class SettleFlow {
     private readonly deps: SettleFlowDeps;
     private readonly now: () => Date;
-    /** Chats asked for a cash-out amount, and for which bet. */
-    private readonly awaitingAmount = new Map<number, string>();
 
     constructor(deps: SettleFlowDeps) {
         this.deps = deps;
@@ -67,7 +68,7 @@ export class SettleFlow {
 
         if (bet.status !== "open") return { text: `${describeBet(bet)}\n\nAlready settled.` };
         if (key === "c") {
-            this.awaitingAmount.set(chatId, bet.id);
+            await this.deps.repos.chats.put(chatId, "cashout", { betId: bet.id }, this.now());
             return { text: `${describeBet(bet)}\n\nHow much did the cash-out pay? Reply with the amount, e.g. 2557.` };
         }
         const outcome = OUTCOME_KEYS[key];
@@ -77,12 +78,12 @@ export class SettleFlow {
 
     /** A text reply while a cash-out amount is awaited; undefined when none is, so the text is a bet instead. */
     async amount(chatId: number, text: string): Promise<Reply | undefined> {
-        const betId = this.awaitingAmount.get(chatId);
-        if (betId === undefined) return undefined;
+        const stored = storedCashout.safeParse((await this.deps.repos.chats.get(chatId, "cashout"))?.value);
+        if (!stored.success) return undefined;
         const kroner = parseKroner(text);
         if (kroner === undefined) return { text: "Reply with just the amount, e.g. 2557 or 2.557,17." };
-        this.awaitingAmount.delete(chatId);
-        const bet = await this.ownBet(chatId, betId);
+        await this.deps.repos.chats.remove(chatId, "cashout");
+        const bet = await this.ownBet(chatId, stored.data.betId);
         if (bet?.status !== "open") return { text: "That bet is already settled." };
         return this.cashOut(chatId, bet, Math.round(kroner * 100));
     }

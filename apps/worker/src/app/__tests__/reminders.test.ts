@@ -15,7 +15,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await handle.db.execute("truncate players, bets restart identity cascade");
+    await handle.db.execute("truncate players, bets, chat_sessions restart identity cascade");
     await repos.players.ensure([
         { id: "tg_2", name: "Sam", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "2" },
         { id: "owner", name: "Owner", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "1" },

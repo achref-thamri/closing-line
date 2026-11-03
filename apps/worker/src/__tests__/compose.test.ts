@@ -27,7 +27,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
     );
 });
 
