@@ -127,7 +127,6 @@ describe("logging a bet step by step", () => {
                 tag: "skewed_price",
                 selfReported: true,
                 receivedAt: clock,
-                screenshotPath: null,
                 status: "open",
             },
         ]);

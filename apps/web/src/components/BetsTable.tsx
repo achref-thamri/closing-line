@@ -73,7 +73,7 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                                     ) : (
                                         // A match we do not track has no kickoff, only when the bet was logged.
                                         <span title="Kickoff unknown: when the bet was logged">
-                                            logged {shortDate(bet.placedAt ?? bet.createdAt)}
+                                            logged {shortDate(bet.receivedAt ?? bet.createdAt)}
                                         </span>
                                     )}
                                 </td>

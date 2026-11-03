@@ -140,7 +140,6 @@ describe("bettorBreakdown", () => {
             fixtureId: null,
             sport: "football",
             eventName: "A – B",
-            competition: null,
             market: "player_shots_on_target",
             selection: "over",
             playerName: "P",
@@ -152,13 +151,10 @@ describe("bettorBreakdown", () => {
             edgeAtBet: null,
             selfReported: true,
             tag: "lineup",
-            couponId: null,
-            placedAt: null,
             receivedAt: null,
             cashoutOfferOre: null,
             impliedCurrentOdds: null,
             heldStatus: null,
-            screenshotPath: "/data/slips/x.jpeg",
             status: "won",
             closingFairOdds: null,
             closingProvisional: null,
@@ -187,7 +183,7 @@ describe("bettorBreakdown", () => {
     it("breaks results down by reason and sport, and compares reasons", () => {
         const bets = [
             ...times(5, { tag: "lineup" }),
-            ...times(5, { tag: "game_read", status: "lost", profitOre: -100_000, screenshotPath: null }),
+            ...times(5, { tag: "game_read", status: "lost", profitOre: -100_000 }),
             bet({ tag: "game_read", sport: "counter_strike" }),
         ];
         const { lines, lessons } = bettorBreakdown("Sam", bets);
