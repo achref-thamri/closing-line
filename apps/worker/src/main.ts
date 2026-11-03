@@ -1,43 +1,29 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { loadConfig } from "@closing-line/config";
-import { createRepositories, openDatabase } from "@closing-line/db";
-import { createBetBot } from "./adapters/telegram/bot.ts";
-import { BetFlow } from "./app/betFlow.ts";
+import { openDatabase } from "@closing-line/db";
 import { markStarted, markStopped } from "./app/lifecycle.ts";
-import { SettleFlow } from "./app/settleFlow.ts";
 import { ensurePlayers } from "./app/players.ts";
 import { compose } from "./compose.ts";
 import { createLogger } from "./lib/logger.ts";
 import { createPinger } from "./lib/ping.ts";
-import { createTelegramNotifier } from "./lib/telegram.ts";
 import { tick } from "./scheduler/runner.ts";
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel);
 const database = await openDatabase(config.database);
-const notify = createTelegramNotifier({
-    botToken: config.telegram.botToken,
-    chatId: config.telegram.ownerChatId,
-    logger,
-});
-const runner = compose({ config, db: database.db, logger, notify });
+const worker = compose({ config, db: database.db, logger });
 const ping = config.healthcheckPingUrl ? createPinger({ url: config.healthcheckPingUrl, logger }) : undefined;
 
-const repos = createRepositories(database.db);
-await ensurePlayers(repos, config);
+await ensurePlayers(worker.repos, config);
 mkdirSync(dirname(config.heartbeatPath), { recursive: true });
-logger.info({ leagues: runner.leagues, database: config.database.kind }, "worker started");
-await markStarted({ repos, now: () => new Date(), logger, notify });
+logger.info({ leagues: worker.runner.leagues, database: config.database.kind }, "worker started");
+await markStarted({ repos: worker.repos, now: () => new Date(), logger, notify: worker.notify });
 
-// The bet flow: bettors log and settle their bets in Telegram.
-const betBot = createBetBot({ botToken: config.telegram.botToken, logger });
-const settle = new SettleFlow({ repos, messenger: betBot.messenger, ownerChatId: config.telegram.ownerChatId, logger });
-betBot.attach(new BetFlow({ repos, config, messenger: betBot.messenger, logger }), settle, runner.picks);
-void betBot.start().catch((error: unknown) => {
+void worker.bot.start().catch((error: unknown) => {
     logger.error({ error: (error as Error).message }, "telegram bot stopped");
 });
-logger.info({ bets: true }, "bet flow listening on Telegram");
+logger.info({}, "bet flow listening on Telegram");
 
 let running: Promise<void> | undefined;
 let timer: NodeJS.Timeout | undefined;
@@ -49,7 +35,7 @@ function schedule(): void {
             const now = new Date();
             writeFileSync(config.heartbeatPath, now.toISOString());
             ping?.(now);
-            running ??= tick(runner)
+            running ??= tick(worker.runner)
                 .catch((error: unknown) => {
                     logger.error({ error: (error as Error).message }, "tick failed");
                 })
@@ -66,9 +52,9 @@ schedule();
 async function shutdown(signal: string): Promise<void> {
     logger.info({ signal }, "shutting down");
     clearTimeout(timer);
-    await betBot.stop();
+    await worker.bot.stop();
     await running;
-    await markStopped({ repos });
+    await markStopped({ repos: worker.repos });
     await database.close();
     process.exit(0);
 }
