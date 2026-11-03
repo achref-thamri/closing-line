@@ -115,9 +115,8 @@ export const bets = pgTable(
         /** Null for bets on events we do not track (player props in other leagues, Counter-Strike). */
         fixtureId: text("fixture_id").references(() => fixtures.id),
         sport: sport().notNull().default("football"),
-        /** The match as written on the bet slip, e.g. "Aurora – Team Liquid", when no fixture matches. */
+        /** The match as the bettor typed it, e.g. "Aurora – Team Liquid", when no fixture matches. */
         eventName: text("event_name"),
-        competition: text(),
         market: text().notNull(),
         selection: text().notNull(),
         /** Player props: the player and the line, e.g. "Jobe Bellingham" and 1.5 shots on target. */
@@ -130,10 +129,7 @@ export const bets = pgTable(
         edgeAtBet: doublePrecision("edge_at_bet"),
         selfReported: boolean("self_reported").notNull().default(false),
         tag: betTag(),
-        /** The bookmaker's id for the bet slip; stops the same slip from being logged twice. */
-        couponId: text("coupon_id"),
-        /** When the bookmaker says the bet was placed (from the slip) and when we received the slip. */
-        placedAt: timestamp("placed_at", { withTimezone: true }),
+        /** When the bettor logged the bet. */
         receivedAt: timestamp("received_at", { withTimezone: true }),
         /** The latest cash-out offer seen; for a cashed-out bet, what it paid. */
         cashoutOfferOre: integer("cashout_offer_ore"),
@@ -141,8 +137,6 @@ export const bets = pgTable(
         impliedCurrentOdds: doublePrecision("implied_current_odds"),
         /** For a cashed-out bet: how the selection itself ended, to compare cashing out with holding. */
         heldStatus: betStatus("held_status"),
-        /** Only on bets logged from screenshots before 2026-11-03; bets are entered step by step since. */
-        screenshotPath: text("screenshot_path"),
         status: betStatus().notNull().default("open"),
         closingFairOdds: doublePrecision("closing_fair_odds"),
         /** True when a better closing source may still replace the value (ADR 0006). */
@@ -156,9 +150,6 @@ export const bets = pgTable(
         uniqueIndex("bets_one_per_selection")
             .on(table.playerId, table.fixtureId, table.market, table.selection)
             .where(sql`not ${table.selfReported}`),
-        uniqueIndex("bets_one_per_coupon")
-            .on(table.bookmaker, table.couponId, table.market, table.selection)
-            .where(sql`${table.couponId} is not null`),
         index("bets_open_idx")
             .on(table.fixtureId)
             .where(sql`${table.status} = 'open'`),

@@ -46,12 +46,11 @@ function bet(overrides: Partial<NewBet> = {}): NewBet {
     };
 }
 
-/** A bettor's player-prop bet as read from a bet slip, on a match we do not track. */
+/** A bettor's player-prop bet, logged in Telegram, on a match we do not track. */
 function slipBet(overrides: Partial<NewBet> = {}): NewBet {
     return {
         playerId: "friend",
         eventName: "Bayern München – Borussia Dortmund",
-        competition: "Bundesliga",
         market: "player_shots_on_target",
         selection: "over",
         playerName: "Jobe Bellingham",
@@ -246,13 +245,10 @@ describe("bets", () => {
         expect(listed).toMatchObject({ eventName: "Aurora – Team Liquid", fixture: null });
     });
 
-    it("lets a bettor ladder one player across slips but logs each slip once", async () => {
-        const over05 = slipBet({ selection: "over", line: 0.5, couponId: "c1" });
-        expect(await repos.bets.place(over05)).toBeDefined();
-        expect(await repos.bets.place(slipBet({ selection: "over", line: 1.5, couponId: "c2" }))).toBeDefined();
-        expect(await repos.bets.place(slipBet({ selection: "over", line: 0.5, couponId: "c3" }))).toBeDefined();
-        expect(await repos.bets.place(over05)).toBeUndefined();
-        expect(await repos.bets.forPlayer("friend")).toHaveLength(3);
+    it("lets a bettor log the same player at two lines", async () => {
+        expect(await repos.bets.place(slipBet({ selection: "over", line: 0.5 }))).toBeDefined();
+        expect(await repos.bets.place(slipBet({ selection: "over", line: 1.5 }))).toBeDefined();
+        expect(await repos.bets.forPlayer("friend")).toHaveLength(2);
     });
 
     it("rejects a bet with neither a fixture nor an event name", async () => {

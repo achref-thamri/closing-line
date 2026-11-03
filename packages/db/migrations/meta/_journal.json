@@ -92,6 +92,13 @@
             "when": 1793717239325,
             "tag": "0012_scanner_decisions",
             "breakpoints": true
+        },
+        {
+            "idx": 13,
+            "version": "7",
+            "when": 1793731947462,
+            "tag": "0013_drop_slip_columns",
+            "breakpoints": true
         }
     ]
 }
