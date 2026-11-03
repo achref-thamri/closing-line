@@ -5,6 +5,7 @@ import { openDatabase } from "@closing-line/db";
 import { markStarted, markStopped } from "./app/lifecycle.ts";
 import { ensurePlayers } from "./app/players.ts";
 import { compose } from "./compose.ts";
+import { messageOf } from "./lib/errors.ts";
 import { createLogger } from "./lib/logger.ts";
 import { createPinger } from "./lib/ping.ts";
 import { tick } from "./scheduler/runner.ts";
@@ -21,7 +22,7 @@ logger.info({ leagues: worker.runner.leagues, database: config.database.kind }, 
 await markStarted({ repos: worker.repos, now: () => new Date(), logger, notify: worker.notify });
 
 void worker.bot.start().catch((error: unknown) => {
-    logger.error({ error: (error as Error).message }, "telegram bot stopped");
+    logger.error({ error: messageOf(error) }, "telegram bot stopped");
 });
 logger.info({}, "bet flow listening on Telegram");
 
@@ -37,7 +38,7 @@ function schedule(): void {
             ping?.(now);
             running ??= tick(worker.runner)
                 .catch((error: unknown) => {
-                    logger.error({ error: (error as Error).message }, "tick failed");
+                    logger.error({ error: messageOf(error) }, "tick failed");
                 })
                 .finally(() => {
                     running = undefined;

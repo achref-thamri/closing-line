@@ -13,7 +13,6 @@ export const envSchema = z.object({
     FOOTBALL_DATA_TOKEN: requiredSecret,
     TELEGRAM_BOT_TOKEN: requiredSecret,
     TELEGRAM_OWNER_CHAT_ID: z.preprocess(emptyToUndefined, chatId),
-    /** Needed from phase 2, when the bot reads bets written in plain language. */
     /** Postgres connection string. Without it the worker uses an embedded PGlite database in `PGLITE_DIR`. */
     DATABASE_URL: z.preprocess(emptyToUndefined, z.url({ protocol: /^postgres(ql)?$/ }).optional()),
     PGLITE_DIR: z.preprocess(emptyToUndefined, z.string().min(1).default("data/pglite")),
@@ -111,7 +110,7 @@ export const settingsSchema = z
             })
             .prefault({}),
         startingBankroll: z.number().positive().default(10_000),
-        /** A player that loses this share of its bankroll in a week pauses until Monday. */
+        /** The scanner stops betting while its losses over the last seven days are above this share of its bankroll. */
         weeklyLossPause: fraction.default(0.15),
         credits: z
             .strictObject({
