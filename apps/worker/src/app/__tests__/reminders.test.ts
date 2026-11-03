@@ -15,7 +15,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await handle.db.execute("truncate players, bets, chat_sessions restart identity cascade");
+    await handle.db.execute("truncate players, fixtures, bets, chat_sessions restart identity cascade");
     await repos.players.ensure([
         { id: "tg_2", name: "Sam", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "2" },
         { id: "owner", name: "Owner", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "1" },
@@ -52,5 +52,27 @@ describe("remindOpenBets", () => {
             [1, expect.stringMatching(/^🔔 You have 1 open bet from earlier/) as string],
             [2, expect.stringMatching(/^🔔 You have 2 open bets from earlier/) as string],
         ]);
+    });
+
+    it("leaves out match results on tracked fixtures, which settle themselves", async () => {
+        const kickoff = new Date(Date.now() + 2 * 3_600_000);
+        await repos.fixtures.upsert([{ id: "f1", league: "soccer_epl", homeTeam: "A", awayTeam: "B", kickoff }]);
+        await repos.bets.place({
+            playerId: "tg_2",
+            fixtureId: "f1",
+            eventName: "A – B",
+            market: "h2h",
+            selection: "home",
+            stakeOre: 100_000,
+            lockedOdds: 2,
+            bookmaker: "nordicbet",
+            selfReported: true,
+        });
+        const send = vi.fn((_chatId: number, _text: string) => Promise.resolve());
+        expect(await remindOpenBets({ repos, send, now: () => new Date(Date.now() + 13 * 3_600_000) })).toBe(0);
+
+        await slipBet("tg_2");
+        expect(await remindOpenBets({ repos, send, now: () => new Date(Date.now() + 13 * 3_600_000) })).toBe(1);
+        expect(send.mock.calls[0]?.[1]).toMatch(/^🔔 You have 1 open bet from earlier/);
     });
 });
