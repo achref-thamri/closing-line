@@ -7,7 +7,7 @@ import {
 } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
-import { parseKroner, type Reply } from "../betFlow.ts";
+import type { Reply } from "../chat.ts";
 import { SettleFlow } from "../settleFlow.ts";
 
 const OWNER = 100;
@@ -123,6 +123,11 @@ describe("settling with buttons", () => {
         const bet = await place();
         expect((await flow.tap(OWNER, `st:${bet.id}:w`)).text).toBe("That bet is not yours or no longer exists.");
         expect((await flow.tap(FRIEND, `st:${bet.id}:x`)).text).toBe("Unknown button.");
+        expect([flow.owns(`st:${bet.id}:w`), flow.owns(`hd:${bet.id}:w`), flow.owns("w:football")]).toEqual([
+            true,
+            true,
+            false,
+        ]);
         expect((await flow.tap(FRIEND, `hd:${bet.id}:w`)).text).not.toMatch(/Cashed out/);
     });
 });
@@ -168,22 +173,5 @@ describe("restarts", () => {
         flow = newFlow();
         expect((await flow.amount(FRIEND, "2557"))?.text).toContain("💰 cashed out");
         expect((await repos.bets.get(bet.id))?.status).toBe("cashed_out");
-    });
-});
-
-describe("parseKroner", () => {
-    it("reads Danish and English amounts", () => {
-        expect(parseKroner("2557")).toBe(2557);
-        expect(parseKroner("2.557,17 kr.")).toBe(2557.17);
-        expect(parseKroner("2,557.17")).toBe(2557.17);
-        expect(parseKroner("2.557")).toBe(2557);
-        expect(parseKroner("12,5")).toBe(12.5);
-        expect(parseKroner("1 500 DKK")).toBe(1500);
-    });
-
-    it("refuses anything that is not one amount", () => {
-        expect(parseKroner("won")).toBeUndefined();
-        expect(parseKroner("0")).toBeUndefined();
-        expect(parseKroner("2557 and 100")).toBeUndefined();
     });
 });

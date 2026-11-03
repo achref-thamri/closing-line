@@ -1,25 +1,11 @@
 import type { Config } from "@closing-line/config";
-import { bookName, pickText, teamsOf } from "@closing-line/core";
+import { bookName, teamsOf } from "@closing-line/core";
 import type { NewBet, Repositories } from "@closing-line/db";
 import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
-
-export interface Button {
-    text: string;
-    data: string;
-}
-/** Rows of inline buttons under a message. */
-export type Keyboard = Button[][];
-
-export interface Reply {
-    text: string;
-    keyboard?: Keyboard;
-}
-
-/** Sends new messages; the Telegram adapter implements it. */
-export interface Messenger {
-    send(chatId: number, reply: Reply): Promise<void>;
-}
+import { WAITING, type Bettors } from "./bettors.ts";
+import { hasAction, rows, type Button, type ButtonHandler, type Messenger, type Reply } from "./chat.ts";
+import { describeBet, kroner, parseDecimal, parseKroner, type BetCard } from "./format.ts";
 
 export const TAGS = {
     l: { tag: "lineup", label: "⚡ Lineup" },
@@ -108,7 +94,6 @@ const storedDraft = z.object({
         })
         .partial(),
 });
-const storedRequest = z.object({ name: z.string() });
 
 /** The answers so far for a bet being entered. */
 type Answers = z.infer<typeof storedDraft>["draft"];
@@ -120,7 +105,8 @@ interface Pending {
 }
 
 export interface BetFlowDeps {
-    repos: Pick<Repositories, "players" | "bets" | "chats">;
+    repos: Pick<Repositories, "bets" | "chats">;
+    bettors: Pick<Bettors, "isAllowed" | "isWaiting" | "ensure" | "player">;
     config: Pick<Config, "bettors"> & { telegram: { ownerChatId: number } };
     messenger: Messenger;
     logger: Logger;
@@ -128,12 +114,11 @@ export interface BetFlowDeps {
 }
 
 /**
- * The Telegram bet flow (spec §4): the owner approves who may log bets; a bettor logs a bet with `/log`, answering
- * one question at a time (buttons where the answers are known, typed text for the match, player, odds and stake),
- * and tags it with a reason. Each answer is checked when it arrives, so a logged bet is complete. Bets being entered
- * and join requests are stored in the database, so they survive a restart.
+ * Logging a bet in Telegram (spec §4): `/log` asks one question at a time (buttons where the answers are known, typed
+ * text for the match, player, odds and stake), and a tap on a reason logs the bet. Each answer is checked when it
+ * arrives, so a logged bet is complete. The answers so far are stored, so a restart does not lose them.
  */
-export class BetFlow {
+export class BetFlow implements ButtonHandler {
     private readonly deps: BetFlowDeps;
     private readonly now: () => Date;
 
@@ -146,31 +131,10 @@ export class BetFlow {
         return this.deps.config.telegram.ownerChatId;
     }
 
-    async isAllowed(chatId: number): Promise<boolean> {
-        return chatId === this.ownerChatId || (await this.deps.repos.players.byChat(chatId)) !== undefined;
-    }
-
-    /** `/start`: welcomes known bettors and asks the owner about anyone else. */
-    async start(chatId: number, name: string): Promise<Reply> {
-        if (await this.isAllowed(chatId)) return { text: WELCOME };
-        if (await this.requested(chatId)) return { text: WAITING };
-        await this.deps.repos.chats.put(chatId, "join_request", { name }, this.now());
-        await this.deps.messenger.send(this.ownerChatId, {
-            text: `${name} wants to log bets with Closing Line.`,
-            keyboard: [
-                [
-                    { text: "✅ Allow", data: `ap:${chatId}` },
-                    { text: "✖ Deny", data: `dn:${chatId}` },
-                ],
-            ],
-        });
-        return { text: "Thanks! The owner has been asked to let you in. You will get a message when it is done." };
-    }
-
     /** `/log` (or `/bet`): starts a new bet, replacing one left half-entered. */
     async bet(chatId: number): Promise<Reply> {
-        if (!(await this.isAllowed(chatId))) {
-            return { text: (await this.requested(chatId)) ? WAITING : "Send /start first." };
+        if (!(await this.deps.bettors.isAllowed(chatId))) {
+            return { text: (await this.deps.bettors.isWaiting(chatId)) ? WAITING : "Send /start first." };
         }
         const pending: Pending = { step: "sport", draft: {}, updatedAt: this.now() };
         const reply = this.ask(pending, "sport");
@@ -180,7 +144,9 @@ export class BetFlow {
 
     /** A typed message: the answer to the current question, or a hint when no bet is being entered. */
     async text(chatId: number, text: string): Promise<Reply[]> {
-        if (!(await this.isAllowed(chatId))) return (await this.requested(chatId)) ? [{ text: WAITING }] : [];
+        if (!(await this.deps.bettors.isAllowed(chatId))) {
+            return (await this.deps.bettors.isWaiting(chatId)) ? [{ text: WAITING }] : [];
+        }
         const pending = await this.current(chatId);
         if (!pending) return [{ text: "Send /log to log a bet, or /open to settle one." }];
         const reply = this.answer(pending, text.trim());
@@ -212,9 +178,9 @@ export class BetFlow {
                 return this.ask(pending, "stake");
             }
             case "stake": {
-                const kroner = parseKroner(answer);
-                if (kroner === undefined) return { text: "The stake in kroner, e.g. 1500" };
-                draft.stakeOre = Math.round(kroner * 100);
+                const amount = parseKroner(answer);
+                if (amount === undefined) return { text: "The stake in kroner, e.g. 1500" };
+                draft.stakeOre = Math.round(amount * 100);
                 return this.ask(pending, "reason");
             }
             case "sport":
@@ -224,25 +190,15 @@ export class BetFlow {
         }
     }
 
-    /** `/tips on|off`: value tips for this person. */
-    async tips(chatId: number, name: string, argument: string): Promise<Reply> {
-        if (!(await this.isAllowed(chatId))) return { text: "Send /start first." };
-        const playerId = await this.ensureBettor(chatId, name);
-        const word = argument.trim().toLowerCase();
-        if (word !== "on" && word !== "off") {
-            const muted = (await this.deps.repos.players.byChat(chatId))?.tipsMuted ?? false;
-            return { text: `Value tips are ${muted ? "off" : "on"}. Send /tips on or /tips off.` };
-        }
-        await this.deps.repos.players.setTipsMuted(playerId, word === "off");
-        return { text: word === "off" ? "Value tips are off. /tips on brings them back." : "Value tips are on." };
+    /** Answers (`w:<value>`), reasons (`t:<tag>`) and Cancel (`x`). */
+    owns(data: string): boolean {
+        return hasAction(data, ["w", "t", "x"]);
     }
 
-    /** A button tap. Returns the new text for the message the button was on. */
     async tap(chatId: number, data: string): Promise<Reply> {
         const separator = data.indexOf(":");
         const action = separator < 0 ? data : data.slice(0, separator);
         const value = separator < 0 ? "" : data.slice(separator + 1);
-        if (action === "ap" || action === "dn") return this.decide(chatId, action === "ap", Number(value));
         const pending = await this.current(chatId);
         if (!pending) return { text: "This bet is no longer open. Send /log to start again." };
         if (action === "x") {
@@ -340,7 +296,7 @@ export class BetFlow {
             case "reason": {
                 const tags = Object.entries(TAGS).map(([key, { label }]) => ({ text: label, data: `t:${key}` }));
                 return {
-                    text: `${describe(draft as Draft)}\n\nWhy did you take it? Tap a reason to log the bet.`,
+                    text: `${describeBet(cardOf(draft as Draft))}\n\nWhy did you take it? Tap a reason to log the bet.`,
                     keyboard: [...rows(tags, 2), [CANCEL]],
                 };
             }
@@ -376,51 +332,23 @@ export class BetFlow {
         return { text: "What did you back? Type it.", keyboard: [[CANCEL]] };
     }
 
-    private async decide(chatId: number, allow: boolean, requester: number): Promise<Reply> {
-        if (chatId !== this.ownerChatId || !Number.isInteger(requester)) return { text: "Only the owner can decide." };
-        const request = storedRequest.safeParse((await this.deps.repos.chats.get(requester, "join_request"))?.value);
-        const name = request.success ? request.data.name : `Telegram ${requester}`;
-        await this.deps.repos.chats.remove(requester, "join_request");
-        if (!allow) return { text: `${name} was not let in.` };
-        await this.ensureBettor(requester, name);
-        await this.deps.messenger.send(requester, { text: `You're in! ${WELCOME}` });
-        return { text: `${name} can now log bets.` };
-    }
-
-    private async ensureBettor(chatId: number, name: string): Promise<string> {
-        // The owner's player row is named "Owner" whatever their Telegram name is.
-        if (chatId === this.ownerChatId) name = "Owner";
-        const existing = await this.deps.repos.players.byChat(chatId);
-        if (existing) return existing.id;
-        const id = chatId === this.ownerChatId ? "owner" : `tg_${chatId}`;
-        await this.deps.repos.players.ensure([
-            {
-                id,
-                name,
-                kind: "bettor",
-                startingBankrollOre: Math.round(this.deps.config.bettors.startingBankroll * 100),
-                telegramChatId: String(chatId),
-            },
-        ]);
-        return id;
-    }
-
     private async log(chatId: number, pending: Pending, tagKey: TagKey): Promise<Reply> {
         const draft = pending.draft as Draft;
         await this.deps.repos.chats.remove(chatId, "bet_draft");
-        const playerId = await this.ensureBettor(chatId, "");
+        const playerId = await this.deps.bettors.ensure(chatId, "");
         await this.deps.repos.bets.place(this.toBet(playerId, draft, TAGS[tagKey].tag));
         this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "bet logged");
+        const card = describeBet(cardOf(draft));
         if (chatId !== this.ownerChatId) {
             // Telegram chats with a bot are private, so the owner hears about other bettors' bets from the bot.
-            const name = (await this.deps.repos.players.byChat(chatId))?.name ?? playerId;
+            const name = (await this.deps.bettors.player(chatId))?.name ?? playerId;
             await this.deps.messenger.send(this.ownerChatId, {
-                text: `📝 ${name} logged:\n${describe(draft)}\n${TAGS[tagKey].label}`,
+                text: `📝 ${name} logged:\n${card}\n${TAGS[tagKey].label}`,
             });
         }
         const cap = this.deps.config.bettors.maxBankrollFraction * this.deps.config.bettors.startingBankroll * 100;
         const capNote = draft.stakeOre > cap ? `\nNote: the stake is above the ${kroner(cap)} cap.` : "";
-        return { text: `${describe(draft)}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}\n/log logs another.` };
+        return { text: `${card}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}\n/log logs another.` };
     }
 
     private toBet(playerId: string, draft: Draft, tag: NewBet["tag"]): NewBet {
@@ -463,57 +391,11 @@ export class BetFlow {
             pending.updatedAt,
         );
     }
-
-    private async requested(chatId: number): Promise<boolean> {
-        return (await this.deps.repos.chats.get(chatId, "join_request")) !== undefined;
-    }
 }
 
 const CANCEL: Button = { text: "✖ Cancel", data: "x" };
-const WELCOME =
-    "Send /log right after placing a bet. I ask for the match, market, pick, bookmaker, odds and stake one at a time, then you tap why you took it.\n\n" +
-    "When a bet is over, /open settles it (won, lost, void or cashed out).\n" +
-    "You also get value tips, the same ones the owner gets; /tips off pauses them.";
-const WAITING = 'Still waiting for the owner to let you in. Send /log once you get "You\'re in!".';
 
-function rows(buttons: Button[], size: number): Keyboard {
-    const result: Keyboard = [];
-    for (let i = 0; i < buttons.length; i += size) result.push(buttons.slice(i, i + size));
-    return result;
-}
-
-type Described = Pick<
-    Draft,
-    "eventName" | "market" | "selection" | "playerName" | "line" | "bookmaker" | "odds" | "stakeOre"
->;
-
-/** The card text for a bet. */
-export function describe(bet: Described): string {
-    return [
-        `🧾 ${bookName(bet.bookmaker)} · ${bet.eventName}`,
-        pickText(bet),
-        `Odds ${bet.odds.toFixed(2)} · Stake ${kroner(bet.stakeOre)}`,
-    ].join("\n");
-}
-
-export function kroner(ore: number): string {
-    return `${(ore / 100).toLocaleString("en-GB", { maximumFractionDigits: 2 })} kr`;
-}
-
-/** "3.70" or "3,70" as a number; undefined otherwise. */
-export function parseDecimal(text: string): number | undefined {
-    if (!/^\d+(?:[.,]\d+)?$/.test(text.trim())) return undefined;
-    return Number(text.trim().replace(",", "."));
-}
-
-/** Reads "2557", "2557 kr", "2.557,17" (Danish) or "2,557.17" as kroner; undefined when it is not one amount. */
-export function parseKroner(text: string): number | undefined {
-    const cleaned = text.replace(/kr\.?|dkk/gi, "").replace(/\s/g, "");
-    if (!/^\d[\d.,]*$/.test(cleaned)) return undefined;
-    const lastSeparator = Math.max(cleaned.lastIndexOf(","), cleaned.lastIndexOf("."));
-    const decimals = lastSeparator >= 0 && cleaned.length - lastSeparator - 1 <= 2 ? lastSeparator : -1;
-    const whole = (decimals >= 0 ? cleaned.slice(0, decimals) : cleaned).replace(/[.,]/g, "");
-    const fraction = decimals >= 0 ? cleaned.slice(decimals + 1) : "";
-    const value = Number(`${whole}.${fraction || "0"}`);
-    return Number.isFinite(value) && value > 0 ? value : undefined;
+/** A complete draft as the card the bettor sees. */
+function cardOf(draft: Draft): BetCard {
+    return { ...draft, lockedOdds: draft.odds };
 }

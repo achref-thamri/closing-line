@@ -2,7 +2,9 @@ import { parseConfig } from "@closing-line/config";
 import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
-import { BetFlow, parseDecimal, type Reply } from "../betFlow.ts";
+import { BetFlow } from "../betFlow.ts";
+import { Bettors } from "../bettors.ts";
+import type { Reply } from "../chat.ts";
 
 const OWNER = 100;
 const FRIEND = 200;
@@ -17,6 +19,7 @@ let handle: DatabaseHandle;
 let repos: Repositories;
 let sent: { chatId: number; reply: Reply }[];
 let clock: Date;
+let bettors: Bettors;
 let flow: BetFlow;
 
 beforeAll(async () => {
@@ -32,23 +35,19 @@ beforeEach(async () => {
     await handle.db.execute("truncate players, bets, chat_sessions restart identity cascade");
     sent = [];
     clock = new Date("2026-11-08T14:15:00Z");
-    flow = newFlow();
+    restart();
 });
 
-/** A fresh flow on the same database, as after a restart. */
-function newFlow(): BetFlow {
-    return new BetFlow({
-        repos,
-        config,
-        messenger: {
-            send: (chatId, reply) => {
-                sent.push({ chatId, reply });
-                return Promise.resolve();
-            },
+/** New flows on the same database, as after a restart. */
+function restart(): void {
+    const messenger = {
+        send: (chatId: number, reply: Reply) => {
+            sent.push({ chatId, reply });
+            return Promise.resolve();
         },
-        logger: silentLogger,
-        now: () => clock,
-    });
+    };
+    bettors = new Bettors({ repos, config, messenger, now: () => clock });
+    flow = new BetFlow({ repos, bettors, config, messenger, logger: silentLogger, now: () => clock });
 }
 
 /** The callback data of the first button whose label contains `label`. */
@@ -59,8 +58,8 @@ function button(reply: Reply | undefined, label: string): string {
 }
 
 async function letFriendIn(): Promise<void> {
-    await flow.start(FRIEND, "Sam");
-    await flow.tap(OWNER, button(sent[0]?.reply, "Allow"));
+    await bettors.start(FRIEND, "Sam");
+    await bettors.tap(OWNER, button(sent[0]?.reply, "Allow"));
 }
 
 /** Answers one question with a tap on the button labelled `label`. */
@@ -75,39 +74,13 @@ async function type(text: string, chatId = FRIEND): Promise<Reply> {
     return reply;
 }
 
-describe("access", () => {
-    it("asks the owner about a stranger and lets them in on Allow", async () => {
-        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/owner has been asked/);
-        expect(sent[0]).toMatchObject({ chatId: OWNER, reply: { text: "Sam wants to log bets with Closing Line." } });
-        expect(await flow.isAllowed(FRIEND)).toBe(false);
-        // While waiting: a second /start does not ask the owner again, and bets get an explanation.
-        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Still waiting/);
+describe("strangers", () => {
+    it("explains the wait while a join request is open, and says nothing to others", async () => {
+        await bettors.start(FRIEND, "Sam");
         expect((await flow.bet(FRIEND)).text).toMatch(/^Still waiting/);
         expect((await flow.text(FRIEND, "hello"))[0]?.text).toMatch(/^Still waiting/);
-        expect(sent).toHaveLength(1);
-
-        expect((await flow.tap(OWNER, button(sent[0]?.reply, "Allow"))).text).toBe("Sam can now log bets.");
-        expect(sent[1]).toMatchObject({
-            chatId: FRIEND,
-            reply: { text: expect.stringMatching(/^You're in!/) as string },
-        });
-        expect(await repos.players.byChat(FRIEND)).toMatchObject({
-            id: `tg_${FRIEND}`,
-            name: "Sam",
-            kind: "bettor",
-            startingBankrollOre: 6_000_000,
-        });
-        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Send \/log right after placing a bet/);
-    });
-
-    it("keeps a stranger out on Deny, and only the owner decides", async () => {
-        await flow.start(FRIEND, "Sam");
-        const allow = button(sent[0]?.reply, "Allow");
-        expect((await flow.tap(FRIEND, allow)).text).toBe("Only the owner can decide.");
-        expect((await flow.tap(OWNER, button(sent[0]?.reply, "Deny"))).text).toBe("Sam was not let in.");
-        expect(await flow.isAllowed(FRIEND)).toBe(false);
-        expect((await flow.bet(FRIEND)).text).toBe("Send /start first.");
-        expect(await flow.text(FRIEND, "hello")).toEqual([]);
+        expect((await flow.bet(300)).text).toBe("Send /start first.");
+        expect(await flow.text(300, "hello")).toEqual([]);
     });
 });
 
@@ -228,6 +201,7 @@ describe("logging a bet step by step", () => {
         reply = await type("Ajax – PSV");
         await tap(reply, "Fouls");
         expect((await type("x")).text).toBe("Which player? E.g. Davies");
+        expect(flow.owns("z:1")).toBe(false);
         expect((await flow.tap(FRIEND, "z:1")).text).toBe("Unknown button.");
         expect((await flow.tap(FRIEND, "x")).text).toBe("Cancelled. /log starts a new one.");
         expect((await type("Ajax")).text).toBe("Send /log to log a bet, or /open to settle one.");
@@ -258,17 +232,10 @@ describe("restarts", () => {
         await tap(await flow.bet(FRIEND), "Football");
         const asked = await type("Bayern – Arsenal");
 
-        flow = newFlow();
+        restart();
         const pick = await tap(asked, "Match result");
         expect(pick.text).toBe("Which result?");
         expect(button(pick, "Bayern")).toBe("w:home");
-    });
-
-    it("remembers a join request across a restart", async () => {
-        await flow.start(FRIEND, "Sam");
-        flow = newFlow();
-        expect((await flow.start(FRIEND, "Sam")).text).toMatch(/^Still waiting/);
-        expect((await flow.tap(OWNER, button(sent[0]?.reply, "Allow"))).text).toBe("Sam can now log bets.");
     });
 
     it("drops a stored draft it cannot read", async () => {
@@ -276,30 +243,5 @@ describe("restarts", () => {
         await repos.chats.put(FRIEND, "bet_draft", { step: "toss", draft: {} }, clock);
         expect((await type("Bayern – Arsenal")).text).toBe("Send /log to log a bet, or /open to settle one.");
         expect(await repos.chats.get(FRIEND, "bet_draft")).toBeUndefined();
-    });
-});
-
-describe("tip settings", () => {
-    it("turns tips off and on for a person", async () => {
-        await letFriendIn();
-        expect((await flow.tips(FRIEND, "Sam", "")).text).toBe("Value tips are on. Send /tips on or /tips off.");
-        expect((await flow.tips(FRIEND, "Sam", "off")).text).toMatch(/^Value tips are off/);
-        expect(await repos.players.byChat(FRIEND)).toMatchObject({ tipsMuted: true });
-        expect((await flow.tips(FRIEND, "Sam", "")).text).toMatch(/^Value tips are off\./);
-        expect((await flow.tips(FRIEND, "Sam", "ON")).text).toBe("Value tips are on.");
-        expect(await repos.players.byChat(FRIEND)).toMatchObject({ tipsMuted: false });
-        expect((await flow.tips(300, "Stranger", "off")).text).toBe("Send /start first.");
-    });
-
-    it("keeps the owner's player named Owner", async () => {
-        await flow.tips(OWNER, "Achref", "off");
-        expect(await repos.players.byChat(OWNER)).toMatchObject({ id: "owner", name: "Owner", tipsMuted: true });
-    });
-});
-
-describe("helpers", () => {
-    it("reads decimals with a point or a comma", () => {
-        expect(parseDecimal("3,70")).toBe(3.7);
-        expect(parseDecimal("3.7x")).toBeUndefined();
     });
 });

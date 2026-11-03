@@ -4,6 +4,7 @@ import { FootballDataClient } from "./adapters/footballData/client.ts";
 import { OddsApiClient } from "./adapters/oddsApi/client.ts";
 import { createTelegramBot, type TelegramBot } from "./adapters/telegram/bot.ts";
 import { BetFlow } from "./app/betFlow.ts";
+import { Bettors } from "./app/bettors.ts";
 import { CreditGuard } from "./app/creditGuard.ts";
 import { bestPicks } from "./app/picks.ts";
 import { pollOdds, type PollReport } from "./app/pollOdds.ts";
@@ -101,9 +102,13 @@ export function compose(options: { config: Config; db: Database; logger: Logger;
         });
 
     // Bettors log, settle and look up bets in Telegram.
-    const betFlow = new BetFlow({ repos, config, messenger: bot.messenger, logger, now });
-    const settleFlow = new SettleFlow({ repos, messenger: bot.messenger, ownerChatId, logger, now });
-    bot.attach(betFlow, settleFlow, picks);
+    const bettors = new Bettors({ repos, config, messenger: bot.messenger, now });
+    bot.attach({
+        bettors,
+        bets: new BetFlow({ repos, bettors, config, messenger: bot.messenger, logger, now }),
+        settle: new SettleFlow({ repos, messenger: bot.messenger, ownerChatId, logger, now }),
+        picks,
+    });
 
     return {
         repos,

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { BetFlow, Reply } from "../../../app/betFlow.ts";
+import type { BetFlow } from "../../../app/betFlow.ts";
+import type { Bettors } from "../../../app/bettors.ts";
+import { hasAction, type Reply } from "../../../app/chat.ts";
 import type { SettleFlow } from "../../../app/settleFlow.ts";
 import { silentLogger } from "../../../lib/logger.ts";
 import { COMMANDS, createTelegramBot } from "../bot.ts";
@@ -24,13 +26,19 @@ const from = { id: 200, is_bot: false, first_name: "Sam" } as const;
 
 let calls: { method: string; payload: Record<string, unknown> }[];
 
-function setup(flow: Partial<BetFlow>, settle: Partial<SettleFlow> = { amount: () => Promise.resolve(undefined) }) {
+/** Stand-in flows: each owns its real button prefixes and does only what a test passes in. */
+function setup(flows: { bettors?: Partial<Bettors>; bets?: Partial<BetFlow>; settle?: Partial<SettleFlow> } = {}) {
     const bot = createTelegramBot({ botToken: "1:secret", logger: silentLogger, botInfo });
     bot.api.config.use((_prev, method, payload) => {
         calls.push({ method, payload });
         return Promise.resolve({ ok: true, result: true } as never);
     });
-    bot.attach(flow as BetFlow, settle as SettleFlow);
+    const owns = (actions: string[]) => (data: string) => hasAction(data, actions);
+    bot.attach({
+        bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as Bettors,
+        bets: { owns: owns(["w", "t", "x"]), ...flows.bets } as BetFlow,
+        settle: { owns: owns(["st", "hd"]), amount: () => Promise.resolve(undefined), ...flows.settle } as SettleFlow,
+    });
     return bot;
 }
 
@@ -72,7 +80,7 @@ describe("bet bot", () => {
         const bet = vi.fn().mockResolvedValue(question);
         const tips = vi.fn().mockResolvedValue({ text: "Value tips are off." });
         const open = vi.fn().mockResolvedValue([{ text: "No open bets." }]);
-        const bot = setup({ isAllowed, start, bet, tips }, { open });
+        const bot = setup({ bettors: { isAllowed, start, tips }, bets: { bet }, settle: { open } });
         await bot.handleUpdate(command("/start"));
         await bot.handleUpdate(command("/log", 2));
         await bot.handleUpdate(command("/tips off", 3));
@@ -93,19 +101,28 @@ describe("bet bot", () => {
     it("routes button taps and edits the question in place", async () => {
         const tap = vi.fn().mockResolvedValue({ text: "Which match?" });
         const settleTap = vi.fn().mockResolvedValue({ text: "✅ won" });
-        const bot = setup({ tap }, { tap: settleTap });
+        const decide = vi.fn().mockResolvedValue({ text: "Sam can now log bets." });
+        const bot = setup({ bettors: { tap: decide }, bets: { tap }, settle: { tap: settleTap } });
         await bot.handleUpdate(tapUpdate("w:football"));
         await bot.handleUpdate(tapUpdate("st:b1:w", 2));
+        await bot.handleUpdate(tapUpdate("ap:300", 3));
+        await bot.handleUpdate(tapUpdate("zz:1", 4));
         expect(tap).toHaveBeenCalledWith(200, "w:football");
         expect(settleTap).toHaveBeenCalledWith(200, "st:b1:w");
-        expect(sent("editMessageText").map((payload) => payload.text)).toEqual(["Which match?", "✅ won"]);
-        expect(sent("answerCallbackQuery")).toHaveLength(2);
+        expect(decide).toHaveBeenCalledWith(200, "ap:300");
+        expect(sent("editMessageText").map((payload) => payload.text)).toEqual([
+            "Which match?",
+            "✅ won",
+            "Sam can now log bets.",
+            "Unknown button.",
+        ]);
+        expect(sent("answerCallbackQuery")).toHaveLength(4);
     });
 
     it("gives typed text to a waiting cash-out first, then to the bet being entered", async () => {
         const amount = vi.fn().mockResolvedValueOnce({ text: "💰 cashed out" }).mockResolvedValueOnce(undefined);
         const text = vi.fn().mockResolvedValue([{ text: "Which market?" }]);
-        const bot = setup({ text }, { amount });
+        const bot = setup({ bets: { text }, settle: { amount } });
         await bot.handleUpdate(message({ text: "2557" }));
         await bot.handleUpdate(message({ text: "Bayern – Arsenal" }, 2));
         expect(text).toHaveBeenCalledWith(200, "Bayern – Arsenal");
@@ -114,7 +131,7 @@ describe("bet bot", () => {
 
     it("points bettors who send screenshots to /log and ignores strangers' files", async () => {
         const isAllowed = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-        const bot = setup({ isAllowed });
+        const bot = setup({ bettors: { isAllowed } });
         const photo = { photo: [{ file_id: "p", file_unique_id: "p", width: 1, height: 1 }] };
         await bot.handleUpdate(message(photo));
         await bot.handleUpdate(message(photo, 2));
@@ -125,14 +142,14 @@ describe("bet bot", () => {
 
     it("keeps /bet working and puts the commands in Telegram's menu on start", async () => {
         const bet = vi.fn().mockResolvedValue(question);
-        const bot = setup({ bet });
+        const bot = setup({ bets: { bet } });
         await bot.handleUpdate(command("/bet"));
         expect(bet).toHaveBeenCalledWith(200);
         expect(COMMANDS.map((each) => each.command)).toEqual(["log", "open", "picks", "tips", "start"]);
     });
 
     it("sends messages with or without buttons", async () => {
-        const bot = setup({});
+        const bot = setup();
         await bot.messenger.send(100, { text: "plain" });
         await bot.messenger.send(100, { text: "ask", keyboard: [[{ text: "✅ Allow", data: "ap:200" }]] });
         expect(sent("sendMessage")).toEqual([

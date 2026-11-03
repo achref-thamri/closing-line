@@ -75,7 +75,7 @@ flowchart TB
     subgraph app["use cases"]
         direction LR
         a1[syncFixtures] ~~~ a2[pollOdds] ~~~ a3[settleBets] ~~~ a4[CreditGuard]
-        a5[BetFlow] ~~~ a6[SettleFlow] ~~~ a7[tips] ~~~ a8[weeklyReport]
+        a5[Bettors] ~~~ a6[BetFlow] ~~~ a7[SettleFlow] ~~~ a8[tips] ~~~ a9[weeklyReport]
     end
     app --> core["packages/core: pure<br/>devig · value · staking · settlement · slips · credits · schedule"]
     app --> ports["ports<br/>OddsSource · ResultsSource"]
