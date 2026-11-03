@@ -1,6 +1,7 @@
 import type { Config } from "@closing-line/config";
 import { bookName, pickText, teamsOf } from "@closing-line/core";
 import type { NewBet, Repositories } from "@closing-line/db";
+import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
 
 export interface Button {
@@ -74,7 +75,8 @@ const LINES = [0.5, 1.5, 2.5, 3.5];
 /** A bet being entered waits this long for the next answer; then it has to be started again. */
 const DRAFT_TTL_MS = 60 * 60 * 1000;
 
-type Step = "sport" | "match" | "market" | "player" | "pick" | "book" | "odds" | "stake" | "reason";
+const STEPS = ["sport", "match", "market", "player", "pick", "book", "odds", "stake", "reason"] as const;
+type Step = (typeof STEPS)[number];
 
 /** A complete bet as entered, one answer at a time. */
 export interface Draft {
@@ -89,14 +91,36 @@ export interface Draft {
     stakeOre: number;
 }
 
+/** A stored draft is read back through this, so a row written by an older version cannot break the flow. */
+const storedDraft = z.object({
+    step: z.enum(STEPS),
+    draft: z
+        .object({
+            sport: z.enum(["football", "counter_strike"]),
+            eventName: z.string(),
+            market: z.string(),
+            playerName: z.string().nullable(),
+            selection: z.string(),
+            line: z.number().nullable(),
+            bookmaker: z.string(),
+            odds: z.number(),
+            stakeOre: z.int(),
+        })
+        .partial(),
+});
+const storedRequest = z.object({ name: z.string() });
+
+/** The answers so far for a bet being entered. */
+type Answers = z.infer<typeof storedDraft>["draft"];
+
 interface Pending {
     step: Step;
-    draft: Partial<Draft>;
+    draft: Answers;
     updatedAt: Date;
 }
 
 export interface BetFlowDeps {
-    repos: Pick<Repositories, "players" | "bets">;
+    repos: Pick<Repositories, "players" | "bets" | "chats">;
     config: Pick<Config, "bettors"> & { telegram: { ownerChatId: number } };
     messenger: Messenger;
     logger: Logger;
@@ -106,13 +130,12 @@ export interface BetFlowDeps {
 /**
  * The Telegram bet flow (spec §4): the owner approves who may log bets; a bettor logs a bet with `/log`, answering
  * one question at a time (buttons where the answers are known, typed text for the match, player, odds and stake),
- * and tags it with a reason. Each answer is checked when it arrives, so a logged bet is complete.
+ * and tags it with a reason. Each answer is checked when it arrives, so a logged bet is complete. Bets being entered
+ * and join requests are stored in the database, so they survive a restart.
  */
 export class BetFlow {
     private readonly deps: BetFlowDeps;
     private readonly now: () => Date;
-    private readonly pending = new Map<number, Pending>();
-    private readonly requests = new Map<number, string>();
 
     constructor(deps: BetFlowDeps) {
         this.deps = deps;
@@ -130,8 +153,8 @@ export class BetFlow {
     /** `/start`: welcomes known bettors and asks the owner about anyone else. */
     async start(chatId: number, name: string): Promise<Reply> {
         if (await this.isAllowed(chatId)) return { text: WELCOME };
-        if (this.requests.has(chatId)) return { text: WAITING };
-        this.requests.set(chatId, name);
+        if (await this.requested(chatId)) return { text: WAITING };
+        await this.deps.repos.chats.put(chatId, "join_request", { name }, this.now());
         await this.deps.messenger.send(this.ownerChatId, {
             text: `${name} wants to log bets with Closing Line.`,
             keyboard: [
@@ -147,19 +170,22 @@ export class BetFlow {
     /** `/log` (or `/bet`): starts a new bet, replacing one left half-entered. */
     async bet(chatId: number): Promise<Reply> {
         if (!(await this.isAllowed(chatId))) {
-            return { text: this.requests.has(chatId) ? WAITING : "Send /start first." };
+            return { text: (await this.requested(chatId)) ? WAITING : "Send /start first." };
         }
         const pending: Pending = { step: "sport", draft: {}, updatedAt: this.now() };
-        this.pending.set(chatId, pending);
-        return this.ask(pending, "sport");
+        const reply = this.ask(pending, "sport");
+        await this.save(chatId, pending);
+        return reply;
     }
 
     /** A typed message: the answer to the current question, or a hint when no bet is being entered. */
     async text(chatId: number, text: string): Promise<Reply[]> {
-        if (!(await this.isAllowed(chatId))) return this.requests.has(chatId) ? [{ text: WAITING }] : [];
-        const pending = this.current(chatId);
+        if (!(await this.isAllowed(chatId))) return (await this.requested(chatId)) ? [{ text: WAITING }] : [];
+        const pending = await this.current(chatId);
         if (!pending) return [{ text: "Send /log to log a bet, or /open to settle one." }];
-        return [this.answer(pending, text.trim())];
+        const reply = this.answer(pending, text.trim());
+        await this.save(chatId, pending);
+        return [reply];
     }
 
     private answer(pending: Pending, answer: string): Reply {
@@ -217,17 +243,19 @@ export class BetFlow {
         const action = separator < 0 ? data : data.slice(0, separator);
         const value = separator < 0 ? "" : data.slice(separator + 1);
         if (action === "ap" || action === "dn") return this.decide(chatId, action === "ap", Number(value));
-        const pending = this.current(chatId);
+        const pending = await this.current(chatId);
         if (!pending) return { text: "This bet is no longer open. Send /log to start again." };
         if (action === "x") {
-            this.pending.delete(chatId);
+            await this.deps.repos.chats.remove(chatId, "bet_draft");
             return { text: "Cancelled. /log starts a new one." };
         }
         if (action === "t" && value in TAGS && pending.step === "reason") {
             return this.log(chatId, pending, value as TagKey);
         }
         if (action !== "w") return { text: "Unknown button." };
-        return this.choose(pending, value);
+        const reply = this.choose(pending, value);
+        await this.save(chatId, pending);
+        return reply;
     }
 
     /** A button answer for the current question; anything else asks the question again. */
@@ -319,7 +347,7 @@ export class BetFlow {
         }
     }
 
-    private askPick(draft: Partial<Draft>): Reply {
+    private askPick(draft: Answers): Reply {
         const market = MARKETS[draft.market as MarketKey];
         if (market.kind === "line") {
             const subject = draft.playerName ? `${draft.playerName}, ${market.label.toLowerCase()}` : market.label;
@@ -350,8 +378,9 @@ export class BetFlow {
 
     private async decide(chatId: number, allow: boolean, requester: number): Promise<Reply> {
         if (chatId !== this.ownerChatId || !Number.isInteger(requester)) return { text: "Only the owner can decide." };
-        const name = this.requests.get(requester) ?? `Telegram ${requester}`;
-        this.requests.delete(requester);
+        const request = storedRequest.safeParse((await this.deps.repos.chats.get(requester, "join_request"))?.value);
+        const name = request.success ? request.data.name : `Telegram ${requester}`;
+        await this.deps.repos.chats.remove(requester, "join_request");
         if (!allow) return { text: `${name} was not let in.` };
         await this.ensureBettor(requester, name);
         await this.deps.messenger.send(requester, { text: `You're in! ${WELCOME}` });
@@ -378,7 +407,7 @@ export class BetFlow {
 
     private async log(chatId: number, pending: Pending, tagKey: TagKey): Promise<Reply> {
         const draft = pending.draft as Draft;
-        this.pending.delete(chatId);
+        await this.deps.repos.chats.remove(chatId, "bet_draft");
         const playerId = await this.ensureBettor(chatId, "");
         await this.deps.repos.bets.place(this.toBet(playerId, draft, TAGS[tagKey].tag));
         this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "bet logged");
@@ -414,14 +443,29 @@ export class BetFlow {
         };
     }
 
-    /** The chat's bet in progress, dropped once it has waited too long. */
-    private current(chatId: number): Pending | undefined {
-        const pending = this.pending.get(chatId);
-        if (pending && this.now().getTime() - pending.updatedAt.getTime() > DRAFT_TTL_MS) {
-            this.pending.delete(chatId);
+    /** The chat's bet in progress, dropped once it has waited too long or no longer reads as a draft. */
+    private async current(chatId: number): Promise<Pending | undefined> {
+        const session = await this.deps.repos.chats.get(chatId, "bet_draft");
+        if (!session) return undefined;
+        const stored = storedDraft.safeParse(session.value);
+        if (!stored.success || this.now().getTime() - session.updatedAt.getTime() > DRAFT_TTL_MS) {
+            await this.deps.repos.chats.remove(chatId, "bet_draft");
             return undefined;
         }
-        return pending;
+        return { ...stored.data, updatedAt: session.updatedAt };
+    }
+
+    private async save(chatId: number, pending: Pending): Promise<void> {
+        await this.deps.repos.chats.put(
+            chatId,
+            "bet_draft",
+            { step: pending.step, draft: pending.draft },
+            pending.updatedAt,
+        );
+    }
+
+    private async requested(chatId: number): Promise<boolean> {
+        return (await this.deps.repos.chats.get(chatId, "join_request")) !== undefined;
     }
 }
 

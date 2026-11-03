@@ -22,7 +22,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
     );
     await repos.players.ensure([
         { id: "scanner", name: "Scanner", kind: "scanner", startingBankrollOre: 1_000_000 },
@@ -335,6 +335,30 @@ describe("state", () => {
             running: false,
             crashAlertedAt: "2026-11-01T10:00:00.000Z",
         });
+    });
+});
+
+describe("chats", () => {
+    it("stores one session per chat and kind, replacing it on put", async () => {
+        const at = new Date("2026-11-03T12:00:00Z");
+        const later = new Date("2026-11-03T12:05:00Z");
+        expect(await repos.chats.get(200, "bet_draft")).toBeUndefined();
+        await repos.chats.put(200, "bet_draft", { step: "sport", draft: {} }, at);
+        await repos.chats.put(200, "bet_draft", { step: "match", draft: { sport: "football" } }, later);
+        await repos.chats.put(200, "cashout", { betId: "b1" }, at);
+        expect(await repos.chats.get(200, "bet_draft")).toEqual({
+            value: { step: "match", draft: { sport: "football" } },
+            updatedAt: later,
+        });
+
+        await repos.chats.remove(200, "bet_draft");
+        expect(await repos.chats.get(200, "bet_draft")).toBeUndefined();
+        expect(await repos.chats.get(200, "cashout")).toEqual({ value: { betId: "b1" }, updatedAt: at });
+    });
+
+    it("keeps Telegram's large group chat ids exact", async () => {
+        await repos.chats.put(-1_002_345_678_901, "join_request", { name: "Group" }, new Date());
+        expect((await repos.chats.get(-1_002_345_678_901, "join_request"))?.value).toEqual({ name: "Group" });
     });
 });
 

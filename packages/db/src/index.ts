@@ -5,6 +5,8 @@ export type {
     ApiUsage,
     Bet,
     BetWithFixture,
+    ChatSession,
+    ChatSessionKind,
     Fixture,
     FixtureResult,
     JobRun,

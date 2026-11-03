@@ -2,7 +2,7 @@ import type { PlayerTotals } from "@closing-line/core";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
-import { apiUsage, bets, fixtures, jobRuns, oddsSnapshots, players, workerState } from "./schema.ts";
+import { apiUsage, bets, chatSessions, fixtures, jobRuns, oddsSnapshots, players, workerState } from "./schema.ts";
 
 export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
@@ -19,6 +19,12 @@ export type ApiUsage = typeof apiUsage.$inferSelect;
 /** `fixture` is null for bets on events we do not track, which carry `eventName` instead. */
 export type BetWithFixture = Bet & { fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "kickoff" | "league"> | null };
 export type JobRun = typeof jobRuns.$inferSelect;
+export type ChatSessionKind = (typeof chatSessions.$inferSelect)["kind"];
+/** `value` is whatever the flow stored; the flow checks its shape when it reads it back. */
+export interface ChatSession {
+    value: unknown;
+    updatedAt: Date;
+}
 
 export type FixtureResult = { status: "finished"; homeGoals: number; awayGoals: number } | { status: "void" };
 
@@ -294,6 +300,28 @@ export function createRepositories(db: Database) {
                     .insert(workerState)
                     .values({ key, value })
                     .onConflictDoUpdate({ target: workerState.key, set: { value, updatedAt: sql`now()` } });
+            },
+        },
+
+        chats: {
+            async get(chatId: number, kind: ChatSessionKind): Promise<ChatSession | undefined> {
+                const [row] = await db
+                    .select({ value: chatSessions.value, updatedAt: chatSessions.updatedAt })
+                    .from(chatSessions)
+                    .where(and(eq(chatSessions.chatId, chatId), eq(chatSessions.kind, kind)));
+                return row;
+            },
+            async put(chatId: number, kind: ChatSessionKind, value: unknown, updatedAt: Date): Promise<void> {
+                await db
+                    .insert(chatSessions)
+                    .values({ chatId, kind, value, updatedAt })
+                    .onConflictDoUpdate({
+                        target: [chatSessions.chatId, chatSessions.kind],
+                        set: { value, updatedAt },
+                    });
+            },
+            async remove(chatId: number, kind: ChatSessionKind): Promise<void> {
+                await db.delete(chatSessions).where(and(eq(chatSessions.chatId, chatId), eq(chatSessions.kind, kind)));
             },
         },
 

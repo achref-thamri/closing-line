@@ -29,13 +29,18 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await handle.db.execute("truncate players, bets restart identity cascade");
+    await handle.db.execute("truncate players, bets, chat_sessions restart identity cascade");
     await repos.players.ensure([
         { id: "friend", name: "Sam", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: String(FRIEND) },
         { id: "owner", name: "Owner", kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: String(OWNER) },
     ]);
     sent = [];
-    flow = new SettleFlow({
+    flow = newFlow();
+});
+
+/** A fresh flow on the same database, as after a restart. */
+function newFlow(): SettleFlow {
+    return new SettleFlow({
         repos,
         messenger: {
             send: (chatId, reply) => {
@@ -47,7 +52,7 @@ beforeEach(async () => {
         logger: silentLogger,
         now: () => now,
     });
-});
+}
 
 async function place(overrides: Partial<NewBet> = {}) {
     const bet = await repos.bets.place({
@@ -153,6 +158,16 @@ describe("cash-outs", () => {
         await flow.tap(FRIEND, `st:${bet.id}:c`);
         await flow.tap(FRIEND, `st:${bet.id}:w`);
         expect(await flow.amount(FRIEND, "2557")).toEqual({ text: "That bet is already settled." });
+    });
+});
+
+describe("restarts", () => {
+    it("still takes the cash-out amount after a restart", async () => {
+        const bet = await place();
+        await flow.tap(FRIEND, `st:${bet.id}:c`);
+        flow = newFlow();
+        expect((await flow.amount(FRIEND, "2557"))?.text).toContain("💰 cashed out");
+        expect((await repos.bets.get(bet.id))?.status).toBe("cashed_out");
     });
 });
 

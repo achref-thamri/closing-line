@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+    bigint,
     boolean,
     jsonb,
     check,
@@ -8,6 +9,7 @@ import {
     integer,
     pgEnum,
     pgTable,
+    primaryKey,
     text,
     timestamp,
     uniqueIndex,
@@ -26,6 +28,8 @@ export const sport = pgEnum("sport", ["football", "counter_strike"]);
 /** Why a bettor took a bet, chosen in Telegram (spec §4). */
 export const betTag = pgEnum("bet_tag", ["lineup", "skewed_price", "game_read", "slow_live_price"]);
 export const runStatus = pgEnum("run_status", ["running", "succeeded", "skipped", "failed"]);
+/** What a Telegram chat is in the middle of: entering a bet, waiting to be let in, or giving a cash-out amount. */
+export const chatSessionKind = pgEnum("chat_session_kind", ["bet_draft", "join_request", "cashout"]);
 
 /** Everyone with a virtual bankroll: bettors, the scanner, the shadow player and benchmarks. */
 export const players = pgTable("players", {
@@ -221,3 +225,15 @@ export const workerState = pgTable("worker_state", {
     value: jsonb().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Telegram conversations in progress, kept here so a restart or deploy does not lose a half-entered bet (ADR 0009). */
+export const chatSessions = pgTable(
+    "chat_sessions",
+    {
+        chatId: bigint("chat_id", { mode: "number" }).notNull(),
+        kind: chatSessionKind().notNull(),
+        value: jsonb().notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+    },
+    (table) => [primaryKey({ columns: [table.chatId, table.kind] })],
+);
