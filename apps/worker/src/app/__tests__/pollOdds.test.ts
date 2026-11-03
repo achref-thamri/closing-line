@@ -32,7 +32,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
     );
     await ensurePlayers(repos, config);
     now = new Date("2026-11-08T12:00:00Z");
@@ -119,6 +119,30 @@ describe("pollOdds", () => {
         expect(messages).toEqual([]);
         expect(tips).toMatchObject([{ pick: "Arsenal", paperStakeKr: 110, seenAt: now }]);
         expect(tips[0]?.offers.map((offer) => offer.bookmaker)).toEqual(["unibet_se", "nordicbet"]);
+    });
+
+    it("sizes each value bet on what the bets before it in the same poll left, reading totals once", async () => {
+        const fullKelly = parseConfig(
+            { ODDS_API_KEY: "k", FOOTBALL_DATA_TOKEN: "t", TELEGRAM_BOT_TOKEN: "1:a", TELEGRAM_OWNER_CHAT_ID: "1" },
+            {
+                startingBankroll: 1_000,
+                scanner: {
+                    stake: { kellyMultiplier: 1, maxBankrollFraction: 1, minStake: 1, maxStake: 1_000, step: 1 },
+                },
+            },
+        );
+        const value = quotes("unibet_se", 2.9, 3.4, 2.75);
+        const poll = {
+            ...deps([event(24 * 60, value, "a".repeat(32)), event(25 * 60, value, "b".repeat(32))]),
+            config: fullKelly,
+        };
+        const totals = vi.spyOn(repos.bets, "totals");
+        expect(await pollOdds(poll, "soccer_epl", "scan")).toMatchObject({ scannerBets: 2 });
+        // Full Kelly is 4.6%: 46 kr of 1,000, then 44 kr of the 954 left.
+        expect((await repos.bets.forPlayer(SCANNER)).map((bet) => bet.stakeOre)).toEqual([4_600, 4_400]);
+        // One read for the weekly loss pause, one for the bankroll.
+        expect(totals).toHaveBeenCalledTimes(2);
+        totals.mockRestore();
     });
 
     it("locks exchange bets at the odds after commission", async () => {
