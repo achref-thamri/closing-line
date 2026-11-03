@@ -1,4 +1,4 @@
-import type { Repositories } from "@closing-line/db";
+import type { Bet, Repositories } from "@closing-line/db";
 
 /** A bet logged this long ago has usually finished; younger ones are left alone. */
 const OPEN_FOR_MS = 12 * 3_600_000;
@@ -9,13 +9,18 @@ export interface RemindDeps {
     now: () => Date;
 }
 
-/** Nudges each bettor with bets logged over 12 hours ago and still open to settle them; returns how many were nudged. */
+/**
+ * Nudges each bettor with bets logged over 12 hours ago and still open to settle them; returns how many were nudged.
+ * Match results on a tracked fixture settle themselves from the score, so they are left out.
+ */
 export async function remindOpenBets(deps: RemindDeps): Promise<number> {
     const cutoff = deps.now().getTime() - OPEN_FOR_MS;
     let reminded = 0;
     for (const player of await deps.repos.players.list()) {
         if (player.kind !== "bettor" || player.telegramChatId === null) continue;
-        const due = (await deps.repos.bets.openFor(player.id)).filter((bet) => bet.createdAt.getTime() <= cutoff);
+        const due = (await deps.repos.bets.openFor(player.id)).filter(
+            (bet) => bet.createdAt.getTime() <= cutoff && !settlesItself(bet),
+        );
         if (due.length === 0) continue;
         const bets = due.length === 1 ? "1 open bet" : `${due.length} open bets`;
         await deps.send(
@@ -25,4 +30,8 @@ export async function remindOpenBets(deps: RemindDeps): Promise<number> {
         reminded++;
     }
     return reminded;
+}
+
+function settlesItself(bet: Pick<Bet, "fixtureId" | "market">): boolean {
+    return bet.fixtureId !== null && bet.market === "h2h";
 }
