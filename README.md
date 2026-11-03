@@ -11,7 +11,18 @@ and a weekly report shows what works. Real money only follows a track record tha
 
 _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/web dev`)._
 
+<p>
+  <img src="docs/images/telegram-tip.png" width="380" alt="A value tip in Telegram with an I bet this button per bookmaker">
+  <img src="docs/images/telegram-log.png" width="300" alt="Logging a bet in Telegram with /log, one question at a time">
+</p>
+
+_A tip and a `/log` conversation, drawn from the bot's own message texts on demo data
+(`node apps/worker/scripts/screenshots.ts` regenerates all three images)._
+
 ## Highlights
+
+New to odds, margins and closing line value? [How it works](docs/how-it-works.md) walks through one bet, from
+Pinnacle's price to the stake and the CLV, with the same maths as the code.
 
 - **Market-based value detection.** Pinnacle's prices, with the margin removed by the power method, are the fair
   reference. The scanner backs any bookmaker price that beats it by 2% or more, after exchange commission.
