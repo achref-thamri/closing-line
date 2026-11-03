@@ -3,7 +3,7 @@ import type { Player, Repositories } from "@closing-line/db";
 import { z } from "zod";
 import { hasAction, type ButtonHandler, type Messenger, type Reply } from "./chat.ts";
 
-export const WELCOME =
+const WELCOME =
     "Send /log right after placing a bet. I ask for the match, market, pick, bookmaker, odds and stake one at a time, then you tap why you took it.\n\n" +
     "When a bet is over, /open settles it (won, lost, void or cashed out). /undo deletes the last bet you logged.\n" +
     "You also get value tips, the same ones the owner gets; /tips off pauses them.";

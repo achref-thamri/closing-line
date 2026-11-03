@@ -35,6 +35,8 @@ export default defineConfig(
     {
         files: ["apps/web/**/*.{ts,tsx}"],
         plugins: { "@next/next": nextPlugin },
+        // Tells the plugin where the app lives in the monorepo; without it every run warns that pages/ is missing.
+        settings: { next: { rootDir: "apps/web/" } },
         rules: { ...nextPlugin.configs.recommended.rules, ...nextPlugin.configs["core-web-vitals"].rules },
     },
 );
