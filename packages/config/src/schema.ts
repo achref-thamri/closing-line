@@ -86,10 +86,11 @@ export const settingsSchema = z
         bookmakers: z.array(z.string().min(1)).min(2).max(10).default(DEFAULT_BOOKMAKERS),
         /** Reference bookmaker whose de-vigged prices count as fair. */
         sharpBookmaker: z.string().min(1).default("pinnacle"),
-        /** Commission on net winnings, for exchanges. */
-        exchangeCommission: z
-            .record(z.string(), z.number().min(0).max(0.2))
-            .default({ betfair_ex_eu: 0.05, matchbook: 0.02 }),
+        /**
+         * Commission on net winnings per exchange in `bookmakers`, e.g. { "betfair_ex_eu": 0.05 }. Empty while the
+         * feed has no exchange (dropped 2026-11-02).
+         */
+        exchangeCommission: z.record(z.string(), z.number().min(0).max(0.2)).default({}),
         scanner: z
             .strictObject({
                 // 2% since 2026-11-02 (owner): more tips, still clear of price noise; the record decides later.

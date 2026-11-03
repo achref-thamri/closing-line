@@ -20,7 +20,7 @@ const timestamps = {
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 };
 
-export const playerKind = pgEnum("player_kind", ["bettor", "scanner", "shadow", "benchmark"]);
+export const playerKind = pgEnum("player_kind", ["bettor", "scanner", "benchmark"]);
 export const fixtureStatus = pgEnum("fixture_status", ["scheduled", "finished", "void"]);
 export const snapshotKind = pgEnum("snapshot_kind", ["poll", "on_demand", "closing"]);
 export const betStatus = pgEnum("bet_status", ["open", "won", "lost", "void", "cashed_out"]);
@@ -41,7 +41,7 @@ export const decisionReason = pgEnum("decision_reason", [
 /** What a Telegram chat is in the middle of: entering a bet, waiting to be let in, or giving a cash-out amount. */
 export const chatSessionKind = pgEnum("chat_session_kind", ["bet_draft", "join_request", "cashout"]);
 
-/** Everyone with a virtual bankroll: bettors, the scanner, the shadow player and benchmarks. */
+/** Everyone with a virtual bankroll: bettors, the scanner and the benchmark. */
 export const players = pgTable(
     "players",
     {
