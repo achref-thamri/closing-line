@@ -319,6 +319,34 @@ describe("bets", () => {
     });
 });
 
+describe("withLaterPrices", () => {
+    it("gives each match-result bet its bookmaker's later prices for the same selection", async () => {
+        const createdAt = new Date("2026-11-07T08:00:00Z");
+        const at = (hours: number) => new Date(createdAt.getTime() + hours * 3_600_000);
+        await repos.bets.place(bet({ bookmaker: "unibet_se", selection: "away", lockedOdds: 2.6, createdAt }));
+        const snapshot = (bookmaker: string, selection: string, price: number, takenAt: Date) => ({
+            fixtureId: "evt1",
+            bookmaker,
+            market: "h2h",
+            selection,
+            price,
+            bookmakerUpdatedAt: takenAt,
+            takenAt,
+            kind: "poll" as const,
+        });
+        await repos.odds.insert([
+            snapshot("unibet_se", "away", 2.7, at(-1)),
+            snapshot("unibet_se", "away", 2.55, at(3)),
+            snapshot("unibet_se", "home", 2.9, at(3)),
+            snapshot("nordicbet", "away", 2.65, at(3)),
+        ]);
+        const [tip] = await repos.bets.withLaterPrices("scanner", at(-24));
+        expect(tip?.later.map((seen) => [seen.price, seen.takenAt])).toEqual([[2.55, at(3)]]);
+        expect(await repos.bets.withLaterPrices("scanner", at(1))).toEqual([]);
+        expect(await repos.bets.withLaterPrices("friend", at(-24))).toEqual([]);
+    });
+});
+
 describe("state", () => {
     it("stores and replaces JSON values by key", async () => {
         expect(await repos.state.get("lifecycle")).toBeUndefined();

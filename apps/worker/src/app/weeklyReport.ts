@@ -1,7 +1,16 @@
 import type { Config } from "@closing-line/config";
-import { cashoutGainOre, statsBy, statsFromTotals, totalsOf, type PlayerStats } from "@closing-line/core";
+import {
+    cashoutGainOre,
+    statsBy,
+    statsFromTotals,
+    tipLifetime,
+    totalsOf,
+    type LaterPrice,
+    type PlayerStats,
+} from "@closing-line/core";
 import type { Bet, Repositories } from "@closing-line/db";
 import { TAGS } from "./betFlow.ts";
+import { SCANNER } from "./players.ts";
 
 const WEEK_MS = 7 * 86_400_000;
 /** Settled bets a player needs before its results mean much (the spec's go-live rule). */
@@ -61,6 +70,8 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         }
     }
 
+    lines.push(...tipsSection(await deps.repos.bets.withLaterPrices(SCANNER, weekStart)));
+
     lines.push("", "📚 Lesson of the week", lessons[0] ?? LESSONS[weekNumber(now) % LESSONS.length] ?? "");
 
     const usage = await deps.repos.apiUsage.latest("odds-api");
@@ -69,6 +80,38 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         lines.push(`Too early to judge: ${mostSettled} of ${BETS_TO_JUDGE} settled bets so far.`);
     }
     return lines.join("\n");
+}
+
+/**
+ * The week's tips (the scanner's bets): how many there were, how often the price was still on offer at the next
+ * poll and just before kickoff, and what that means for how fast to act on one.
+ */
+export function tipsSection(tips: readonly { bet: Bet; later: LaterPrice[] }[]): string[] {
+    if (tips.length === 0) return [];
+    const lifetimes = tips.map(({ bet, later }) => tipLifetime({ odds: bet.lockedOdds, sentAt: bet.createdAt }, later));
+    const share = (answers: (boolean | undefined)[]) => {
+        const seen = answers.filter((answer) => answer !== undefined);
+        return { kept: seen.filter(Boolean).length, seen: seen.length };
+    };
+    const next = share(lifetimes.map((lifetime) => lifetime.nextPoll));
+    const closing = share(lifetimes.map((lifetime) => lifetime.atClosing));
+    const clvs = tips.flatMap(({ bet }) => (bet.clv === null ? [] : [bet.clv]));
+    const lines = ["", `🔎 Tips this week: ${tips.length}`];
+    if (next.seen > 0) lines.push(`Price still there at the next poll: ${next.kept} of ${next.seen}`);
+    if (closing.seen > 0) lines.push(`Price still there just before kickoff: ${closing.kept} of ${closing.seen}`);
+    if (clvs.length > 0) {
+        const average = clvs.reduce((sum, clv) => sum + clv, 0) / clvs.length;
+        lines.push(`Average CLV: ${percent(average)} over ${clvs.length} with a closing price`);
+    }
+    // Advice once there is enough to go on; a handful of tips says little either way.
+    if (closing.seen >= LESSON_MIN_BETS) {
+        lines.push(
+            closing.kept / closing.seen < 0.5
+                ? "Most tip prices are gone by kickoff: bet soon after a tip arrives."
+                : "Most tip prices last until kickoff: there is time to compare books before betting.",
+        );
+    }
+    return lines;
 }
 
 /** A bettor's results by reason and sport and their cash-outs, plus the lessons their numbers support. */

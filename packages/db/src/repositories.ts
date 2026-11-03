@@ -1,5 +1,5 @@
-import type { PlayerTotals } from "@closing-line/core";
-import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import type { LaterPrice, PlayerTotals } from "@closing-line/core";
+import { and, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
 import { apiUsage, bets, chatSessions, fixtures, jobRuns, oddsSnapshots, players, workerState } from "./schema.ts";
@@ -244,6 +244,53 @@ export function createRepositories(db: Database) {
                         closingProvisional: closing.provisional,
                     })
                     .where(eq(bets.id, id));
+            },
+            /**
+             * A player's match-result bets placed since `since`, each with the prices its bookmaker showed for the same
+             * selection in later polls, oldest bet first. For the scanner these are its tips.
+             */
+            async withLaterPrices(playerId: string, since: Date): Promise<{ bet: Bet; later: LaterPrice[] }[]> {
+                const placed = await db
+                    .select()
+                    .from(bets)
+                    .where(
+                        and(
+                            eq(bets.playerId, playerId),
+                            eq(bets.market, "h2h"),
+                            isNotNull(bets.fixtureId),
+                            gte(bets.createdAt, since),
+                        ),
+                    )
+                    .orderBy(bets.createdAt);
+                const fixtureIds = [...new Set(placed.flatMap((bet) => (bet.fixtureId ? [bet.fixtureId] : [])))];
+                if (fixtureIds.length === 0) return [];
+                const snapshots = await db
+                    .select({
+                        fixtureId: oddsSnapshots.fixtureId,
+                        bookmaker: oddsSnapshots.bookmaker,
+                        selection: oddsSnapshots.selection,
+                        price: oddsSnapshots.price,
+                        takenAt: oddsSnapshots.takenAt,
+                        kind: oddsSnapshots.kind,
+                    })
+                    .from(oddsSnapshots)
+                    .where(
+                        and(
+                            inArray(oddsSnapshots.fixtureId, fixtureIds),
+                            eq(oddsSnapshots.market, "h2h"),
+                            gt(oddsSnapshots.takenAt, since),
+                        ),
+                    );
+                return placed.map((bet) => ({
+                    bet,
+                    later: snapshots.filter(
+                        (seen) =>
+                            seen.fixtureId === bet.fixtureId &&
+                            seen.bookmaker === bet.bookmaker &&
+                            seen.selection === bet.selection &&
+                            seen.takenAt > bet.createdAt,
+                    ),
+                }));
             },
             /** Deletes a bet the player logged themselves, while it is open; false when there is no such bet. */
             async removeOwnOpen(id: string, playerId: string): Promise<boolean> {
