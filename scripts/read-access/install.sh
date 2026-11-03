@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gives Claude Code read-only access to Closing Line on the server; the owner runs it once on their Mac:
+# Read-only access to Closing Line on the server, for checks without the owner's own key; run once on the Mac:
 #   bash scripts/read-access/install.sh
 # - A separate key, ~/.ssh/hetzner_read, which the server only lets run db-read (SELECT as the read-only role) and
 #   cl-logs (container logs). It has no passphrase because it can do nothing else.
