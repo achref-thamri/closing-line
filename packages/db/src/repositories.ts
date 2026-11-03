@@ -2,7 +2,17 @@ import type { LaterPrice, PlayerTotals } from "@closing-line/core";
 import { and, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
-import { apiUsage, bets, chatSessions, fixtures, jobRuns, oddsSnapshots, players, workerState } from "./schema.ts";
+import {
+    apiUsage,
+    bets,
+    chatSessions,
+    decisions,
+    fixtures,
+    jobRuns,
+    oddsSnapshots,
+    players,
+    workerState,
+} from "./schema.ts";
 
 export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
@@ -19,6 +29,15 @@ export type ApiUsage = typeof apiUsage.$inferSelect;
 /** `fixture` is null for bets on events we do not track, which carry `eventName` instead. */
 export type BetWithFixture = Bet & { fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "kickoff" | "league"> | null };
 export type JobRun = typeof jobRuns.$inferSelect;
+export type NewDecision = Omit<typeof decisions.$inferInsert, "id">;
+export type Decision = typeof decisions.$inferSelect;
+/** A decision with its match's league and how it ended: null goals until it is settled. */
+export type DecisionWithResult = Decision & {
+    league: string;
+    status: Fixture["status"];
+    homeGoals: number | null;
+    awayGoals: number | null;
+};
 export type ChatSessionKind = (typeof chatSessions.$inferSelect)["kind"];
 /** `value` is whatever the flow stored; the flow checks its shape when it reads it back. */
 export interface ChatSession {
@@ -349,6 +368,29 @@ export function createRepositories(db: Database) {
                     .insert(workerState)
                     .values({ key, value })
                     .onConflictDoUpdate({ target: workerState.key, set: { value, updatedAt: sql`now()` } });
+            },
+        },
+
+        decisions: {
+            async insert(rows: NewDecision[]): Promise<void> {
+                if (rows.length === 0) return;
+                await db.insert(decisions).values(rows);
+            },
+            /** Decisions taken at or after `since`, oldest first, with their match's league and result. */
+            async since(since: Date): Promise<DecisionWithResult[]> {
+                const rows = await db
+                    .select({
+                        decision: decisions,
+                        league: fixtures.league,
+                        status: fixtures.status,
+                        homeGoals: fixtures.homeGoals,
+                        awayGoals: fixtures.awayGoals,
+                    })
+                    .from(decisions)
+                    .innerJoin(fixtures, eq(decisions.fixtureId, fixtures.id))
+                    .where(gte(decisions.takenAt, since))
+                    .orderBy(decisions.takenAt, decisions.id);
+                return rows.map(({ decision, ...match }) => ({ ...decision, ...match }));
             },
         },
 

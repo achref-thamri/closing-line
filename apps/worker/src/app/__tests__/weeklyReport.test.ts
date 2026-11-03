@@ -2,8 +2,8 @@ import { parseConfig } from "@closing-line/config";
 import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
-import type { Bet } from "@closing-line/db";
-import { bettorBreakdown, LESSONS, tipsSection, weeklyReport } from "../weeklyReport.ts";
+import type { Bet, DecisionWithResult } from "@closing-line/db";
+import { bettorBreakdown, decisionsSection, LESSONS, tipsSection, weeklyReport } from "../weeklyReport.ts";
 
 const config = parseConfig({
     ODDS_API_KEY: "k",
@@ -233,5 +233,48 @@ describe("tipsSection", () => {
             /^Most tip prices last until kickoff/,
         );
         expect(tipsSection([])).toEqual([]);
+    });
+});
+
+describe("decisionsSection", () => {
+    const decision = (overrides: Partial<DecisionWithResult>): DecisionWithResult => ({
+        id: 1,
+        fixtureId: "f1",
+        takenAt: new Date("2026-11-07T08:00:00Z"),
+        minutesToKickoff: 480,
+        outcome: "pass",
+        reason: "no_edge",
+        bestSelection: "home",
+        bestBookmaker: "unibet_se",
+        bestOdds: 2.1,
+        bestEdge: -0.01,
+        fairHome: 0.47,
+        fairDraw: 0.27,
+        fairAway: 0.26,
+        league: "soccer_epl",
+        status: "finished",
+        homeGoals: 0,
+        awayGoals: 1,
+        ...overrides,
+    });
+
+    it("counts bets and passes by reason, and tests the passes against the results", () => {
+        expect(
+            decisionsSection([
+                decision({ fixtureId: "f1", outcome: "bet", reason: "value", bestEdge: 0.05 }),
+                decision({ fixtureId: "f1", reason: "already_bet" }),
+                decision({ fixtureId: "f2", homeGoals: 2, awayGoals: 0 }),
+                decision({ fixtureId: "f3" }),
+                decision({ fixtureId: "f4", status: "scheduled", homeGoals: null, awayGoals: null }),
+                decision({ fixtureId: "f5", reason: "no_fresh_sharp", bestOdds: null, bestSelection: null }),
+            ]),
+        ).toEqual([
+            "",
+            "🧭 Decisions this week: 5 matches looked at 6 times, 1 bet, 5 passed (17% bet rate)",
+            "Passed for: 3 no edge, 1 no fresh Pinnacle price, 1 already bet",
+            // f2 won at 2.10 (+1.10) and f3 lost (−1): +5.0% over 2.
+            "Backing the best price on each settled no-edge pass would have returned +5.0% over 2.",
+        ]);
+        expect(decisionsSection([])).toEqual([]);
     });
 });

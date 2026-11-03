@@ -1,6 +1,7 @@
 import type { Config } from "@closing-line/config";
 import {
     cashoutGainOre,
+    outcomeOf,
     statsBy,
     statsFromTotals,
     tipLifetime,
@@ -8,7 +9,7 @@ import {
     type LaterPrice,
     type PlayerStats,
 } from "@closing-line/core";
-import type { Bet, Repositories } from "@closing-line/db";
+import type { Bet, DecisionWithResult, Repositories } from "@closing-line/db";
 import { TAGS } from "./betFlow.ts";
 import { SCANNER } from "./players.ts";
 
@@ -34,7 +35,7 @@ export const LESSONS = [
 ];
 
 export interface WeeklyReportDeps {
-    repos: Pick<Repositories, "players" | "bets" | "apiUsage">;
+    repos: Pick<Repositories, "players" | "bets" | "apiUsage" | "decisions">;
     config: Pick<Config, "timezone">;
     now: () => Date;
 }
@@ -71,6 +72,7 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
     }
 
     lines.push(...tipsSection(await deps.repos.bets.withLaterPrices(SCANNER, weekStart)));
+    lines.push(...decisionsSection(await deps.repos.decisions.since(weekStart)));
 
     lines.push("", "📚 Lesson of the week", lessons[0] ?? LESSONS[weekNumber(now) % LESSONS.length] ?? "");
 
@@ -109,6 +111,56 @@ export function tipsSection(tips: readonly { bet: Bet; later: LaterPrice[] }[]):
             closing.kept / closing.seen < 0.5
                 ? "Most tip prices are gone by kickoff: bet soon after a tip arrives."
                 : "Most tip prices last until kickoff: there is time to compare books before betting.",
+        );
+    }
+    return lines;
+}
+
+const PASS_REASONS: Record<string, string> = {
+    no_edge: "no edge",
+    no_fresh_sharp: "no fresh Pinnacle price",
+    stake_too_small: "stake below the minimum",
+    paused: "scanner paused",
+    already_bet: "already bet",
+};
+
+/**
+ * What the scanner decided this week: how often it bet, why it passed, and how backing the best price on each
+ * no-edge pass would have done, flat stakes on settled matches. A loss there means passing was right.
+ */
+export function decisionsSection(decisions: readonly DecisionWithResult[]): string[] {
+    if (decisions.length === 0) return [];
+    const matches = new Set(decisions.map((decision) => decision.fixtureId)).size;
+    const bets = decisions.filter((decision) => decision.outcome === "bet").length;
+    const passes = decisions.length - bets;
+    const lines = [
+        "",
+        `🧭 Decisions this week: ${matches} matches looked at ${decisions.length} times, ${bets} bet, ${passes} passed ` +
+            `(${percentPlain(bets / decisions.length)} bet rate)`,
+    ];
+    const reasons = Object.entries(PASS_REASONS).flatMap(([reason, label]) => {
+        const count = decisions.filter((decision) => decision.reason === reason).length;
+        return count > 0 ? [`${count} ${label}`] : [];
+    });
+    if (reasons.length > 0) lines.push(`Passed for: ${reasons.join(", ")}`);
+
+    const settled = decisions.flatMap((decision) =>
+        decision.reason === "no_edge" &&
+        decision.status === "finished" &&
+        decision.bestOdds !== null &&
+        decision.homeGoals !== null &&
+        decision.awayGoals !== null
+            ? [
+                  outcomeOf(decision.homeGoals, decision.awayGoals) === decision.bestSelection
+                      ? decision.bestOdds - 1
+                      : -1,
+              ]
+            : [],
+    );
+    if (settled.length > 0) {
+        const roi = settled.reduce((sum, result) => sum + result, 0) / settled.length;
+        lines.push(
+            `Backing the best price on each settled no-edge pass would have returned ${percent(roi)} over ${settled.length}.`,
         );
     }
     return lines;
@@ -195,4 +247,8 @@ function percent(value: number | undefined): string {
 
 function dateText(date: Date, timeZone: string): string {
     return date.toLocaleDateString("en-GB", { timeZone, day: "numeric", month: "short" });
+}
+
+function percentPlain(value: number): string {
+    return `${(value * 100).toFixed(0)}%`;
 }

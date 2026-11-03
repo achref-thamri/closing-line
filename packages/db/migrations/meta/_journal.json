@@ -85,6 +85,13 @@
             "when": 1793711133952,
             "tag": "0011_value_tip_tag",
             "breakpoints": true
+        },
+        {
+            "idx": 12,
+            "version": "7",
+            "when": 1793717239325,
+            "tag": "0012_scanner_decisions",
+            "breakpoints": true
         }
     ]
 }

@@ -319,6 +319,22 @@ describe("bets", () => {
     });
 });
 
+describe("decisions", () => {
+    it("stores decisions and lists them since a time with their match's result", async () => {
+        const at = new Date("2026-11-07T08:00:00Z");
+        const pass = { fixtureId: "evt1", minutesToKickoff: 300, outcome: "pass", reason: "no_edge" } as const;
+        await repos.decisions.insert([
+            { ...pass, takenAt: new Date(at.getTime() - 86_400_000) },
+            { ...pass, takenAt: at, bestSelection: "away", bestOdds: 2.4, bestEdge: -0.01 },
+        ]);
+        await repos.fixtures.setResult("evt1", { status: "finished", homeGoals: 1, awayGoals: 2 });
+        expect(await repos.decisions.since(at)).toMatchObject([
+            { reason: "no_edge", bestOdds: 2.4, league: "soccer_epl", status: "finished", homeGoals: 1, awayGoals: 2 },
+        ]);
+        await expect(repos.decisions.insert([{ ...pass, takenAt: at, outcome: "bet" }])).rejects.toThrow();
+    });
+});
+
 describe("withLaterPrices", () => {
     it("gives each match-result bet its bookmaker's later prices for the same selection", async () => {
         const createdAt = new Date("2026-11-07T08:00:00Z");

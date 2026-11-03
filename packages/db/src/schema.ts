@@ -28,6 +28,16 @@ export const sport = pgEnum("sport", ["football", "counter_strike"]);
 /** Why a bettor took a bet, chosen in Telegram (spec §4). */
 export const betTag = pgEnum("bet_tag", ["lineup", "skewed_price", "game_read", "slow_live_price", "value_tip"]);
 export const runStatus = pgEnum("run_status", ["running", "succeeded", "skipped", "failed"]);
+/** What the scanner did with a match at a poll: bet, or pass and why. */
+export const decisionOutcome = pgEnum("decision_outcome", ["bet", "pass"]);
+export const decisionReason = pgEnum("decision_reason", [
+    "value",
+    "no_edge",
+    "no_fresh_sharp",
+    "stake_too_small",
+    "paused",
+    "already_bet",
+]);
 /** What a Telegram chat is in the middle of: entering a bet, waiting to be let in, or giving a cash-out amount. */
 export const chatSessionKind = pgEnum("chat_session_kind", ["bet_draft", "join_request", "cashout"]);
 
@@ -162,6 +172,36 @@ export const bets = pgTable(
             sql`${table.status}::text <> 'cashed_out' or ${table.cashoutOfferOre} is not null`,
         ),
         check("bets_h2h_selection", sql`${table.market} <> 'h2h' or ${table.selection} in ('home', 'draw', 'away')`),
+    ],
+);
+
+/**
+ * One row per match the scanner looked at in a poll, bet or pass, with the best price it saw and Pinnacle's fair
+ * probabilities, so passes can be measured as well as bets (what happened after a pass, calibration).
+ */
+export const decisions = pgTable(
+    "decisions",
+    {
+        id: integer().primaryKey().generatedAlwaysAsIdentity(),
+        fixtureId: text("fixture_id")
+            .notNull()
+            .references(() => fixtures.id),
+        takenAt: timestamp("taken_at", { withTimezone: true }).notNull(),
+        minutesToKickoff: integer("minutes_to_kickoff").notNull(),
+        outcome: decisionOutcome().notNull(),
+        reason: decisionReason().notNull(),
+        /** The best soft price on any selection, value or not; null without a fresh Pinnacle price. */
+        bestSelection: text("best_selection"),
+        bestBookmaker: text("best_bookmaker"),
+        bestOdds: doublePrecision("best_odds"),
+        bestEdge: doublePrecision("best_edge"),
+        fairHome: doublePrecision("fair_home"),
+        fairDraw: doublePrecision("fair_draw"),
+        fairAway: doublePrecision("fair_away"),
+    },
+    (table) => [
+        index("decisions_taken_idx").on(table.takenAt),
+        check("decisions_bet_is_value", sql`(${table.outcome} = 'bet') = (${table.reason} = 'value')`),
     ],
 );
 
