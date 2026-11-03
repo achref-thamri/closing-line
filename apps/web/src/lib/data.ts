@@ -12,7 +12,14 @@ export interface PlayerSummary {
     player: Player;
     stats: PlayerStats;
     bankrollOre: number;
+    /** Profit as a share of the starting bankroll, so players who start with different bankrolls compare fairly. */
+    growth: number;
     series: BankrollPoint[];
+}
+
+/** Best growth first; players level on growth keep their order. */
+export function byGrowth(a: Pick<PlayerSummary, "growth">, b: Pick<PlayerSummary, "growth">): number {
+    return b.growth - a.growth;
 }
 
 export interface Dashboard {
@@ -50,11 +57,13 @@ export async function loadDashboard(): Promise<Dashboard> {
                 player,
                 stats,
                 bankrollOre: player.startingBankrollOre + stats.profitOre,
+                growth: stats.profitOre / player.startingBankrollOre,
                 series: bankrollSeries(player.startingBankrollOre, player.createdAt, ledger),
             };
         }),
     );
-    players.sort((a, b) => b.bankrollOre - a.bankrollOre);
+    // Bettors start with 60,000 kr and the automated players with 10,000 kr, so kroner would rank bettors first.
+    players.sort(byGrowth);
     const usage = await repos.apiUsage.latest("odds-api");
     return {
         demo: !process.env.DATABASE_URL,

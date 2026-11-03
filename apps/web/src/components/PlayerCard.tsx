@@ -20,7 +20,9 @@ export function PlayerCard({ summary, rank }: { summary: PlayerSummary; rank: nu
                 </span>
             </header>
             <p className="mt-3 text-3xl font-semibold tabular-nums">{kroner(bankrollOre)}</p>
-            <p className="text-sm text-zinc-500 tabular-nums">{signedKroner(stats.profitOre)} profit</p>
+            <p className="text-sm text-zinc-500 tabular-nums">
+                {signedKroner(stats.profitOre)} profit ({percent(summary.growth)} since the start)
+            </p>
             <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
                 <Stat label="ROI" value={percent(stats.roi)} />
                 <Stat label="Avg CLV" value={percent(stats.averageClv)} />
