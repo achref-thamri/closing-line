@@ -163,7 +163,8 @@ async function favouriteBet(deps: PollOddsDeps, event: EventOdds, fair: Record<O
 
 /** Closing value from Pinnacle's price in the last poll before kickoff (ADR 0006); a later poll overwrites it. */
 async function recordClosing(deps: PollOddsDeps, event: EventOdds, fair: Record<Outcome, number>): Promise<number> {
-    const open = await deps.repos.bets.open([event.id]);
+    // Only match-result bets have a Pinnacle price to close against; props on the fixture do not.
+    const open = (await deps.repos.bets.open([event.id])).filter((bet) => bet.market === "h2h");
     for (const bet of open) {
         const fairOdds = 1 / fair[toOutcome(bet.selection)];
         await deps.repos.bets.setClosing(bet.id, {

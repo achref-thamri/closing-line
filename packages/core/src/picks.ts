@@ -34,9 +34,13 @@ export function bookName(book: string): string {
     );
 }
 
-/** The two sides of "Bayern – Arsenal", "Bayern v Arsenal" or "Bayern-Arsenal"; empty when it does not split. */
+/**
+ * The two sides of "Bayern – Arsenal", "Bayern v Arsenal" or "Bayern-Arsenal"; empty when it does not split. A
+ * separator with spaces around it wins, so "Paris Saint-Germain – Lille" keeps the hyphen in the team name.
+ */
 export function teamsOf(eventName: string): [string, string] | [] {
-    const parts = eventName.split(/\s+(?:v|vs)\s+|\s*[–-]\s*/i).map((part) => part.trim());
+    const spaced = /\s+(?:v|vs|–|-)\s+/i;
+    const parts = eventName.split(spaced.test(eventName) ? spaced : /\s*[–-]\s*/).map((part) => part.trim());
     const [home, away] = parts;
     return parts.length === 2 && home && away ? [home, away] : [];
 }

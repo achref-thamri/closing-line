@@ -165,6 +165,25 @@ describe("pollOdds", () => {
         expect(await repos.odds.latest("b".repeat(32))).toHaveLength(6);
     });
 
+    it("gives closing prices to match-result bets only", async () => {
+        await repos.fixtures.upsert([event(30)]);
+        await repos.bets.place({
+            playerId: SCANNER,
+            fixtureId: "a".repeat(32),
+            market: "player_shots",
+            selection: "over",
+            playerName: "Saka",
+            line: 1.5,
+            stakeOre: 10_000,
+            lockedOdds: 1.9,
+            bookmaker: "bet25",
+            selfReported: true,
+        });
+        expect(await pollOdds(deps([event(30)]), "soccer_epl", "closing")).toMatchObject({ closingUpdates: 1 });
+        const bets = await repos.bets.forPlayer(SCANNER);
+        expect(bets.find((bet) => bet.market === "player_shots")?.clv).toBeNull();
+    });
+
     it("records closing prices and backs the favourite near kickoff", async () => {
         await pollOdds(deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75))]), "soccer_epl", "scan");
         now = new Date(now.getTime() + (24 * 60 - 30) * 60_000);

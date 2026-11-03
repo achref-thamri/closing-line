@@ -10,7 +10,7 @@ export { dueJobs, localTime, zonedTimeToUtc } from "./schedule.ts";
 export type { JobKind, PlanInput, PlannedJob, UpcomingFixture } from "./schedule.ts";
 export { isOutcome, OUTCOMES, outcomeOf, settle1x2, toOutcome } from "./settlement.ts";
 export type { MatchResult, Outcome, Settlement } from "./settlement.ts";
-export { matchFixture, normalizeTeam, sameTeam } from "./teams.ts";
+export { fixtureNamed, matchFixture, normalizeTeam, sameTeam } from "./teams.ts";
 export type { ResultCandidate } from "./teams.ts";
 export { kellyFraction, kellyStake } from "./staking.ts";
 export type { StakeRules } from "./staking.ts";

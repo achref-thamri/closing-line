@@ -105,6 +105,28 @@ describe("settleBets", () => {
         ]);
     });
 
+    it("leaves a bettor's player prop on the fixture for /open", async () => {
+        await bet(SCANNER, id("a"), "home", 2.1);
+        await repos.bets.place({
+            playerId: SCANNER,
+            fixtureId: id("a"),
+            market: "player_shots_on_target",
+            selection: "over",
+            playerName: "Thiago",
+            line: 0.5,
+            stakeOre: 10_000,
+            lockedOdds: 1.6,
+            bookmaker: "bet25",
+            selfReported: true,
+        });
+        const results = [finished(["Brentford FC"], ["Nottingham Forest FC"], 2, 0)];
+        expect(await settleBets(deps(results))).toMatchObject({ settledBets: 1 });
+        expect((await repos.bets.forPlayer(SCANNER)).map((each) => [each.market, each.status])).toEqual([
+            ["h2h", "won"],
+            ["player_shots_on_target", "open"],
+        ]);
+    });
+
     it("asks for results around the kickoffs, once per league", async () => {
         const run = deps([]);
         await settleBets(run);

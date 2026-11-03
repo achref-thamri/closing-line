@@ -1,5 +1,5 @@
 import type { Config } from "@closing-line/config";
-import { bookName, teamsOf } from "@closing-line/core";
+import { bookName, fixtureNamed, isOutcome, teamsOf } from "@closing-line/core";
 import type { NewBet, Repositories } from "@closing-line/db";
 import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
@@ -58,6 +58,10 @@ const BOOKS = [
 ];
 const LINES = [0.5, 1.5, 2.5, 3.5];
 
+/** A typed match is looked up among fixtures from this long ago (bets placed live) to a week ahead. */
+const LIVE_MS = 3 * 3_600_000;
+const WEEK_MS = 7 * 86_400_000;
+
 /** A bet being entered waits this long for the next answer; then it has to be started again. */
 const DRAFT_TTL_MS = 60 * 60 * 1000;
 
@@ -68,6 +72,8 @@ type Step = (typeof STEPS)[number];
 export interface Draft {
     sport: Sport;
     eventName: string;
+    /** The fixture the typed match names, when it is one we track; null otherwise. */
+    fixtureId: string | null;
     market: string;
     playerName: string | null;
     selection: string;
@@ -84,6 +90,7 @@ const storedDraft = z.object({
         .object({
             sport: z.enum(["football", "counter_strike"]),
             eventName: z.string(),
+            fixtureId: z.string().nullable(),
             market: z.string(),
             playerName: z.string().nullable(),
             selection: z.string(),
@@ -105,9 +112,9 @@ interface Pending {
 }
 
 export interface BetFlowDeps {
-    repos: Pick<Repositories, "bets" | "chats">;
+    repos: Pick<Repositories, "bets" | "chats" | "fixtures">;
     bettors: Pick<Bettors, "isAllowed" | "isWaiting" | "ensure" | "player">;
-    config: Pick<Config, "bettors"> & { telegram: { ownerChatId: number } };
+    config: Pick<Config, "bettors" | "timezone"> & { telegram: { ownerChatId: number } };
     messenger: Messenger;
     logger: Logger;
     now?: () => Date;
@@ -116,7 +123,9 @@ export interface BetFlowDeps {
 /**
  * Logging a bet in Telegram (spec §4): `/log` asks one question at a time (buttons where the answers are known, typed
  * text for the match, player, odds and stake), and a tap on a reason logs the bet. Each answer is checked when it
- * arrives, so a logged bet is complete. The answers so far are stored, so a restart does not lose them.
+ * arrives, so a logged bet is complete. The answers so far are stored, so a restart does not lose them. A typed
+ * match that names a fixture we track is linked to it: a match-result bet on it then gets a closing price and CLV,
+ * and settles itself, like the scanner's.
  */
 export class BetFlow implements ButtonHandler {
     private readonly deps: BetFlowDeps;
@@ -149,18 +158,17 @@ export class BetFlow implements ButtonHandler {
         }
         const pending = await this.current(chatId);
         if (!pending) return [{ text: "Send /log to log a bet, or /open to settle one." }];
-        const reply = this.answer(pending, text.trim());
+        const reply = await this.answer(pending, text.trim());
         await this.save(chatId, pending);
         return [reply];
     }
 
-    private answer(pending: Pending, answer: string): Reply {
+    private async answer(pending: Pending, answer: string): Promise<Reply> {
         const { draft } = pending;
         switch (pending.step) {
             case "match":
                 if (answer.length < 3) return { text: "Which match? E.g. Bayern – Arsenal" };
-                draft.eventName = answer;
-                return this.ask(pending, "market");
+                return this.match(pending, answer);
             case "player":
                 if (answer.length < 2) return { text: "Which player? E.g. Davies" };
                 draft.playerName = answer;
@@ -237,6 +245,28 @@ export class BetFlow implements ButtonHandler {
             return this.ask(pending, "odds");
         }
         return this.ask(pending, pending.step);
+    }
+
+    /** Links the typed match to a fixture we track when exactly one fits, and names it the way the fixture does. */
+    private async match(pending: Pending, answer: string): Promise<Reply> {
+        const { draft } = pending;
+        const now = this.now().getTime();
+        const fixtures =
+            draft.sport === "football"
+                ? await this.deps.repos.fixtures.between(new Date(now - LIVE_MS), new Date(now + WEEK_MS), "scheduled")
+                : [];
+        const fixture = fixtureNamed(answer, fixtures);
+        draft.fixtureId = fixture?.id ?? null;
+        draft.eventName = fixture ? `${fixture.homeTeam} – ${fixture.awayTeam}` : answer;
+        const reply = this.ask(pending, "market");
+        if (!fixture) return reply;
+        const kickoff = fixture.kickoff.toLocaleString("en-GB", {
+            timeZone: this.deps.config.timezone,
+            weekday: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+        return { ...reply, text: `✓ Kickoff ${kickoff}; a match-result bet gets a closing price.\n${reply.text}` };
     }
 
     /** A typed pick: "over 9.5" for line markets, the backed side or outcome otherwise. */
@@ -355,10 +385,12 @@ export class BetFlow implements ButtonHandler {
         const now = this.now();
         return {
             playerId,
-            fixtureId: null,
+            fixtureId: draft.fixtureId,
             sport: draft.sport,
             eventName: draft.eventName,
-            market: draft.market,
+            // A match result on a tracked fixture is stored like the scanner's, so it gets a closing price and settles.
+            market:
+                draft.fixtureId && draft.market === "match_result" && isOutcome(draft.selection) ? "h2h" : draft.market,
             selection: draft.selection,
             playerName: draft.playerName,
             line: draft.line,

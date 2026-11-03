@@ -29,7 +29,8 @@ export interface SettleReport {
 
 /**
  * Settles every open bet on fixtures that should be over: finished matches by their regular-time score, and
- * matches called off (or never reported) for 48 hours as void. A settled fixture is never settled again.
+ * matches called off (or never reported) for 48 hours as void. A settled fixture is never settled again. Only
+ * match-result (`h2h`) bets settle from the score.
  */
 export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     const now = deps.now();
@@ -90,6 +91,8 @@ async function settleFixtureBets(
     const result = resultOf(fixture);
     const lines: string[] = [];
     for (const bet of await deps.repos.bets.open([fixtureId])) {
+        // Other markets on the fixture (a bettor's player props) are settled by the bettor with /open.
+        if (bet.market !== "h2h") continue;
         const settlement = settle1x2(
             { selection: toOutcome(bet.selection), stakeOre: bet.stakeOre, decimalOdds: bet.lockedOdds },
             result,

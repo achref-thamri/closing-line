@@ -23,7 +23,8 @@ _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/w
   reserve, warns at 70% and 90%, and pauses instead of failing when the quota is used up.
 - **A bet in a few taps.** `/log` asks for the match, market, player, line, bookmaker, odds and stake one at a time,
   with buttons wherever the answers are known, and checks each answer before the next question. One more tap logs
-  the reason, and `/open` settles the bet later, cash-outs included. A bet half entered survives a deploy or restart
+  the reason, and `/open` settles the bet later, cash-outs included. A typed match that names a fixture we track is
+  linked to it, so a match-result bet gets a closing price and CLV and settles itself, like the scanner's. A bet half entered survives a deploy or restart
   ([ADR 0009](docs/adr/0009-chat-state-in-the-database.md)).
 - **Correct by construction.** One bet per selection for automated players (a unique index), settlement only of
   open bets,
