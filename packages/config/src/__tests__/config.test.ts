@@ -57,7 +57,7 @@ describe("parseConfig", () => {
             "coolbet",
         ]);
         expect(config.sharpBookmaker).toBe("pinnacle");
-        expect(config.exchangeCommission).toEqual({ betfair_ex_eu: 0.05, matchbook: 0.02 });
+        expect(config.exchangeCommission).toEqual({});
         expect(config.scanner).toEqual({
             minEdge: 0.02,
             maxSharpAgeMinutes: 10,

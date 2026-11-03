@@ -99,6 +99,13 @@
             "when": 1793731947462,
             "tag": "0013_drop_slip_columns",
             "breakpoints": true
+        },
+        {
+            "idx": 14,
+            "version": "7",
+            "when": 1793732231271,
+            "tag": "0014_drop_shadow_kind",
+            "breakpoints": true
         }
     ]
 }

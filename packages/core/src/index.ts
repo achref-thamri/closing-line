@@ -6,7 +6,7 @@ export { bestOffer, fairProbabilities, favourite, findValueBets, netOdds } from 
 export type { PriceQuote, ValueBet, ValueOffer } from "./scanner.ts";
 export { availableFromTotals, bankrollSeries, playerStats, statsFromTotals, totalsOf } from "./metrics.ts";
 export type { BankrollPoint, MetricsBet, PlayerStats, PlayerTotals } from "./metrics.ts";
-export { dueJobs, localTime, zonedTimeToUtc } from "./schedule.ts";
+export { dueJobs, localTime } from "./schedule.ts";
 export type { JobKind, PlanInput, PlannedJob, UpcomingFixture } from "./schedule.ts";
 export { isOutcome, OUTCOMES, outcomeOf, settle1x2, toOutcome } from "./settlement.ts";
 export type { MatchResult, Outcome, Settlement } from "./settlement.ts";

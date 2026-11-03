@@ -11,5 +11,4 @@ export const KIND_LABEL: Record<Player["kind"], string> = {
     scanner: "Scanner",
     benchmark: "Benchmark",
     bettor: "Bettor",
-    shadow: "Shadow",
 };

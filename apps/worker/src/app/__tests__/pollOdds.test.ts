@@ -146,7 +146,11 @@ describe("pollOdds", () => {
     });
 
     it("locks exchange bets at the odds after commission", async () => {
-        await pollOdds(deps([event(24 * 60, quotes("betfair_ex_eu", 2.9, 3.4, 2.8))]), "soccer_epl", "scan");
+        const poll = {
+            ...deps([event(24 * 60, quotes("betfair_ex_eu", 2.9, 3.4, 2.8))]),
+            config: { ...config, exchangeCommission: { betfair_ex_eu: 0.05 } },
+        };
+        await pollOdds(poll, "soccer_epl", "scan");
         const [bet] = await repos.bets.forPlayer(SCANNER);
         expect(bet?.lockedOdds).toBeCloseTo(2.71);
     });
