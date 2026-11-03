@@ -1,4 +1,5 @@
 import type { Api } from "grammy";
+import { messageOf } from "./errors.ts";
 import type { Logger } from "./logger.ts";
 
 /** A message to the owner: alerts, failed jobs, settlements. */
@@ -15,7 +16,7 @@ export function createTextSender(options: { api: Pick<Api, "sendMessage">; logge
         try {
             await options.api.sendMessage(chatId, text, { link_preview_options: { is_disabled: true } });
         } catch (error) {
-            options.logger.warn({ chatId, error: (error as Error).message }, "telegram message failed");
+            options.logger.warn({ chatId, error: messageOf(error) }, "telegram message failed");
         }
     };
 }

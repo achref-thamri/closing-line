@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { HttpError, PermanentError, TransientError } from "./errors.ts";
+import { HttpError, messageOf, PermanentError, TransientError } from "./errors.ts";
 
 export type Fetch = typeof fetch;
 
@@ -33,7 +33,7 @@ export async function getJson<S extends z.ZodType>(request: GetJsonRequest<S>): 
             signal: AbortSignal.timeout(timeoutMs),
         });
     } catch (error) {
-        throw new TransientError(`${label}: ${(error as Error).message}`, undefined, { cause: error });
+        throw new TransientError(`${label}: ${messageOf(error)}`, undefined, { cause: error });
     }
 
     const text = await response.text();

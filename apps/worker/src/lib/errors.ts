@@ -1,3 +1,8 @@
+/** The message of anything thrown; a thrown string or object is turned into text instead of logging undefined. */
+export function messageOf(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
 /** A failure worth retrying: timeouts, network errors, HTTP 429 and 5xx. */
 export class TransientError extends Error {
     override name = "TransientError";

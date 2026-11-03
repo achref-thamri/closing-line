@@ -127,7 +127,7 @@ export class SettleFlow implements ButtonHandler {
                 text: `📝 ${name} settled:\n${describeBet(bet)}\n${result}`,
             });
         }
-        this.deps.logger.info({ playerId: bet.playerId, status: settlement.status }, "slip bet settled");
+        this.deps.logger.info({ playerId: bet.playerId, status: settlement.status }, "bet settled");
         return { text: `${describeBet(bet)}\n\n${result}` };
     }
 

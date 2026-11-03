@@ -1,5 +1,6 @@
 import { dueJobs, type JobKind, type PlannedJob } from "@closing-line/core";
 import type { Repositories } from "@closing-line/db";
+import { messageOf } from "../lib/errors.ts";
 import type { Logger } from "../lib/logger.ts";
 import type { Notify } from "../lib/telegram.ts";
 
@@ -42,7 +43,7 @@ export async function tick(deps: RunnerDeps): Promise<void> {
             await deps.repos.runs.finish(job.key, { ...outcome, finishedAt: deps.now() });
             deps.logger.info({ job: job.key, ...outcome }, "job finished");
         } catch (error) {
-            const message = (error as Error).message;
+            const message = messageOf(error);
             await deps.repos.runs.finish(job.key, { status: "failed", message, finishedAt: deps.now() });
             deps.logger.error({ job: job.key, error: message }, "job failed");
             await deps.notify(`❌ Job ${job.key} failed: ${message}`);

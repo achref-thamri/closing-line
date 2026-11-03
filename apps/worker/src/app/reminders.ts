@@ -20,7 +20,7 @@ export async function remindOpenBets(deps: RemindDeps): Promise<number> {
         const bets = due.length === 1 ? "1 open bet" : `${due.length} open bets`;
         await deps.send(
             Number(player.telegramChatId),
-            `🔔 You have ${bets} from earlier. Send /open to mark them won, lost, void or cashed out, or send the settled slip.`,
+            `🔔 You have ${bets} from earlier. Send /open to mark them won, lost, void or cashed out.`,
         );
         reminded++;
     }
