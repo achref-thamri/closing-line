@@ -61,14 +61,19 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
         favouriteBets: 0,
         closingUpdates: 0,
     };
-    const scannerPaused = await isScannerPaused(deps, now);
+    const minutesToKickoff = (event: EventOdds) => (event.kickoff.getTime() - now.getTime()) / 60_000;
+    const isClosing = (event: EventOdds) =>
+        minutesToKickoff(event) > 0 && minutesToKickoff(event) <= config.closingWindowMinutes;
+    await deps.repos.fixtures.upsert(result.data);
+    await deps.repos.odds.insert(
+        result.data.flatMap((event) => snapshotsOf(event, now, isClosing(event) ? "closing" : "poll")),
+    );
+    // Read once per poll; each bet placed below takes its stake off, as the next query would have.
+    const scanner = (await isScannerPaused(deps, now)) ? undefined : { availableOre: await scannerAvailableOre(deps) };
 
     for (const event of result.data) {
-        const minutesToKickoff = (event.kickoff.getTime() - now.getTime()) / 60_000;
-        const closing = minutesToKickoff > 0 && minutesToKickoff <= config.closingWindowMinutes;
-        await deps.repos.fixtures.upsert([event]);
-        await deps.repos.odds.insert(snapshotsOf(event, now, closing ? "closing" : "poll"));
-        if (minutesToKickoff <= 0) continue;
+        if (minutesToKickoff(event) <= 0) continue;
+        const closing = isClosing(event);
 
         const fair = fairProbabilities(
             event.quotes,
@@ -78,7 +83,7 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
         );
         if (!fair) continue;
 
-        if (!scannerPaused) report.scannerBets += await scannerBets(deps, event, fair);
+        if (scanner) report.scannerBets += await scannerBets(deps, event, fair, scanner);
         if (closing) {
             report.favouriteBets += await favouriteBet(deps, event, fair);
             report.closingUpdates += await recordClosing(deps, event, fair);
@@ -87,7 +92,12 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
     return report;
 }
 
-async function scannerBets(deps: PollOddsDeps, event: EventOdds, fair: Record<Outcome, number>): Promise<number> {
+async function scannerBets(
+    deps: PollOddsDeps,
+    event: EventOdds,
+    fair: Record<Outcome, number>,
+    bankroll: { availableOre: number },
+): Promise<number> {
     const { config } = deps;
     const values = findValueBets(event.quotes, fair, {
         sharpBookmaker: config.sharpBookmaker,
@@ -96,9 +106,12 @@ async function scannerBets(deps: PollOddsDeps, event: EventOdds, fair: Record<Ou
     });
     let placed = 0;
     for (const value of values) {
-        const totals = (await deps.repos.bets.totals()).get(SCANNER) ?? { profitOre: 0, openStakeOre: 0 };
-        const bankrollOre = availableFromTotals(config.startingBankroll * 100, totals);
-        const stake = kellyStake(bankrollOre / 100, value.netOdds, value.fairProbability, config.scanner.stake);
+        const stake = kellyStake(
+            bankroll.availableOre / 100,
+            value.netOdds,
+            value.fairProbability,
+            config.scanner.stake,
+        );
         if (stake === 0) continue;
         const bet = await deps.repos.bets.place({
             playerId: SCANNER,
@@ -113,6 +126,7 @@ async function scannerBets(deps: PollOddsDeps, event: EventOdds, fair: Record<Ou
         });
         if (!bet) continue;
         placed++;
+        bankroll.availableOre -= bet.stakeOre;
         const tip: Tip = {
             homeTeam: event.homeTeam,
             awayTeam: event.awayTeam,
@@ -159,6 +173,12 @@ async function recordClosing(deps: PollOddsDeps, event: EventOdds, fair: Record<
         });
     }
     return open.length;
+}
+
+/** What the scanner can stake: its starting bankroll plus settled profit, minus stakes still open. */
+async function scannerAvailableOre(deps: PollOddsDeps): Promise<number> {
+    const totals = (await deps.repos.bets.totals()).get(SCANNER) ?? { profitOre: 0, openStakeOre: 0 };
+    return availableFromTotals(deps.config.startingBankroll * 100, totals);
 }
 
 /** The scanner sits out after losing `weeklyLossPause` of its starting bankroll in the last seven days. */
