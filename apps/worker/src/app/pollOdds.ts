@@ -1,6 +1,7 @@
 import type { Config } from "@closing-line/config";
 import {
     availableFromTotals,
+    bestOffer,
     closingLineValue,
     fairProbabilities,
     favourite,
@@ -10,7 +11,7 @@ import {
     type CreditPriority,
     type Outcome,
 } from "@closing-line/core";
-import type { NewOddsSnapshot, Repositories } from "@closing-line/db";
+import type { NewDecision, NewOddsSnapshot, Repositories } from "@closing-line/db";
 import type { EventOdds, OddsSource } from "../ports/odds.ts";
 import type { CreditGuard } from "./creditGuard.ts";
 import { FAVOURITE, SCANNER } from "./players.ts";
@@ -21,7 +22,7 @@ const WEEK_MS = 7 * 86_400_000;
 export interface PollOddsDeps {
     source: Pick<OddsSource, "odds">;
     guard: Pick<CreditGuard, "spend">;
-    repos: Pick<Repositories, "fixtures" | "odds" | "bets">;
+    repos: Pick<Repositories, "fixtures" | "odds" | "bets" | "decisions">;
     config: Pick<
         Config,
         | "bookmakers"
@@ -45,8 +46,9 @@ export type PollReport =
     | { skipped: false; events: number; scannerBets: number; favouriteBets: number; closingUpdates: number };
 
 /**
- * One paid odds poll for a league: stores every price, lets the scanner bet on value, and, close to kickoff,
- * records closing prices for open bets and places the favourite benchmark bet.
+ * One paid odds poll for a league: stores every price, lets the scanner bet on value, records what it decided for
+ * each match (bet, or pass and why), and, close to kickoff, records closing prices for open bets and places the
+ * favourite benchmark bet.
  */
 export async function pollOdds(deps: PollOddsDeps, league: string, priority: CreditPriority): Promise<PollReport> {
     const { config } = deps;
@@ -71,9 +73,13 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
     // Read once per poll; each bet placed below takes its stake off, as the next query would have.
     const scanner = (await isScannerPaused(deps, now)) ? undefined : { availableOre: await scannerAvailableOre(deps) };
 
+    const decisions: NewDecision[] = [];
+
     for (const event of result.data) {
-        if (minutesToKickoff(event) <= 0) continue;
+        const minutes = Math.round(minutesToKickoff(event));
+        if (minutes <= 0) continue;
         const closing = isClosing(event);
+        const decided = { fixtureId: event.id, takenAt: now, minutesToKickoff: minutes };
 
         const fair = fairProbabilities(
             event.quotes,
@@ -81,23 +87,53 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
             now,
             config.scanner.maxSharpAgeMinutes * 60_000,
         );
-        if (!fair) continue;
+        if (!fair) {
+            decisions.push({ ...decided, outcome: "pass", reason: "no_fresh_sharp" });
+            continue;
+        }
 
-        if (scanner) report.scannerBets += await scannerBets(deps, event, fair, scanner);
+        const best = bestOffer(event.quotes, fair, {
+            sharpBookmaker: config.sharpBookmaker,
+            commission: config.exchangeCommission,
+        });
+        let reason: Reason;
+        if (scanner) {
+            const bets = await scannerBets(deps, event, fair, scanner);
+            report.scannerBets += bets.placed;
+            reason = bets.reason;
+        } else {
+            reason = best && best.edge >= config.scanner.minEdge ? "paused" : "no_edge";
+        }
+        decisions.push({
+            ...decided,
+            outcome: reason === "value" ? "bet" : "pass",
+            reason,
+            bestSelection: best?.selection ?? null,
+            bestBookmaker: best?.bookmaker ?? null,
+            bestOdds: best?.netOdds ?? null,
+            bestEdge: best?.edge ?? null,
+            fairHome: fair.home,
+            fairDraw: fair.draw,
+            fairAway: fair.away,
+        });
+
         if (closing) {
             report.favouriteBets += await favouriteBet(deps, event, fair);
             report.closingUpdates += await recordClosing(deps, event, fair);
         }
     }
+    await deps.repos.decisions.insert(decisions);
     return report;
 }
+
+type Reason = NewDecision["reason"];
 
 async function scannerBets(
     deps: PollOddsDeps,
     event: EventOdds,
     fair: Record<Outcome, number>,
     bankroll: { availableOre: number },
-): Promise<number> {
+): Promise<{ placed: number; reason: Reason }> {
     const { config } = deps;
     const values = findValueBets(event.quotes, fair, {
         sharpBookmaker: config.sharpBookmaker,
@@ -105,6 +141,7 @@ async function scannerBets(
         minEdge: config.scanner.minEdge,
     });
     let placed = 0;
+    let sized = 0;
     for (const value of values) {
         const stake = kellyStake(
             bankroll.availableOre / 100,
@@ -113,6 +150,7 @@ async function scannerBets(
             config.scanner.stake,
         );
         if (stake === 0) continue;
+        sized++;
         const bet = await deps.repos.bets.place({
             playerId: SCANNER,
             fixtureId: event.id,
@@ -142,7 +180,10 @@ async function scannerBets(
         if (deps.tip) await deps.tip(tip);
         else await deps.notify(formatTip(tip, config.timezone) ?? "");
     }
-    return placed;
+    if (placed > 0) return { placed, reason: "value" };
+    if (values.length === 0) return { placed, reason: "no_edge" };
+    // Value, but every stake rounded below the minimum, or the scanner already backed these selections.
+    return { placed, reason: sized === 0 ? "stake_too_small" : "already_bet" };
 }
 
 async function favouriteBet(deps: PollOddsDeps, event: EventOdds, fair: Record<Outcome, number>): Promise<number> {

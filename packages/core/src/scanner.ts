@@ -80,6 +80,16 @@ export function findValueBets(
     return bets;
 }
 
+/** The single best soft price against the fair price, on any selection, whether it reaches a threshold or not. */
+export function bestOffer(
+    quotes: readonly PriceQuote[],
+    fair: Record<Outcome, number>,
+    options: { sharpBookmaker: string; commission: Readonly<Record<string, number>> },
+): ValueBet | undefined {
+    const all = findValueBets(quotes, fair, { ...options, minEdge: -Infinity });
+    return all.reduce<ValueBet | undefined>((best, bet) => (!best || bet.edge > best.edge ? bet : best), undefined);
+}
+
 /** The sharp bookmaker's favourite: the shortest price, or nothing without a full market. */
 export function favourite(quotes: readonly PriceQuote[], sharpBookmaker: string): PriceQuote | undefined {
     const sharp = quotes.filter((quote) => quote.bookmaker === sharpBookmaker);

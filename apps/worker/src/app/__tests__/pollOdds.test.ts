@@ -217,6 +217,7 @@ describe("pollOdds", () => {
         // 2.62 is a 3.05% edge, enough to bet, but quarter-Kelly stakes only about 47 kr, under the 50 kr minimum.
         await pollOdds(deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.62))]), "soccer_epl", "scan");
         expect(await repos.bets.forPlayer(SCANNER)).toEqual([]);
+        expect((await repos.decisions.since(now)).map((decision) => decision.reason)).toEqual(["stake_too_small"]);
     });
 
     it("pauses the scanner after a bad week", async () => {
@@ -238,6 +239,39 @@ describe("pollOdds", () => {
         ).toMatchObject({
             scannerBets: 0,
         });
+        expect((await repos.decisions.since(now)).map((decision) => decision.reason)).toEqual(["paused"]);
+    });
+
+    it("records a decision for every match it looks at: the bet, or the pass and why", async () => {
+        const value = event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75), "a".repeat(32));
+        const none = event(25 * 60, quotes("unibet_se", 2.8, 3.3, 2.4), "b".repeat(32));
+        const stale = event(26 * 60, quotes("unibet_se", 2.9, 3.4, 2.75), "c".repeat(32));
+        stale.quotes = [
+            ...quotes("pinnacle", 2.96, 3.43, 2.47, new Date(now.getTime() - 30 * 60_000)),
+            ...stale.quotes.slice(3),
+        ];
+        const started = event(-5, quotes("unibet_se", 2.9, 3.4, 2.75), "d".repeat(32));
+        await pollOdds(deps([value, none, stale, started]), "soccer_epl", "scan");
+        await pollOdds(deps([value]), "soccer_epl", "scan");
+
+        const decisions = await repos.decisions.since(now);
+        expect(decisions.map((decision) => [decision.fixtureId[0], decision.outcome, decision.reason])).toEqual([
+            ["a", "bet", "value"],
+            ["b", "pass", "no_edge"],
+            ["c", "pass", "no_fresh_sharp"],
+            ["a", "pass", "already_bet"],
+        ]);
+        const [bet, pass] = decisions;
+        expect(bet).toMatchObject({
+            minutesToKickoff: 1440,
+            bestSelection: "away",
+            bestBookmaker: "unibet_se",
+            bestOdds: 2.75,
+        });
+        expect(bet?.bestEdge).toBeGreaterThan(0.08);
+        expect(pass?.bestEdge).toBeLessThan(0.02);
+        expect((bet?.fairHome ?? 0) + (bet?.fairDraw ?? 0) + (bet?.fairAway ?? 0)).toBeCloseTo(1, 9);
+        expect(decisions[2]).toMatchObject({ bestOdds: null, fairHome: null });
     });
 
     it("does nothing when the credit guard says no", async () => {

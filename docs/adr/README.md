@@ -13,3 +13,4 @@ Each record states the context, the decision and its consequences, so later chan
 | [0007](0007-dashboard-reads-the-database-directly.md) | The dashboard reads the database directly, with SQL doing the sums |
 | [0008](0008-edge-threshold-from-the-back-test.md)     | A 2% edge threshold, chosen by back-testing past seasons           |
 | [0009](0009-chat-state-in-the-database.md)            | Telegram conversations in progress live in the database            |
+| [0010](0010-record-every-decision.md)                 | Record every decision, passes included                             |
