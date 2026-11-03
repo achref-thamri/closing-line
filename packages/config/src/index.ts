@@ -4,6 +4,11 @@ import { envSchema, settingsSchema, type Settings } from "./schema.ts";
 
 export type { League, Settings } from "./schema.ts";
 
+/** The settings the worker runs with when no settings file overrides them; no secrets needed. */
+export function defaultSettings(): Settings {
+    return settingsSchema.parse({});
+}
+
 export type LogLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 
 export interface Config extends Settings {

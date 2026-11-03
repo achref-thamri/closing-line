@@ -8,6 +8,7 @@
         "backtest": "node src/main.ts"
     },
     "dependencies": {
+        "@closing-line/config": "workspace:*",
         "@closing-line/core": "workspace:*"
     }
 }
