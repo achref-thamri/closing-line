@@ -1,9 +1,18 @@
-import { bookName, type ValueOffer } from "@closing-line/core";
+import { bookName, type Outcome, type ValueOffer } from "@closing-line/core";
 import type { Player } from "@closing-line/db";
+import { messageOf } from "../lib/errors.ts";
 import type { Logger } from "../lib/logger.ts";
+import type { Keyboard, Reply } from "./chat.ts";
+
+/** "I bet this" buttons under a tip, one per bookmaker that pays enough, best first. */
+const TIP_BUTTONS = 3;
+/** Telegram's limit on a button's data. */
+const MAX_BUTTON_DATA_BYTES = 64;
 
 /** A value bet the scanner found, with every bookmaker that pays enough. */
 export interface Tip {
+    fixtureId: string;
+    selection: Outcome;
     homeTeam: string;
     awayTeam: string;
     kickoff: Date;
@@ -58,19 +67,44 @@ export function tipRecipients(
     return [{ chatId: ownerChatId, muted: false }, ...bettors];
 }
 
-/** Sends the same tip to every recipient who has not paused tips. */
+/**
+ * One "I bet this" button per bookmaker that pays enough: `tb:<fixture>:<selection>:<bookmaker>:<odds>`, which
+ * the bet flow turns into a bet with everything but the stake filled in.
+ */
+export function tipKeyboard(tip: Tip): Keyboard {
+    return tip.offers
+        .slice(0, TIP_BUTTONS)
+        .map((offer) => ({
+            text: `✅ I bet this at ${bookName(offer.bookmaker)} ${offer.offeredOdds.toFixed(2)}`,
+            data: `tb:${tip.fixtureId}:${tip.selection}:${offer.bookmaker}:${offer.offeredOdds.toFixed(2)}`,
+        }))
+        .filter((button) => Buffer.byteLength(button.data) <= MAX_BUTTON_DATA_BYTES)
+        .map((button) => [button]);
+}
+
+/**
+ * Sends the same tip, with its "I bet this" buttons, to every recipient who has not paused tips. A message that
+ * fails is logged; the others still go out.
+ */
 export function createTipSender(options: {
     recipients: () => Promise<TipRecipient[]>;
-    send: (chatId: number, text: string) => Promise<void>;
+    send: (chatId: number, reply: Reply) => Promise<void>;
     timeZone: string;
     logger: Logger;
 }): (tip: Tip) => Promise<void> {
     return async (tip) => {
         const text = formatTip(tip, options.timeZone);
         if (!text) return;
+        const reply = { text, keyboard: tipKeyboard(tip) };
         const recipients = (await options.recipients()).filter((recipient) => !recipient.muted);
-        await Promise.all(recipients.map((recipient) => options.send(recipient.chatId, text)));
-        const sent = recipients.length;
+        const results = await Promise.allSettled(recipients.map((recipient) => options.send(recipient.chatId, reply)));
+        results.forEach((result, index) => {
+            if (result.status === "rejected") {
+                const chatId = recipients[index]?.chatId;
+                options.logger.warn({ chatId, error: messageOf(result.reason) }, "value tip not delivered");
+            }
+        });
+        const sent = results.filter((result) => result.status === "fulfilled").length;
         options.logger.info({ pick: tip.pick, offers: tip.offers.length, sent }, "value tip sent");
     };
 }

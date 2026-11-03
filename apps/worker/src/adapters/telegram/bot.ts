@@ -96,8 +96,12 @@ export function createTelegramBot(options: {
             const data = ctx.callbackQuery.data;
             const handler = buttons.find((each) => each.owns(data));
             const reply = handler ? await handler.tap(chatId, data) : { text: "Unknown button." };
-            const keyboard = keyboardOf(reply.keyboard);
-            await ctx.editMessageText(reply.text, keyboard ? { reply_markup: keyboard } : {});
+            if (reply.newMessage) {
+                await sendAll(ctx, [reply]);
+            } else {
+                const keyboard = keyboardOf(reply.keyboard);
+                await ctx.editMessageText(reply.text, keyboard ? { reply_markup: keyboard } : {});
+            }
             await ctx.answerCallbackQuery();
         });
 

@@ -27,6 +27,7 @@ const REASONS: Record<NonNullable<BetWithFixture["tag"]>, string> = {
     skewed_price: "📈 Skewed price",
     game_read: "🧠 Game read",
     slow_live_price: "⏱ Slow live",
+    value_tip: "🔎 Value tip",
 };
 
 function reason(bet: BetWithFixture): string {

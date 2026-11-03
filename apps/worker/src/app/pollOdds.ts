@@ -128,6 +128,8 @@ async function scannerBets(
         placed++;
         bankroll.availableOre -= bet.stakeOre;
         const tip: Tip = {
+            fixtureId: event.id,
+            selection: value.selection,
             homeTeam: event.homeTeam,
             awayTeam: event.awayTeam,
             kickoff: event.kickoff,

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."bet_tag" ADD VALUE 'value_tip';
