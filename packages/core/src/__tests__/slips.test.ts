@@ -1,17 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { MetricsBet } from "../metrics.ts";
-import {
-    cashoutGainOre,
-    groupPositions,
-    heldProfitOre,
-    impliedOddsFromCashout,
-    positionKey,
-    priceMove,
-    skew,
-    statsBy,
-    type PositionBet,
-} from "../slips.ts";
+import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout, priceMove, statsBy } from "../slips.ts";
 
 describe("heldProfitOre", () => {
     const bet = { stakeOre: 150_000, lockedOdds: 3.7 };
@@ -51,14 +41,10 @@ describe("impliedOddsFromCashout", () => {
     });
 });
 
-describe("priceMove and skew", () => {
+describe("priceMove", () => {
     it("is positive when the bookmaker cut the price after the bet", () => {
         expect(priceMove(3.1, 2.012)).toBeCloseTo(0.5408, 4);
         expect(priceMove(2, 2.5)).toBeCloseTo(-0.2);
-    });
-
-    it("compares the odds taken with the other books' price", () => {
-        expect(skew(3.1, 1.4)).toBeCloseTo(1.2143, 4);
     });
 });
 
@@ -73,55 +59,6 @@ describe("cashoutGainOre", () => {
     it("is the whole cash-out when the selection went on to lose", () => {
         expect(cashoutGainOre(bet, "lost")).toBe(255_717);
         expect(cashoutGainOre(bet, "void")).toBe(89_717);
-    });
-});
-
-describe("positions", () => {
-    const base: PositionBet = {
-        playerId: "friend",
-        fixtureId: null,
-        eventName: "Bayern München – Borussia Dortmund",
-        market: "player_shots_on_target",
-        playerName: "Jobe Bellingham",
-        selection: "over",
-    };
-
-    it("puts laddered lines on one player in one position", () => {
-        const spelledDifferently = {
-            ...base,
-            eventName: " bayern munchen –  borussia dortmund",
-            playerName: "JOBE BELLINGHAM",
-        };
-        expect(positionKey(spelledDifferently)).toBe(positionKey(base));
-    });
-
-    it("keeps other players, markets, matches and bettors apart", () => {
-        const keys = [
-            base,
-            { ...base, playerName: "Serhou Guirassy" },
-            { ...base, market: "player_fouls" },
-            { ...base, eventName: "Bayern München – Arsenal" },
-            { ...base, playerId: "owner" },
-            { ...base, fixtureId: "evt1" },
-        ].map(positionKey);
-        expect(new Set(keys).size).toBe(keys.length);
-    });
-
-    it("uses the selection when the bet is not on a player", () => {
-        const winner = { ...base, eventName: "Aurora – Team Liquid", market: "winner", playerName: null };
-        expect(positionKey({ ...winner, selection: "Team Liquid" })).not.toBe(
-            positionKey({ ...winner, selection: "Aurora" }),
-        );
-    });
-
-    it("groups bets in order of first appearance", () => {
-        const davies = { ...base, eventName: "Bayern München – Arsenal", playerName: "Alphonso Davies" };
-        const groups = groupPositions([
-            { ...base, id: 1 },
-            { ...davies, id: 2 },
-            { ...base, id: 3 },
-        ]);
-        expect(groups.map((group) => group.map((bet) => bet.id))).toEqual([[1, 3], [2]]);
     });
 });
 

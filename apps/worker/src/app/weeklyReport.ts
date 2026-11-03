@@ -1,5 +1,5 @@
 import type { Config } from "@closing-line/config";
-import { heldProfitOre, statsBy, statsFromTotals, totalsOf, type PlayerStats } from "@closing-line/core";
+import { cashoutGainOre, statsBy, statsFromTotals, totalsOf, type PlayerStats } from "@closing-line/core";
 import type { Bet, Repositories } from "@closing-line/db";
 import { TAGS } from "./betFlow.ts";
 
@@ -91,7 +91,8 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
                 : [{ bet, held: bet.heldStatus }],
         );
         const gain = answered.reduce(
-            (total, { bet, held }) => total + (bet.cashoutOfferOre ?? 0) - bet.stakeOre - heldProfitOre(bet, held),
+            (total, { bet, held }) =>
+                total + cashoutGainOre({ ...bet, cashoutOfferOre: bet.cashoutOfferOre ?? 0 }, held),
             0,
         );
         const move = moves.length > 0 ? `, price moved ${percent(average(moves))} on average` : "";

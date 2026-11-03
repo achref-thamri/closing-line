@@ -22,7 +22,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
     );
     await repos.players.ensure([
         { id: "scanner", name: "Scanner", kind: "scanner", startingBankrollOre: 1_000_000 },
@@ -178,7 +178,7 @@ describe("odds", () => {
 describe("bets", () => {
     it("places a bet once per player and selection", async () => {
         const placed = await repos.bets.place(bet());
-        expect(placed).toMatchObject({ status: "open", stakeOre: 15_000, reasonTags: [], selfReported: false });
+        expect(placed).toMatchObject({ status: "open", stakeOre: 15_000, selfReported: false });
         expect(await repos.bets.place(bet({ stakeOre: 30_000 }))).toBeUndefined();
         expect(await repos.bets.place(bet({ playerId: "friend" }))).toBeDefined();
         expect(await repos.bets.open()).toHaveLength(2);
@@ -188,20 +188,6 @@ describe("bets", () => {
         const first = await repos.bets.place(bet());
         const second = await repos.bets.place(bet({ selection: "draw" }));
         expect(first && second && first.id < second.id).toBe(true);
-    });
-
-    it("stores a bettor's bet with its own price and reasons", async () => {
-        await repos.bets.place(
-            bet({
-                playerId: "friend",
-                fairPriceEntered: 2.3,
-                reasonTags: ["injury", "fatigue"],
-                note: "Saka back, Liverpool played Wednesday",
-                wouldBetReal: true,
-            }),
-        );
-        const [stored] = await repos.bets.forPlayer("friend");
-        expect(stored).toMatchObject({ fairPriceEntered: 2.3, reasonTags: ["injury", "fatigue"], wouldBetReal: true });
     });
 
     it("records closing odds and settles exactly once", async () => {
@@ -245,10 +231,9 @@ describe("bets", () => {
                 market: "winner",
                 selection: "Team Liquid",
                 lockedOdds: 3.25,
-                live: true,
             }),
         );
-        expect(placed).toMatchObject({ fixtureId: null, sport: "counter_strike", live: true, tag: "game_read" });
+        expect(placed).toMatchObject({ fixtureId: null, sport: "counter_strike", tag: "game_read" });
         const [listed] = await repos.bets.recent(1);
         expect(listed).toMatchObject({ eventName: "Aurora – Team Liquid", fixture: null });
     });

@@ -64,6 +64,13 @@
             "when": 1793707091698,
             "tag": "0008_keep_chat_sessions",
             "breakpoints": true
+        },
+        {
+            "idx": 9,
+            "version": "7",
+            "when": 1793707976392,
+            "tag": "0009_drop_unused_bet_fields",
+            "breakpoints": true
         }
     ]
 }
