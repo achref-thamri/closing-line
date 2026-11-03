@@ -228,6 +228,8 @@ describe("bets", () => {
         ]);
         expect((await repos.bets.recent(10, "scanner")).map((row) => row.playerId)).toEqual(["scanner"]);
         expect(await repos.bets.recent(1)).toHaveLength(1);
+        expect((await repos.bets.recent(1, undefined, 1)).map((row) => row.playerId)).toEqual(["scanner"]);
+        expect(await repos.bets.recent(10, undefined, 2)).toEqual([]);
     });
 
     it("stores a bet from a slip on an event we do not track", async () => {

@@ -175,8 +175,8 @@ export function createRepositories(db: Database) {
                     .where(and(eq(bets.status, "open"), fixtureIds && inArray(bets.fixtureId, fixtureIds)))
                     .orderBy(bets.createdAt);
             },
-            /** Newest first, with the match each bet is on, for listings. */
-            async recent(limit: number, playerId?: string): Promise<BetWithFixture[]> {
+            /** Newest first, with the match each bet is on, for listings; `offset` skips that many for paging. */
+            async recent(limit: number, playerId?: string, offset = 0): Promise<BetWithFixture[]> {
                 const rows = await db
                     .select({
                         bet: bets,
@@ -190,8 +190,9 @@ export function createRepositories(db: Database) {
                     .from(bets)
                     .leftJoin(fixtures, eq(bets.fixtureId, fixtures.id))
                     .where(playerId ? eq(bets.playerId, playerId) : undefined)
-                    .orderBy(desc(bets.createdAt))
-                    .limit(limit);
+                    .orderBy(desc(bets.createdAt), desc(bets.id))
+                    .limit(limit)
+                    .offset(offset);
                 return rows.map((row) => ({ ...row.bet, fixture: row.fixture }));
             },
             /**

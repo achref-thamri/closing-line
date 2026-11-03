@@ -30,7 +30,12 @@ const REASONS: Record<NonNullable<BetWithFixture["tag"]>, string> = {
     value_tip: "🔎 Value tip",
 };
 
-function reason(bet: BetWithFixture): string {
+/** A bettor's tag; the automated players always bet for the same reason, so theirs follows from their kind. */
+export function reason(bet: BetWithFixture, player: Pick<Player, "kind"> | undefined): string {
+    if (player?.kind === "scanner") {
+        return bet.edgeAtBet === null ? "" : `📊 ${percent(bet.edgeAtBet)} vs Pinnacle`;
+    }
+    if (player?.kind === "benchmark") return "⭐ Pinnacle favourite";
     if (!bet.selfReported) return "";
     return bet.tag ? REASONS[bet.tag] : "";
 }
@@ -87,7 +92,7 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                                 <td className="px-3 py-2 whitespace-nowrap">{match(bet)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap">{pick(bet)}</td>
                                 <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{bookName(bet.bookmaker)}</td>
-                                <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{reason(bet)}</td>
+                                <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{reason(bet, player)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{odds(bet.lockedOdds)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{kroner(bet.stakeOre)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{percent(bet.clv ?? undefined)}</td>
