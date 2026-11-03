@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ConfigError, loadConfig, parseConfig } from "../index.ts";
+import { ConfigError, defaultSettings, loadConfig, parseConfig } from "../index.ts";
 
 const env = {
     ODDS_API_KEY: "odds-key",
@@ -20,6 +20,19 @@ function problemsOf(run: () => unknown): string {
     }
     throw new Error("expected a ConfigError");
 }
+
+describe("defaultSettings", () => {
+    it("is what parseConfig gives without a settings file", () => {
+        const config = parseConfig({
+            ODDS_API_KEY: "k",
+            FOOTBALL_DATA_TOKEN: "t",
+            TELEGRAM_BOT_TOKEN: "1:a",
+            TELEGRAM_OWNER_CHAT_ID: "1",
+        });
+        expect(defaultSettings().scanner).toEqual(config.scanner);
+        expect(defaultSettings().startingBankroll).toBe(config.startingBankroll);
+    });
+});
 
 describe("parseConfig", () => {
     it("fills in every default from the spec", () => {

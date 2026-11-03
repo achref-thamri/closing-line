@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
+import { defaultSettings } from "@closing-line/config";
 import { parseSeason, type PastMatch } from "./seasons.ts";
 import { backtest } from "./simulate.ts";
 
@@ -13,11 +14,9 @@ if (files.length === 0) {
     process.exit(1);
 }
 
-// The live scanner's stake rules and bankroll (config defaults).
-const options = {
-    startingBankroll: 10_000,
-    stake: { kellyMultiplier: 0.25, maxBankrollFraction: 0.02, minStake: 50, maxStake: 500, step: 10 },
-};
+// The live scanner's stake rules and bankroll, read from the same defaults the worker uses.
+const settings = defaultSettings();
+const options = { startingBankroll: settings.startingBankroll, stake: settings.scanner.stake };
 const pct = (value: number | undefined) => (value === undefined ? "–" : `${(value * 100).toFixed(1)}%`);
 
 function table(title: string, matches: PastMatch[]): void {
