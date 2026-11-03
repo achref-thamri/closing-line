@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchFixture, normalizeTeam, sameTeam } from "../teams.ts";
+import { fixtureNamed, matchFixture, normalizeTeam, sameTeam } from "../teams.ts";
 
 // Premier League 2026/27 as named by The Odds API and by football-data.org (name, short name), 1 November 2026.
 const ODDS_API = [
@@ -115,5 +115,27 @@ describe("matchFixture", () => {
                 HOURS_3,
             ),
         ).toBeUndefined();
+    });
+});
+
+describe("fixtureNamed", () => {
+    const fixtures = [
+        { id: "f1", homeTeam: "Bayern Munich", awayTeam: "Borussia Dortmund" },
+        { id: "f2", homeTeam: "Arsenal", awayTeam: "Chelsea" },
+        { id: "f3", homeTeam: "Chelsea", awayTeam: "Arsenal" },
+        { id: "f4", homeTeam: "Manchester City", awayTeam: "Everton" },
+        { id: "f5", homeTeam: "Manchester United", awayTeam: "Everton" },
+    ];
+
+    it("finds the one fixture a typed match names, home side first", () => {
+        expect(fixtureNamed("Bayern – Dortmund", fixtures)?.id).toBe("f1");
+        expect(fixtureNamed("arsenal v chelsea", fixtures)?.id).toBe("f2");
+        expect(fixtureNamed("Chelsea-Arsenal", fixtures)?.id).toBe("f3");
+    });
+
+    it("finds nothing when no fixture or several fit, or the text names no two teams", () => {
+        expect(fixtureNamed("Dortmund – Bayern", fixtures)).toBeUndefined();
+        expect(fixtureNamed("Manchester – Everton", fixtures)).toBeUndefined();
+        expect(fixtureNamed("Bayern", fixtures)).toBeUndefined();
     });
 });

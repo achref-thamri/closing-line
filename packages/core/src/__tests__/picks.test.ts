@@ -8,6 +8,11 @@ describe("teamsOf", () => {
         expect(teamsOf("Bayern-Dortmund")).toEqual(["Bayern", "Dortmund"]);
         expect(teamsOf("Bayern")).toEqual([]);
     });
+
+    it("keeps hyphens inside team names when the separator has spaces", () => {
+        expect(teamsOf("Paris Saint-Germain – Lille")).toEqual(["Paris Saint-Germain", "Lille"]);
+        expect(teamsOf("Lille - Paris Saint-Germain")).toEqual(["Lille", "Paris Saint-Germain"]);
+    });
 });
 
 describe("pickText", () => {

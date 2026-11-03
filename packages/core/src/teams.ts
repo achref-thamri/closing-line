@@ -1,3 +1,5 @@
+import { teamsOf } from "./picks.ts";
+
 /** Words that only say "football club" and differ between data sources. */
 const FILLER = new Set(["fc", "afc", "cf", "sc", "ac", "the"]);
 
@@ -44,6 +46,22 @@ export function matchFixture<T extends ResultCandidate>(
             Math.abs(candidate.kickoff.getTime() - fixture.kickoff.getTime()) <= toleranceMs &&
             sameTeam(fixture.homeTeam, candidate.home) &&
             sameTeam(fixture.awayTeam, candidate.away),
+    );
+    return matches.length === 1 ? matches[0] : undefined;
+}
+
+/**
+ * The one fixture a typed match names, home side first as bookmakers list it ("Bayern – Arsenal" for Bayern
+ * München v Arsenal); nothing when the text does not split into two teams, or when none or several fit.
+ */
+export function fixtureNamed<T extends { homeTeam: string; awayTeam: string }>(
+    eventName: string,
+    fixtures: readonly T[],
+): T | undefined {
+    const [home, away] = teamsOf(eventName);
+    if (!home || !away) return undefined;
+    const matches = fixtures.filter(
+        (fixture) => sameTeam(home, [fixture.homeTeam]) && sameTeam(away, [fixture.awayTeam]),
     );
     return matches.length === 1 ? matches[0] : undefined;
 }

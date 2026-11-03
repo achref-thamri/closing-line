@@ -32,7 +32,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-    await handle.db.execute("truncate players, bets, chat_sessions restart identity cascade");
+    await handle.db.execute("truncate players, fixtures, bets, chat_sessions restart identity cascade");
     sent = [];
     clock = new Date("2026-11-08T14:15:00Z");
     restart();
@@ -223,6 +223,66 @@ describe("logging a bet step by step", () => {
         await type("5", OWNER);
         reply = await type("4000", OWNER);
         expect((await tap(reply, "Lineup", OWNER)).text).toContain("Note: the stake is above the 3,000 kr cap.");
+    });
+});
+
+describe("matches we track", () => {
+    const fixture = {
+        id: "f".repeat(32),
+        league: "soccer_germany_bundesliga",
+        homeTeam: "Bayern Munich",
+        awayTeam: "Borussia Dortmund",
+    };
+
+    beforeEach(async () => {
+        await repos.fixtures.upsert([{ ...fixture, kickoff: new Date(clock.getTime() + 3 * 3_600_000) }]);
+    });
+
+    it("links a typed match to the fixture and stores a match result like the scanner's", async () => {
+        await letFriendIn();
+        await tap(await flow.bet(FRIEND), "Football");
+        const market = await type("Bayern – Dortmund");
+        expect(market.text).toBe(
+            "✓ Kickoff Sun 18:15; a match-result bet gets a closing price.\nBayern Munich – Borussia Dortmund\nWhich market?",
+        );
+        const pick = await tap(market, "Match result");
+        const book = await tap(pick, "Bayern Munich");
+        await tap(book, "NordicBet");
+        await type("1.85");
+        await tap(await type("2000"), "Game read");
+        expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toMatchObject([
+            {
+                fixtureId: fixture.id,
+                eventName: "Bayern Munich – Borussia Dortmund",
+                market: "h2h",
+                selection: "home",
+                lockedOdds: 1.85,
+            },
+        ]);
+    });
+
+    it("links a player prop too but keeps its market, and leaves unknown matches unlinked", async () => {
+        await tap(await flow.bet(OWNER), "Football", OWNER);
+        await tap(await type("bayern v dortmund", OWNER), "Shots on target", OWNER);
+        let reply = await tap(await type("Kane", OWNER), "Over 0.5", OWNER);
+        await tap(reply, "Bet25", OWNER);
+        await type("1.4", OWNER);
+        await tap(await type("500", OWNER), "Lineup", OWNER);
+
+        await tap(await flow.bet(OWNER), "Football", OWNER);
+        reply = await type("Ajax – PSV", OWNER);
+        expect(reply.text).toBe("Ajax – PSV\nWhich market?");
+        reply = await tap(reply, "Match result", OWNER);
+        reply = await tap(reply, "Ajax", OWNER);
+        await tap(reply, "Bet25", OWNER);
+        await type("2.1", OWNER);
+        await tap(await type("500", OWNER), "Lineup", OWNER);
+
+        const bets = await repos.bets.forPlayer("owner");
+        expect(bets.map((bet) => [bet.fixtureId, bet.market, bet.selection])).toEqual([
+            [fixture.id, "player_shots_on_target", "over"],
+            [null, "match_result", "home"],
+        ]);
     });
 });
 
