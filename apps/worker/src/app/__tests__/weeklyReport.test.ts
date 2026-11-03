@@ -3,7 +3,14 @@ import { createRepositories, openDatabase, type DatabaseHandle, type Repositorie
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import type { Bet, DecisionWithResult } from "@closing-line/db";
-import { bettorBreakdown, decisionsSection, LESSONS, tipsSection, weeklyReport } from "../weeklyReport.ts";
+import {
+    allTimeSection,
+    bettorBreakdown,
+    decisionsSection,
+    LESSONS,
+    tipsSection,
+    weeklyReport,
+} from "../weeklyReport.ts";
 
 const config = parseConfig({
     ODDS_API_KEY: "k",
@@ -72,6 +79,9 @@ describe("weeklyReport", () => {
                 "",
                 "🔎 Tips this week: 1",
                 "Average CLV: +4.0% over 1 with a closing price",
+                "",
+                "📐 All time",
+                "Calibration: 0 of 50 settled matches so far.",
                 "",
                 "📚 Lesson of the week",
                 LESSONS[Math.floor(now.getTime() / (7 * 86_400_000)) % LESSONS.length],
@@ -276,5 +286,67 @@ describe("decisionsSection", () => {
             "Backing the best price on each settled no-edge pass would have returned +5.0% over 2.",
         ]);
         expect(decisionsSection([])).toEqual([]);
+    });
+});
+
+describe("allTimeSection", () => {
+    const names = new Map([["soccer_epl", "Premier League"]]);
+    const match = (id: number, home: number, away: number, fairHome: number): DecisionWithResult => ({
+        id,
+        fixtureId: `f${id}`,
+        takenAt: new Date("2026-11-07T08:00:00Z"),
+        minutesToKickoff: 480,
+        outcome: "pass",
+        reason: "no_edge",
+        bestSelection: "home",
+        bestBookmaker: "unibet_se",
+        bestOdds: 2,
+        bestEdge: 0,
+        fairHome,
+        fairDraw: 0.25,
+        fairAway: 0.75 - fairHome,
+        league: "soccer_epl",
+        status: "finished",
+        homeGoals: home,
+        awayGoals: away,
+    });
+    const scannerBet = (hoursBefore: number, profitOre: number) => {
+        const kickoff = new Date("2026-11-07T15:00:00Z");
+        return {
+            stakeOre: 10_000,
+            status: profitOre > 0 ? "won" : "lost",
+            profitOre,
+            settledAt: kickoff,
+            clv: 0.02,
+            createdAt: new Date(kickoff.getTime() - hoursBefore * 3_600_000),
+            league: "soccer_epl",
+            kickoff,
+        } as Bet & { league: string; kickoff: Date };
+    };
+
+    it("waits for enough matches before showing calibration, and hides small groups", () => {
+        expect(allTimeSection([match(1, 1, 0, 0.5)], [scannerBet(1, 10_000)], names)).toEqual([
+            "",
+            "📐 All time",
+            "Calibration: 1 of 50 settled matches so far.",
+        ]);
+    });
+
+    it("compares what Pinnacle said with what happened, and breaks the scanner's bets down", () => {
+        // 60 matches with the home side at 50%; 30 home wins. A second decision on a match does not count again.
+        const decisions = Array.from({ length: 60 }, (_, i) => match(i, i < 30 ? 1 : 0, i < 30 ? 0 : 1, 0.5));
+        decisions.push({ ...match(0, 1, 0, 0.9), id: 99 });
+        const bets = [...Array.from({ length: 10 }, () => scannerBet(1, 10_000)), scannerBet(20, -10_000)];
+        expect(allTimeSection(decisions, bets, names)).toEqual([
+            "",
+            "📐 All time",
+            "Calibration of Pinnacle's fair prices over 60 matches:",
+            "20–40%: said 25%, happened 25% (120)",
+            "40–60%: said 50%, happened 50% (60)",
+            "Scanner by league:",
+            "Premier League: 11 bets, ROI +81.8%, CLV +2.0%",
+            "Scanner by time before kickoff:",
+            "under 2 h: 10 bets, ROI +100.0%, CLV +2.0%",
+        ]);
     });
 });

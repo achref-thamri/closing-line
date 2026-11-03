@@ -19,3 +19,5 @@ export type { LaterPrice, TipLifetime } from "./value.ts";
 export { cashoutGainOre, heldProfitOre, impliedOddsFromCashout, priceMove, statsBy } from "./slips.ts";
 export type { SlipStatus } from "./slips.ts";
 export { bookName, pickText, teamsOf } from "./picks.ts";
+export { calibration } from "./calibration.ts";
+export type { CalibrationBand, Forecast } from "./calibration.ts";
