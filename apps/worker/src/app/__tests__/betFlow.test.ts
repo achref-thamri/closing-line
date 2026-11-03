@@ -336,6 +336,57 @@ describe("from a tip", () => {
     });
 });
 
+describe("undo and twins", () => {
+    /** Logs Ajax – PSV, over 2.5 corners at Bet25 2.00 for 500 kr. */
+    async function logCorners(chatId = FRIEND): Promise<Reply> {
+        await tap(await flow.bet(chatId), "Football", chatId);
+        await tap(await type("Ajax – PSV", chatId), "Corners", chatId);
+        await tap(await type("over 2.5", chatId), "Bet25", chatId);
+        await type("2", chatId);
+        return tap(await type("500", chatId), "Lineup", chatId);
+    }
+
+    beforeEach(async () => {
+        await letFriendIn();
+    });
+
+    it("asks before logging the same bet twice in a day, and logs it on Yes", async () => {
+        expect((await logCorners()).text).toContain("✅ Logged");
+        const twin = await logCorners();
+        expect(twin.text).toContain("You logged this exact bet at 15:15. Log it again?");
+        expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toHaveLength(1);
+        expect((await tap(twin, "second bet")).text).toContain("✅ Logged");
+        expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toHaveLength(2);
+
+        clock = new Date(clock.getTime() + 25 * 3_600_000);
+        expect((await logCorners()).text).toContain("✅ Logged");
+    });
+
+    it("deletes the last bet logged on /undo, tells the owner, and keeps it on Keep", async () => {
+        expect((await flow.undo(FRIEND)).text).toBe("You have not logged a bet yet.");
+        await logCorners();
+        const asked = await flow.undo(FRIEND);
+        expect(asked.text).toMatch(/Ajax – PSV[\s\S]*Delete this bet\?$/);
+        expect((await tap(asked, "Keep")).text).toMatch(/^Kept\./);
+        expect((await tap(asked, "Delete")).text).toContain("🗑 Deleted.");
+        expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toEqual([]);
+        expect(sent.at(-1)).toMatchObject({
+            chatId: OWNER,
+            reply: { text: expect.stringMatching(/^🗑 Sam deleted:/) as string },
+        });
+        expect((await tap(asked, "Delete")).text).toMatch(/already gone/);
+    });
+
+    it("keeps settled bets and refuses strangers", async () => {
+        await logCorners();
+        const [bet] = await repos.bets.forPlayer(`tg_${FRIEND}`);
+        await repos.bets.settle(bet?.id ?? "", { status: "won", profitOre: 50_000, settledAt: clock });
+        expect((await flow.undo(FRIEND)).text).toMatch(/settled, so it stays\.$/);
+        expect((await flow.undo(300)).text).toBe("Send /start first.");
+        expect((await flow.tap(300, `u:${bet?.id ?? ""}`)).text).toMatch(/nothing was deleted/);
+    });
+});
+
 describe("restarts", () => {
     it("carries on with a bet half entered before a restart", async () => {
         await letFriendIn();

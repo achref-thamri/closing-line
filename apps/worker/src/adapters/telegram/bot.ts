@@ -9,6 +9,7 @@ import type { Logger } from "../../lib/logger.ts";
 export const COMMANDS = [
     { command: "log", description: "Log a bet you just placed" },
     { command: "open", description: "Settle your open bets" },
+    { command: "undo", description: "Delete the last bet you logged" },
     { command: "picks", description: "Best prices for the coming week" },
     { command: "tips", description: "Turn value tips on or off" },
     { command: "start", description: "Join or show the help" },
@@ -53,7 +54,7 @@ export function createTelegramBot(options: {
     /** Routes commands, typed text and button taps to the flows. `picks` answers /picks from stored odds. */
     function attach(flows: {
         bettors: Pick<Bettors, "isAllowed" | "start" | "tips"> & ButtonHandler;
-        bets: Pick<BetFlow, "bet" | "text"> & ButtonHandler;
+        bets: Pick<BetFlow, "bet" | "text" | "undo"> & ButtonHandler;
         settle: Pick<SettleFlow, "open" | "amount"> & ButtonHandler;
         picks?: () => Promise<string>;
     }): void {
@@ -67,6 +68,10 @@ export function createTelegramBot(options: {
         // /log is the name in the menu; /bet stays for anyone who learned it first.
         bot.command(["log", "bet"], async (ctx) => {
             await sendAll(ctx, [await bets.bet(ctx.chat.id)]);
+        });
+
+        bot.command("undo", async (ctx) => {
+            await sendAll(ctx, [await bets.undo(ctx.chat.id)]);
         });
 
         bot.command("tips", async (ctx) => {

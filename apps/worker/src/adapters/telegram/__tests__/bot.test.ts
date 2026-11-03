@@ -154,7 +154,7 @@ describe("bet bot", () => {
         const bot = setup({ bets: { bet } });
         await bot.handleUpdate(command("/bet"));
         expect(bet).toHaveBeenCalledWith(200);
-        expect(COMMANDS.map((each) => each.command)).toEqual(["log", "open", "picks", "tips", "start"]);
+        expect(COMMANDS.map((each) => each.command)).toEqual(["log", "open", "undo", "picks", "tips", "start"]);
     });
 
     it("sends messages with or without buttons", async () => {

@@ -1,6 +1,6 @@
 import type { Config } from "@closing-line/config";
 import { bookName, fixtureNamed, isOutcome, teamsOf } from "@closing-line/core";
-import type { NewBet, Repositories } from "@closing-line/db";
+import type { Bet, NewBet, Repositories } from "@closing-line/db";
 import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
 import { WAITING, type Bettors } from "./bettors.ts";
@@ -62,6 +62,9 @@ const LINES = [0.5, 1.5, 2.5, 3.5];
 /** A typed match is looked up among fixtures from this long ago (bets placed live) to a week ahead. */
 const LIVE_MS = 3 * 3_600_000;
 const WEEK_MS = 7 * 86_400_000;
+
+/** The same bet logged again within this long is checked with the bettor first. */
+const TWIN_MS = 24 * 3_600_000;
 
 /** A bet being entered waits this long for the next answer; then it has to be started again. */
 const DRAFT_TTL_MS = 60 * 60 * 1000;
@@ -202,9 +205,31 @@ export class BetFlow implements ButtonHandler {
         }
     }
 
-    /** Answers (`w:<value>`), reasons (`t:<tag>`), Cancel (`x`) and a tip's "I bet this" (`tb:…`). */
+    /**
+     * Answers (`w:<value>`), reasons (`t:<tag>`, `t:<tag>:again` to log a twin), Cancel (`x`), a tip's "I bet this"
+     * (`tb:…`) and `/undo`'s Delete (`u:<bet>`) and Keep (`uk`).
+     */
     owns(data: string): boolean {
-        return hasAction(data, ["w", "t", "x", "tb"]);
+        return hasAction(data, ["w", "t", "x", "tb", "u", "uk"]);
+    }
+
+    /** `/undo`: offers to delete the last bet the chat logged, while it is still open. */
+    async undo(chatId: number): Promise<Reply> {
+        if (!(await this.deps.bettors.isAllowed(chatId))) return { text: "Send /start first." };
+        const player = await this.deps.bettors.player(chatId);
+        const own = player ? (await this.deps.repos.bets.forPlayer(player.id)).filter((bet) => bet.selfReported) : [];
+        const last = own.at(-1);
+        if (!last) return { text: "You have not logged a bet yet." };
+        if (last.status !== "open") return { text: `${describeBet(last)}\n\nThis bet is settled, so it stays.` };
+        return {
+            text: `${describeBet(last)}\n\nDelete this bet?`,
+            keyboard: [
+                [
+                    { text: "🗑 Delete", data: `u:${last.id}` },
+                    { text: "Keep it", data: "uk" },
+                ],
+            ],
+        };
     }
 
     async tap(chatId: number, data: string): Promise<Reply> {
@@ -212,14 +237,17 @@ export class BetFlow implements ButtonHandler {
         const action = separator < 0 ? data : data.slice(0, separator);
         const value = separator < 0 ? "" : data.slice(separator + 1);
         if (action === "tb") return { ...(await this.fromTip(chatId, value)), newMessage: true };
+        if (action === "uk") return { text: "Kept. /undo again any time while the bet is open." };
+        if (action === "u") return this.remove(chatId, value);
         const pending = await this.current(chatId);
         if (!pending) return { text: "This bet is no longer open. Send /log to start again." };
         if (action === "x") {
             await this.deps.repos.chats.remove(chatId, "bet_draft");
             return { text: "Cancelled. /log starts a new one." };
         }
-        if (action === "t" && value in TAGS && pending.step === "reason") {
-            return this.log(chatId, pending, value as TagKey);
+        const [tag = "", again] = value.split(":");
+        if (action === "t" && tag in TAGS && pending.step === "reason") {
+            return this.log(chatId, pending, tag as TagKey, again === "again");
         }
         if (action !== "w") return { text: "Unknown button." };
         const reply = this.choose(pending, value);
@@ -418,13 +446,28 @@ export class BetFlow implements ButtonHandler {
         return { text: "What did you back? Type it.", keyboard: [[CANCEL]] };
     }
 
-    private async log(chatId: number, pending: Pending, tagKey: TagKey): Promise<Reply> {
+    /** Logs the bet; one identical to a bet logged in the last day is checked with the bettor first. */
+    private async log(chatId: number, pending: Pending, tagKey: TagKey, again = false): Promise<Reply> {
         const draft = pending.draft as Draft;
-        await this.deps.repos.chats.remove(chatId, "bet_draft");
         const playerId = await this.deps.bettors.ensure(chatId, "");
-        await this.deps.repos.bets.place(this.toBet(playerId, draft, TAGS[tagKey].tag));
-        this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "bet logged");
+        const bet = this.toBet(playerId, draft, TAGS[tagKey].tag);
         const card = describeBet(cardOf(draft));
+        const twin = again ? undefined : await this.twinOf(bet);
+        if (twin) {
+            await this.save(chatId, { ...pending, step: "reason" });
+            const at = (twin.receivedAt ?? twin.createdAt).toLocaleTimeString("en-GB", {
+                timeZone: this.deps.config.timezone,
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+            return {
+                text: `${card}\n\nYou logged this exact bet at ${at}. Log it again?`,
+                keyboard: [[{ text: "Yes, it is a second bet", data: `t:${tagKey}:again` }], [CANCEL]],
+            };
+        }
+        await this.deps.repos.chats.remove(chatId, "bet_draft");
+        await this.deps.repos.bets.place(bet);
+        this.deps.logger.info({ playerId, bookmaker: draft.bookmaker, market: draft.market }, "bet logged");
         if (chatId !== this.ownerChatId) {
             // Telegram chats with a bot are private, so the owner hears about other bettors' bets from the bot.
             const name = (await this.deps.bettors.player(chatId))?.name ?? playerId;
@@ -435,6 +478,38 @@ export class BetFlow implements ButtonHandler {
         const cap = this.deps.config.bettors.maxBankrollFraction * this.deps.config.bettors.startingBankroll * 100;
         const capNote = draft.stakeOre > cap ? `\nNote: the stake is above the ${kroner(cap)} cap.` : "";
         return { text: `${card}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}\n/log logs another.` };
+    }
+
+    /** A bet the player logged in the last day with the same match, pick, bookmaker, odds and stake. */
+    private async twinOf(bet: NewBet): Promise<Bet | undefined> {
+        const since = this.now().getTime() - TWIN_MS;
+        return (await this.deps.repos.bets.forPlayer(bet.playerId)).find(
+            (other) =>
+                (other.receivedAt ?? other.createdAt).getTime() >= since &&
+                other.eventName === bet.eventName &&
+                other.market === bet.market &&
+                other.selection === bet.selection &&
+                other.playerName === (bet.playerName ?? null) &&
+                other.line === (bet.line ?? null) &&
+                other.bookmaker === bet.bookmaker &&
+                other.lockedOdds === bet.lockedOdds &&
+                other.stakeOre === bet.stakeOre,
+        );
+    }
+
+    private async remove(chatId: number, betId: string): Promise<Reply> {
+        const player = await this.deps.bettors.player(chatId);
+        const bet = player ? await this.deps.repos.bets.get(betId) : undefined;
+        if (!player || !bet || !(await this.deps.repos.bets.removeOwnOpen(betId, player.id))) {
+            return { text: "That bet is settled or already gone, so nothing was deleted." };
+        }
+        this.deps.logger.info({ playerId: player.id }, "bet deleted");
+        if (chatId !== this.ownerChatId) {
+            await this.deps.messenger.send(this.ownerChatId, {
+                text: `🗑 ${player.name} deleted:\n${describeBet(bet)}`,
+            });
+        }
+        return { text: `${describeBet(bet)}\n\n🗑 Deleted. /log logs it again if you need to.` };
     }
 
     private toBet(playerId: string, draft: Draft, tag: NewBet["tag"]): NewBet {

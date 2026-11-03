@@ -5,7 +5,7 @@ import { hasAction, type ButtonHandler, type Messenger, type Reply } from "./cha
 
 export const WELCOME =
     "Send /log right after placing a bet. I ask for the match, market, pick, bookmaker, odds and stake one at a time, then you tap why you took it.\n\n" +
-    "When a bet is over, /open settles it (won, lost, void or cashed out).\n" +
+    "When a bet is over, /open settles it (won, lost, void or cashed out). /undo deletes the last bet you logged.\n" +
     "You also get value tips, the same ones the owner gets; /tips off pauses them.";
 export const WAITING = 'Still waiting for the owner to let you in. Send /log once you get "You\'re in!".';
 
