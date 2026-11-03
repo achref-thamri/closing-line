@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { parseConfig } from "@closing-line/config";
 import { createRepositories, openDatabase, type DatabaseHandle } from "@closing-line/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { compose } from "../compose.ts";
+import { compose, type Worker } from "../compose.ts";
 import { silentLogger } from "../lib/logger.ts";
 
 const config = parseConfig({
@@ -35,6 +35,17 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
+/** Composes the worker with Telegram answered locally; returns the chats each message went to. */
+function composeOffline(now?: () => Date): { worker: Worker; chats: number[] } {
+    const worker = compose({ config, db: handle.db, logger: silentLogger, ...(now ? { now } : {}) });
+    const chats: number[] = [];
+    worker.bot.api.config.use((_prev, method, payload) => {
+        if (method === "sendMessage") chats.push((payload as { chat_id: number }).chat_id);
+        return Promise.resolve({ ok: true, result: true } as never);
+    });
+    return { worker, chats };
+}
+
 describe("compose", () => {
     it("wires the jobs to the adapters and use cases", async () => {
         vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
@@ -47,7 +58,7 @@ describe("compose", () => {
             return Promise.resolve(new Response(body, { headers: { "content-type": "application/json", ...credits } }));
         });
         const now = () => new Date("2026-11-01T09:00:00Z");
-        const runner = compose({ config, db: handle.db, logger: silentLogger, notify: () => Promise.resolve(), now });
+        const { runner } = composeOffline(now).worker;
         expect(runner.leagues).toEqual([
             "soccer_epl",
             "soccer_efl_champ",
@@ -77,7 +88,7 @@ describe("compose", () => {
     });
 
     it("sends the weekly report to the owner and every bettor", async () => {
-        const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+        vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
         const db = createRepositories(handle.db);
         await db.players.ensure([
             {
@@ -89,13 +100,10 @@ describe("compose", () => {
                 tipsMuted: true,
             },
         ]);
-        const runner = compose({ config, db: handle.db, logger: silentLogger, notify: () => Promise.resolve() });
-        expect(await runner.handlers.weekly_report({ key: "w", kind: "weekly_report" })).toEqual({
+        const { worker, chats } = composeOffline();
+        expect(await worker.runner.handlers.weekly_report({ key: "w", kind: "weekly_report" })).toEqual({
             status: "succeeded",
         });
-        const chats = fetch.mock.calls.map(
-            ([, init]) => (JSON.parse(init?.body as string) as { chat_id: number }).chat_id,
-        );
         expect(chats.sort()).toEqual([1, 2]);
     });
 
@@ -105,7 +113,7 @@ describe("compose", () => {
                 headers: { "x-requests-used": "500", "x-requests-remaining": "0", "x-requests-last": "0" },
             }),
         );
-        const runner = compose({ config, db: handle.db, logger: silentLogger, notify: () => Promise.resolve() });
+        const { runner } = composeOffline().worker;
         expect(
             await runner.handlers.prekickoff_poll({ key: "p", kind: "prekickoff_poll", league: "soccer_epl" }),
         ).toEqual({

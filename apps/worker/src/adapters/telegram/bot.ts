@@ -17,14 +17,23 @@ function keyboardOf(rows: Keyboard | undefined): InlineKeyboard | undefined {
     return InlineKeyboard.from(rows.map((row) => row.map((button) => InlineKeyboard.text(button.text, button.data))));
 }
 
-/** grammY bot for the bet flow, long polling. The token stays inside grammY and is never logged. */
-export function createBetBot(options: {
+/** The Telegram side of the bet flow and the API client for every message the worker sends. */
+export type TelegramBot = ReturnType<typeof createTelegramBot>;
+
+/**
+ * grammY bot, long polling. The token stays inside grammY and is never logged. The client timeout sits above
+ * getUpdates' 30-second long poll, and stops a hung request from holding up a job for grammY's default 500 seconds.
+ */
+export function createTelegramBot(options: {
     botToken: string;
     logger: Logger;
     /** Tests pass this to run updates without Telegram. */
     botInfo?: UserFromGetMe;
 }) {
-    const bot = new Bot(options.botToken, options.botInfo ? { botInfo: options.botInfo } : {});
+    const bot = new Bot(options.botToken, {
+        client: { timeoutSeconds: 60 },
+        ...(options.botInfo ? { botInfo: options.botInfo } : {}),
+    });
     const messenger: Messenger = {
         async send(chatId: number, reply: Reply) {
             const keyboard = keyboardOf(reply.keyboard);

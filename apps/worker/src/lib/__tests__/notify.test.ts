@@ -6,32 +6,28 @@ import { isHealthy } from "../../healthcheck.ts";
 import type { Fetch } from "../http.ts";
 import { createLogger, silentLogger, type Logger } from "../logger.ts";
 import { createPinger } from "../ping.ts";
-import { createTelegramNotifier } from "../telegram.ts";
+import { createTextSender } from "../telegram.ts";
 
 function spyLogger(): { logger: Logger; warn: ReturnType<typeof vi.fn> } {
     const warn = vi.fn();
     return { logger: { ...silentLogger, warn }, warn };
 }
 
-describe("createTelegramNotifier", () => {
-    it("posts the text to the chat", async () => {
-        const fetch = vi.fn<Fetch>().mockResolvedValue(new Response("{}"));
-        await createTelegramNotifier({ botToken: "123:abc", chatId: 42, logger: silentLogger, fetch })("hello");
-        const [url, init] = fetch.mock.calls[0] ?? [];
-        expect(url).toBe("https://api.telegram.org/bot123:abc/sendMessage");
-        expect(JSON.parse(init?.body as string)).toMatchObject({ chat_id: 42, text: "hello" });
+describe("createTextSender", () => {
+    it("sends plain text without link previews", async () => {
+        const sendMessage = vi.fn().mockResolvedValue({});
+        await createTextSender({ api: { sendMessage }, logger: silentLogger })(42, "hello");
+        expect(sendMessage).toHaveBeenCalledWith(42, "hello", { link_preview_options: { is_disabled: true } });
     });
 
-    it("logs failures without throwing or leaking the token", async () => {
+    it("logs a failed message instead of throwing", async () => {
         const { logger, warn } = spyLogger();
-        const refused = vi.fn<Fetch>().mockResolvedValue(new Response("{}", { status: 403 }));
-        await createTelegramNotifier({ botToken: "123:abc", chatId: 42, logger, fetch: refused })("hi");
-        const broken = vi.fn<Fetch>().mockRejectedValue(new TypeError("fetch failed"));
-        await createTelegramNotifier({ botToken: "123:abc", chatId: 42, logger, fetch: broken })("hi");
-        expect(warn.mock.calls).toEqual([
-            [{ status: 403 }, "telegram message refused"],
-            [{ error: "TypeError" }, "telegram message failed"],
-        ]);
+        const sendMessage = vi.fn().mockRejectedValue(new Error("Call to 'sendMessage' failed! (403: Forbidden)"));
+        await createTextSender({ api: { sendMessage }, logger })(42, "hi");
+        expect(warn).toHaveBeenCalledWith(
+            { chatId: 42, error: "Call to 'sendMessage' failed! (403: Forbidden)" },
+            "telegram message failed",
+        );
     });
 });
 

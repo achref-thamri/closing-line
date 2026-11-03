@@ -96,7 +96,8 @@ docker/           Dockerfile and backup script
 ```
 
 Dependencies point inward: `core` imports nothing, use cases reach vendors only through ports, and only adapters
-know vendor APIs. Decisions and their trade-offs are in [docs/adr](docs/adr/).
+know vendor APIs. `compose.ts` is the one place that builds the adapters and wires them into the jobs and the
+Telegram flows; `main.ts` only starts and stops the result. Decisions and their trade-offs are in [docs/adr](docs/adr/).
 
 ## Tech stack
 

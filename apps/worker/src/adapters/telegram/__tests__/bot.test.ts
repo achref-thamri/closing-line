@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BetFlow, Reply } from "../../../app/betFlow.ts";
 import type { SettleFlow } from "../../../app/settleFlow.ts";
 import { silentLogger } from "../../../lib/logger.ts";
-import { COMMANDS, createBetBot } from "../bot.ts";
+import { COMMANDS, createTelegramBot } from "../bot.ts";
 
 const botInfo = {
     id: 1,
@@ -25,7 +25,7 @@ const from = { id: 200, is_bot: false, first_name: "Sam" } as const;
 let calls: { method: string; payload: Record<string, unknown> }[];
 
 function setup(flow: Partial<BetFlow>, settle: Partial<SettleFlow> = { amount: () => Promise.resolve(undefined) }) {
-    const bot = createBetBot({ botToken: "1:secret", logger: silentLogger, botInfo });
+    const bot = createTelegramBot({ botToken: "1:secret", logger: silentLogger, botInfo });
     bot.api.config.use((_prev, method, payload) => {
         calls.push({ method, payload });
         return Promise.resolve({ ok: true, result: true } as never);
