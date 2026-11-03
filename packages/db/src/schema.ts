@@ -32,15 +32,20 @@ export const runStatus = pgEnum("run_status", ["running", "succeeded", "skipped"
 export const chatSessionKind = pgEnum("chat_session_kind", ["bet_draft", "join_request", "cashout"]);
 
 /** Everyone with a virtual bankroll: bettors, the scanner, the shadow player and benchmarks. */
-export const players = pgTable("players", {
-    id: text().primaryKey(),
-    name: text().notNull(),
-    kind: playerKind().notNull(),
-    startingBankrollOre: integer("starting_bankroll_ore").notNull(),
-    telegramChatId: text("telegram_chat_id"),
-    tipsMuted: boolean("tips_muted").notNull().default(false),
-    ...timestamps,
-});
+export const players = pgTable(
+    "players",
+    {
+        id: text().primaryKey(),
+        name: text().notNull(),
+        kind: playerKind().notNull(),
+        startingBankrollOre: integer("starting_bankroll_ore").notNull(),
+        /** One player per chat: the bot finds the bettor by the chat a message came from. */
+        telegramChatId: text("telegram_chat_id"),
+        tipsMuted: boolean("tips_muted").notNull().default(false),
+        ...timestamps,
+    },
+    (table) => [uniqueIndex("players_telegram_chat_id_unique").on(table.telegramChatId)],
+);
 
 /** Matches, keyed by The Odds API event id. */
 export const fixtures = pgTable(

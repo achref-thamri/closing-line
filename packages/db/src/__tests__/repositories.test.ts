@@ -87,6 +87,14 @@ describe("players", () => {
             ["scanner", "Scanner"],
         ]);
     });
+
+    it("keeps one player per Telegram chat; players without a chat do not clash", async () => {
+        const bettor = { kind: "bettor", startingBankrollOre: 6_000_000, telegramChatId: "200" } as const;
+        await repos.players.ensure([{ ...bettor, id: "tg_200", name: "Sam" }]);
+        await repos.players.ensure([{ ...bettor, id: "sam_again", name: "Sam" }]);
+        expect(await repos.players.byChat(200)).toMatchObject({ id: "tg_200" });
+        expect((await repos.players.list()).map((player) => player.id)).toEqual(["friend", "scanner", "tg_200"]);
+    });
 });
 
 describe("fixtures", () => {

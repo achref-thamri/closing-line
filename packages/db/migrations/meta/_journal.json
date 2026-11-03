@@ -71,6 +71,13 @@
             "when": 1793707976392,
             "tag": "0009_drop_unused_bet_fields",
             "breakpoints": true
+        },
+        {
+            "idx": 10,
+            "version": "7",
+            "when": 1793709826760,
+            "tag": "0010_one_player_per_chat",
+            "breakpoints": true
         }
     ]
 }
