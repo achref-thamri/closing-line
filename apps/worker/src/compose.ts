@@ -55,7 +55,7 @@ export function compose(options: { config: Config; db: Database; logger: Logger;
     const tip = createTipSender({
         timeZone: config.timezone,
         logger,
-        send: sendText,
+        send: (chatId, reply) => bot.messenger.send(chatId, reply),
         recipients: async () => tipRecipients(await repos.players.list(), ownerChatId),
     });
     const pollDeps = { source: odds, guard, repos, config, now, notify, tip };

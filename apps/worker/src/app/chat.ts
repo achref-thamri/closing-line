@@ -10,6 +10,8 @@ export type Keyboard = Button[][];
 export interface Reply {
     text: string;
     keyboard?: Keyboard;
+    /** For a button tap: send this as a new message and leave the tapped one as it is (e.g. a tip). */
+    newMessage?: boolean;
 }
 
 /** Sends new messages; the Telegram adapter implements it. */

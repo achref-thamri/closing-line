@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
-import { createTipSender, formatTip, tipRecipients, type Tip } from "../tips.ts";
+import type { Reply } from "../chat.ts";
+import { createTipSender, formatTip, tipKeyboard, tipRecipients, type Tip } from "../tips.ts";
 
 const tip: Tip = {
+    fixtureId: "f".repeat(32),
+    selection: "away",
     homeTeam: "Hull City",
     awayTeam: "Watford",
     kickoff: new Date("2026-11-07T15:00:00Z"),
@@ -37,9 +40,25 @@ describe("formatTip", () => {
     });
 });
 
+describe("tipKeyboard", () => {
+    it("offers one I-bet-this button per book, best first, with what the bet flow needs", () => {
+        expect(tipKeyboard(tip)).toEqual([
+            [{ text: "✅ I bet this at Unibet 3.40", data: `tb:${"f".repeat(32)}:away:unibet_se:3.40` }],
+            [{ text: "✅ I bet this at NordicBet 3.25", data: `tb:${"f".repeat(32)}:away:nordicbet:3.25` }],
+            [{ text: "✅ I bet this at Marathonbet 3.20", data: `tb:${"f".repeat(32)}:away:marathonbet:3.20` }],
+        ]);
+    });
+
+    it("leaves out a button whose data would pass Telegram's 64 bytes", () => {
+        const offer = { bookmaker: "a_bookmaker_with_a_long_key", offeredOdds: 3.4, netOdds: 3.4, edge: 0.0968 };
+        const long = { ...tip, offers: [offer] };
+        expect(tipKeyboard(long)).toEqual([]);
+    });
+});
+
 describe("createTipSender", () => {
     it("sends everyone the same tip, except people who paused tips", async () => {
-        const send = vi.fn((_chatId: number, _text: string) => Promise.resolve());
+        const send = vi.fn((_chatId: number, _reply: Reply) => Promise.resolve());
         const sendTip = createTipSender({
             timeZone: TZ,
             logger: silentLogger,
@@ -55,6 +74,27 @@ describe("createTipSender", () => {
         await sendTip({ ...tip, offers: [] });
         expect(send.mock.calls.map(([chatId]) => chatId)).toEqual([1, 2]);
         expect(send.mock.calls[0]?.[1]).toBe(send.mock.calls[1]?.[1]);
+        expect(send.mock.calls[0]?.[1].keyboard).toHaveLength(3);
+    });
+
+    it("still sends to the others when one message fails", async () => {
+        const send = vi.fn((chatId: number) =>
+            chatId === 1 ? Promise.reject(new Error("blocked")) : Promise.resolve(),
+        );
+        const warn = vi.fn();
+        const sendTip = createTipSender({
+            timeZone: TZ,
+            logger: { ...silentLogger, warn },
+            send,
+            recipients: () =>
+                Promise.resolve([
+                    { chatId: 1, muted: false },
+                    { chatId: 2, muted: false },
+                ]),
+        });
+        await sendTip(tip);
+        expect(send).toHaveBeenCalledTimes(2);
+        expect(warn).toHaveBeenCalledWith({ chatId: 1, error: "blocked" }, "value tip not delivered");
     });
 });
 

@@ -286,6 +286,56 @@ describe("matches we track", () => {
     });
 });
 
+describe("from a tip", () => {
+    const fixtureId = "f".repeat(32);
+
+    beforeEach(async () => {
+        await repos.fixtures.upsert([
+            {
+                id: fixtureId,
+                league: "soccer_efl_champ",
+                homeTeam: "Hull City",
+                awayTeam: "Watford",
+                kickoff: new Date(clock.getTime() + 24 * 3_600_000),
+            },
+        ]);
+        await letFriendIn();
+    });
+
+    it("fills in everything but the stake, as a new message, and logs it as a value tip", async () => {
+        const odds = await flow.tap(FRIEND, `tb:${fixtureId}:away:nordicbet:3.25`);
+        expect(odds).toMatchObject({
+            text: "Hull City – Watford\nDid you get 3.25? Tap it, or type the odds you got.",
+            newMessage: true,
+        });
+        expect((await tap(odds, "3.25")).text).toMatch(/^How much did you stake/);
+        const logged = await type("1500");
+        expect(logged.text).toBe(
+            "🧾 NordicBet · Hull City – Watford\nWatford to win\nOdds 3.25 · Stake 1,500 kr\n\n✅ Logged as 🔎 Value tip.\n/log logs another.",
+        );
+        expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toMatchObject([
+            { fixtureId, market: "h2h", selection: "away", bookmaker: "nordicbet", lockedOdds: 3.25, tag: "value_tip" },
+        ]);
+        expect(await repos.chats.get(FRIEND, "bet_draft")).toBeUndefined();
+    });
+
+    it("takes the odds the bettor typed, and does not log the same tip twice", async () => {
+        await flow.tap(FRIEND, `tb:${fixtureId}:away:nordicbet:3.25`);
+        await type("3.1");
+        await type("1000");
+        expect((await repos.bets.forPlayer(`tg_${FRIEND}`))[0]?.lockedOdds).toBe(3.1);
+        expect((await flow.tap(FRIEND, `tb:${fixtureId}:away:unibet_se:3.40`)).text).toMatch(/Already logged\./);
+    });
+
+    it("refuses strangers and tips it cannot read", async () => {
+        expect((await flow.tap(300, `tb:${fixtureId}:away:nordicbet:3.25`)).text).toBe("Send /start first.");
+        expect((await flow.tap(FRIEND, `tb:${"e".repeat(32)}:away:nordicbet:3.25`)).text).toMatch(
+            /no longer be logged/,
+        );
+        expect((await flow.tap(FRIEND, `tb:${fixtureId}:over:nordicbet:3.25`)).text).toMatch(/no longer be logged/);
+    });
+});
+
 describe("restarts", () => {
     it("carries on with a bet half entered before a restart", async () => {
         await letFriendIn();

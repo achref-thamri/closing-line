@@ -26,7 +26,7 @@ export const snapshotKind = pgEnum("snapshot_kind", ["poll", "on_demand", "closi
 export const betStatus = pgEnum("bet_status", ["open", "won", "lost", "void", "cashed_out"]);
 export const sport = pgEnum("sport", ["football", "counter_strike"]);
 /** Why a bettor took a bet, chosen in Telegram (spec §4). */
-export const betTag = pgEnum("bet_tag", ["lineup", "skewed_price", "game_read", "slow_live_price"]);
+export const betTag = pgEnum("bet_tag", ["lineup", "skewed_price", "game_read", "slow_live_price", "value_tip"]);
 export const runStatus = pgEnum("run_status", ["running", "succeeded", "skipped", "failed"]);
 /** What a Telegram chat is in the middle of: entering a bet, waiting to be let in, or giving a cash-out amount. */
 export const chatSessionKind = pgEnum("chat_session_kind", ["bet_draft", "join_request", "cashout"]);

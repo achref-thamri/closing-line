@@ -12,6 +12,7 @@ export const TAGS = {
     s: { tag: "skewed_price", label: "📈 Skewed price" },
     g: { tag: "game_read", label: "🧠 Game read" },
     v: { tag: "slow_live_price", label: "⏱ Slow live price" },
+    p: { tag: "value_tip", label: "🔎 Value tip" },
 } as const;
 type TagKey = keyof typeof TAGS;
 
@@ -98,6 +99,8 @@ const storedDraft = z.object({
             bookmaker: z.string(),
             odds: z.number(),
             stakeOre: z.int(),
+            /** Started from a tip's "I bet this" button: logged as a value tip once the stake is in. */
+            fromTip: z.boolean(),
         })
         .partial(),
 });
@@ -159,6 +162,7 @@ export class BetFlow implements ButtonHandler {
         const pending = await this.current(chatId);
         if (!pending) return [{ text: "Send /log to log a bet, or /open to settle one." }];
         const reply = await this.answer(pending, text.trim());
+        if (pending.step === "reason" && pending.draft.fromTip) return [await this.log(chatId, pending, "p")];
         await this.save(chatId, pending);
         return [reply];
     }
@@ -198,15 +202,16 @@ export class BetFlow implements ButtonHandler {
         }
     }
 
-    /** Answers (`w:<value>`), reasons (`t:<tag>`) and Cancel (`x`). */
+    /** Answers (`w:<value>`), reasons (`t:<tag>`), Cancel (`x`) and a tip's "I bet this" (`tb:…`). */
     owns(data: string): boolean {
-        return hasAction(data, ["w", "t", "x"]);
+        return hasAction(data, ["w", "t", "x", "tb"]);
     }
 
     async tap(chatId: number, data: string): Promise<Reply> {
         const separator = data.indexOf(":");
         const action = separator < 0 ? data : data.slice(0, separator);
         const value = separator < 0 ? "" : data.slice(separator + 1);
+        if (action === "tb") return { ...(await this.fromTip(chatId, value)), newMessage: true };
         const pending = await this.current(chatId);
         if (!pending) return { text: "This bet is no longer open. Send /log to start again." };
         if (action === "x") {
@@ -244,7 +249,51 @@ export class BetFlow implements ButtonHandler {
             draft.bookmaker = value;
             return this.ask(pending, "odds");
         }
+        const odds = pending.step === "odds" ? parseDecimal(value) : undefined;
+        if (odds !== undefined && odds > 1) {
+            draft.odds = odds;
+            return this.ask(pending, "stake");
+        }
         return this.ask(pending, pending.step);
+    }
+
+    /**
+     * A tip's "I bet this" (`<fixture>:<selection>:<bookmaker>:<odds>`): a bet with the match, pick, bookmaker and
+     * the tip's price filled in, so only the odds check and the stake are left. A tip already logged is not
+     * logged again.
+     */
+    private async fromTip(chatId: number, value: string): Promise<Reply> {
+        if (!(await this.deps.bettors.isAllowed(chatId))) return { text: "Send /start first." };
+        const [fixtureId = "", selection = "", bookmaker = "", price = ""] = value.split(":");
+        const fixture = await this.deps.repos.fixtures.get(fixtureId);
+        const odds = parseDecimal(price);
+        if (!fixture || !isOutcome(selection) || !bookmaker || odds === undefined) {
+            return { text: "That tip can no longer be logged. Send /log to log the bet." };
+        }
+        const player = await this.deps.bettors.player(chatId);
+        const logged = player ? await this.deps.repos.bets.forPlayer(player.id) : [];
+        const twin = logged.find((bet) => bet.fixtureId === fixtureId && bet.selection === selection);
+        if (twin) return { text: `${describeBet(twin)}\n\nAlready logged. /open settles it if it is over.` };
+
+        const pending: Pending = {
+            step: "odds",
+            draft: {
+                sport: "football",
+                eventName: `${fixture.homeTeam} – ${fixture.awayTeam}`,
+                fixtureId,
+                market: "match_result",
+                playerName: null,
+                selection,
+                line: null,
+                bookmaker,
+                odds,
+                fromTip: true,
+            },
+            updatedAt: this.now(),
+        };
+        const reply = this.ask(pending, "odds");
+        await this.save(chatId, pending);
+        return reply;
     }
 
     /** Links the typed match to a fixture we track when exactly one fits, and names it the way the fixture does. */
@@ -320,6 +369,13 @@ export class BetFlow implements ButtonHandler {
                 return { text: "Which bookmaker? Tap it, or type another.", keyboard: [...rows(buttons, 3), [CANCEL]] };
             }
             case "odds":
+                if (draft.fromTip && draft.odds !== undefined) {
+                    const odds = draft.odds.toFixed(2);
+                    return {
+                        text: `${draft.eventName ?? ""}\nDid you get ${odds}? Tap it, or type the odds you got.`,
+                        keyboard: [[{ text: `✅ ${odds}`, data: `w:${odds}` }], [CANCEL]],
+                    };
+                }
                 return { text: "What odds did you get? E.g. 3.70", keyboard: [[CANCEL]] };
             case "stake":
                 return { text: "How much did you stake, in kroner? E.g. 1500", keyboard: [[CANCEL]] };

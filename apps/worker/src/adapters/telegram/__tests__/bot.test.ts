@@ -36,7 +36,7 @@ function setup(flows: { bettors?: Partial<Bettors>; bets?: Partial<BetFlow>; set
     const owns = (actions: string[]) => (data: string) => hasAction(data, actions);
     bot.attach({
         bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as Bettors,
-        bets: { owns: owns(["w", "t", "x"]), ...flows.bets } as BetFlow,
+        bets: { owns: owns(["w", "t", "x", "tb"]), ...flows.bets } as BetFlow,
         settle: { owns: owns(["st", "hd"]), amount: () => Promise.resolve(undefined), ...flows.settle } as SettleFlow,
     });
     return bot;
@@ -117,6 +117,15 @@ describe("bet bot", () => {
             "Unknown button.",
         ]);
         expect(sent("answerCallbackQuery")).toHaveLength(4);
+    });
+
+    it("answers a tap with a new message when asked, leaving the tapped message (a tip) as it is", async () => {
+        const tap = vi.fn().mockResolvedValue({ text: "Did you get 3.25?", newMessage: true });
+        const bot = setup({ bets: { tap } });
+        await bot.handleUpdate(tapUpdate("tb:f:away:nordicbet:3.25"));
+        expect(sent("editMessageText")).toEqual([]);
+        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["Did you get 3.25?"]);
+        expect(sent("answerCallbackQuery")).toHaveLength(1);
     });
 
     it("gives typed text to a waiting cash-out first, then to the bet being entered", async () => {
