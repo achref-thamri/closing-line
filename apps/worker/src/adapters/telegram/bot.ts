@@ -1,6 +1,8 @@
 import { Bot, InlineKeyboard, type Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
-import type { BetFlow, Keyboard, Messenger, Reply } from "../../app/betFlow.ts";
+import type { BetFlow } from "../../app/betFlow.ts";
+import type { Bettors } from "../../app/bettors.ts";
+import type { ButtonHandler, Keyboard, Messenger, Reply } from "../../app/chat.ts";
 import type { SettleFlow } from "../../app/settleFlow.ts";
 import type { Logger } from "../../lib/logger.ts";
 
@@ -48,31 +50,39 @@ export function createTelegramBot(options: {
         }
     }
 
-    /** `picks` answers /picks; it reads stored odds only. */
-    function attach(flow: BetFlow, settle: SettleFlow, picks?: () => Promise<string>): void {
+    /** Routes commands, typed text and button taps to the flows. `picks` answers /picks from stored odds. */
+    function attach(flows: {
+        bettors: Pick<Bettors, "isAllowed" | "start" | "tips"> & ButtonHandler;
+        bets: Pick<BetFlow, "bet" | "text"> & ButtonHandler;
+        settle: Pick<SettleFlow, "open" | "amount"> & ButtonHandler;
+        picks?: () => Promise<string>;
+    }): void {
+        const { bettors, bets, settle, picks } = flows;
+        const buttons: ButtonHandler[] = [bettors, settle, bets];
+
         bot.command("start", async (ctx) => {
-            await ctx.reply((await flow.start(ctx.chat.id, ctx.from?.first_name ?? "Someone")).text);
+            await ctx.reply((await bettors.start(ctx.chat.id, ctx.from?.first_name ?? "Someone")).text);
         });
 
         // /log is the name in the menu; /bet stays for anyone who learned it first.
         bot.command(["log", "bet"], async (ctx) => {
-            await sendAll(ctx, [await flow.bet(ctx.chat.id)]);
+            await sendAll(ctx, [await bets.bet(ctx.chat.id)]);
         });
 
         bot.command("tips", async (ctx) => {
-            await ctx.reply((await flow.tips(ctx.chat.id, ctx.from?.first_name ?? "Someone", ctx.match)).text);
+            await ctx.reply((await bettors.tips(ctx.chat.id, ctx.from?.first_name ?? "Someone", ctx.match)).text);
         });
 
         bot.command("picks", async (ctx) => {
-            if (picks && (await flow.isAllowed(ctx.chat.id))) await ctx.reply(await picks());
+            if (picks && (await bettors.isAllowed(ctx.chat.id))) await ctx.reply(await picks());
         });
 
         bot.command("open", async (ctx) => {
-            if (await flow.isAllowed(ctx.chat.id)) await sendAll(ctx, await settle.open(ctx.chat.id));
+            if (await bettors.isAllowed(ctx.chat.id)) await sendAll(ctx, await settle.open(ctx.chat.id));
         });
 
         bot.on(["message:photo", "message:document"], async (ctx) => {
-            if (await flow.isAllowed(ctx.chat.id)) {
+            if (await bettors.isAllowed(ctx.chat.id)) {
                 await ctx.reply("Screenshots are not read. Send /log and answer the questions instead.");
             }
         });
@@ -84,7 +94,8 @@ export function createTelegramBot(options: {
                 return;
             }
             const data = ctx.callbackQuery.data;
-            const reply = /^(st|hd):/.test(data) ? await settle.tap(chatId, data) : await flow.tap(chatId, data);
+            const handler = buttons.find((each) => each.owns(data));
+            const reply = handler ? await handler.tap(chatId, data) : { text: "Unknown button." };
             const keyboard = keyboardOf(reply.keyboard);
             await ctx.editMessageText(reply.text, keyboard ? { reply_markup: keyboard } : {});
             await ctx.answerCallbackQuery();
@@ -92,7 +103,7 @@ export function createTelegramBot(options: {
 
         bot.on("message:text", async (ctx) => {
             const amount = await settle.amount(ctx.chat.id, ctx.message.text);
-            await sendAll(ctx, amount ? [amount] : await flow.text(ctx.chat.id, ctx.message.text));
+            await sendAll(ctx, amount ? [amount] : await bets.text(ctx.chat.id, ctx.message.text));
         });
 
         bot.catch((error) => {

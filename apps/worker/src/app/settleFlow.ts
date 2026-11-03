@@ -1,8 +1,9 @@
-import { bookName, heldProfitOre, impliedOddsFromCashout, pickText, priceMove } from "@closing-line/core";
+import { heldProfitOre, impliedOddsFromCashout, priceMove } from "@closing-line/core";
 import type { Bet, Repositories } from "@closing-line/db";
 import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
-import { kroner, parseKroner, type Keyboard, type Messenger, type Reply } from "./betFlow.ts";
+import { hasAction, type ButtonHandler, type Keyboard, type Messenger, type Reply } from "./chat.ts";
+import { describeBet, kroner, parseKroner, signedKroner } from "./format.ts";
 
 type Outcome = "won" | "lost" | "void";
 interface SlipSettlement {
@@ -28,7 +29,7 @@ export interface SettleFlowDeps {
  * for the amount, records the price it implies, then asks how the bet would have ended. The bet waiting for its
  * cash-out amount is stored in the database, so a restart in between does not lose it.
  */
-export class SettleFlow {
+export class SettleFlow implements ButtonHandler {
     private readonly deps: SettleFlowDeps;
     private readonly now: () => Date;
 
@@ -48,7 +49,11 @@ export class SettleFlow {
         }));
     }
 
-    /** Buttons `st:<bet>:<w|l|v|c>` and `hd:<bet>:<w|l|v>`. */
+    /** Buttons `st:<bet>:<w|l|v|c>` (how the bet ended) and `hd:<bet>:<w|l|v>` (how a cashed-out bet would have). */
+    owns(data: string): boolean {
+        return hasAction(data, ["st", "hd"]);
+    }
+
     async tap(chatId: number, data: string): Promise<Reply> {
         const [action, betId = "", key = ""] = data.split(":");
         const bet = await this.ownBet(chatId, betId);
@@ -80,12 +85,12 @@ export class SettleFlow {
     async amount(chatId: number, text: string): Promise<Reply | undefined> {
         const stored = storedCashout.safeParse((await this.deps.repos.chats.get(chatId, "cashout"))?.value);
         if (!stored.success) return undefined;
-        const kroner = parseKroner(text);
-        if (kroner === undefined) return { text: "Reply with just the amount, e.g. 2557 or 2.557,17." };
+        const amount = parseKroner(text);
+        if (amount === undefined) return { text: "Reply with just the amount, e.g. 2557 or 2.557,17." };
         await this.deps.repos.chats.remove(chatId, "cashout");
         const bet = await this.ownBet(chatId, stored.data.betId);
         if (bet?.status !== "open") return { text: "That bet is already settled." };
-        return this.cashOut(chatId, bet, Math.round(kroner * 100));
+        return this.cashOut(chatId, bet, Math.round(amount * 100));
     }
 
     private async cashOut(chatId: number, bet: Bet, offerOre: number): Promise<Reply> {
@@ -115,7 +120,7 @@ export class SettleFlow {
     private async settle(chatId: number, bet: Bet, settlement: SlipSettlement): Promise<Reply> {
         const done = await this.deps.repos.bets.settleSlip(bet.id, { ...settlement, settledAt: this.now() });
         if (!done) return { text: `${describeBet(bet)}\n\nAlready settled.` };
-        const result = `${statusIcon(settlement.status)} ${settlement.status.replace("_", " ")} ${signed(settlement.profitOre)}`;
+        const result = `${statusIcon(settlement.status)} ${settlement.status.replace("_", " ")} ${signedKroner(settlement.profitOre)}`;
         if (chatId !== this.deps.ownerChatId) {
             const name = (await this.deps.repos.players.byChat(chatId))?.name ?? bet.playerId;
             await this.deps.messenger.send(this.deps.ownerChatId, {
@@ -148,18 +153,6 @@ function settleKeyboard(betId: string): Keyboard {
     ];
 }
 
-export function describeBet(bet: Bet): string {
-    return [
-        `🧾 ${bookName(bet.bookmaker)} · ${bet.eventName ?? ""}`.trim(),
-        pickText(bet),
-        `Odds ${bet.lockedOdds.toFixed(2)} · Stake ${kroner(bet.stakeOre)}`,
-    ].join("\n");
-}
-
 function statusIcon(status: string): string {
     return { won: "✅", lost: "❌", void: "↩️", cashed_out: "💰" }[status] ?? "";
-}
-
-function signed(ore: number): string {
-    return `${ore >= 0 ? "+" : "−"}${kroner(Math.abs(ore))}`;
 }
