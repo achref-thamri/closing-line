@@ -26,6 +26,15 @@ export interface ChatSession {
     updatedAt: Date;
 }
 
+export interface Settlement {
+    status: "won" | "lost" | "void" | "cashed_out";
+    profitOre: number;
+    settledAt: Date;
+    cashoutOfferOre?: number;
+    impliedCurrentOdds?: number;
+    clv?: number;
+}
+
 export type FixtureResult = { status: "finished"; homeGoals: number; awayGoals: number } | { status: "void" };
 
 export function createRepositories(db: Database) {
@@ -247,28 +256,6 @@ export function createRepositories(db: Database) {
                     .where(and(eq(bets.playerId, playerId), eq(bets.status, "open")))
                     .orderBy(bets.createdAt);
             },
-            /**
-             * Settles a bettor's open bet once, including a cash-out with the price it implies; false when it was
-             * already settled.
-             */
-            async settleSlip(
-                id: string,
-                settlement: {
-                    status: "won" | "lost" | "void" | "cashed_out";
-                    profitOre: number;
-                    settledAt: Date;
-                    cashoutOfferOre?: number;
-                    impliedCurrentOdds?: number;
-                    clv?: number;
-                },
-            ): Promise<boolean> {
-                const rows = await db
-                    .update(bets)
-                    .set(settlement)
-                    .where(and(eq(bets.id, id), eq(bets.status, "open")))
-                    .returning({ id: bets.id });
-                return rows.length > 0;
-            },
             /** For a cashed-out bet: how the selection itself ended. */
             async setHeldStatus(id: string, heldStatus: "won" | "lost" | "void"): Promise<void> {
                 await db
@@ -276,11 +263,11 @@ export function createRepositories(db: Database) {
                     .set({ heldStatus })
                     .where(and(eq(bets.id, id), eq(bets.status, "cashed_out")));
             },
-            /** Settles an open bet once; returns false when it was already settled. */
-            async settle(
-                id: string,
-                settlement: { status: "won" | "lost" | "void"; profitOre: number; settledAt: Date },
-            ): Promise<boolean> {
+            /**
+             * Settles an open bet once; false when it was already settled. A cash-out also records the offer, the
+             * price it implies and that price's move as CLV.
+             */
+            async settle(id: string, settlement: Settlement): Promise<boolean> {
                 const rows = await db
                     .update(bets)
                     .set(settlement)

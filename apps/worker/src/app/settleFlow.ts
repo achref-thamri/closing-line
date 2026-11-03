@@ -1,18 +1,12 @@
-import { heldProfitOre, impliedOddsFromCashout, priceMove } from "@closing-line/core";
-import type { Bet, Repositories } from "@closing-line/db";
+import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout, priceMove } from "@closing-line/core";
+import type { Bet, Repositories, Settlement } from "@closing-line/db";
 import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
 import { hasAction, type ButtonHandler, type Keyboard, type Messenger, type Reply } from "./chat.ts";
 import { describeBet, kroner, parseKroner, signedKroner } from "./format.ts";
 
 type Outcome = "won" | "lost" | "void";
-interface SlipSettlement {
-    status: Outcome | "cashed_out";
-    profitOre: number;
-    cashoutOfferOre?: number;
-    impliedCurrentOdds?: number;
-    clv?: number;
-}
+type SlipSettlement = Omit<Settlement, "settledAt">;
 const OUTCOME_KEYS: Record<string, Outcome> = { w: "won", l: "lost", v: "void" };
 const storedCashout = z.object({ betId: z.string() });
 
@@ -63,7 +57,7 @@ export class SettleFlow implements ButtonHandler {
             const held = OUTCOME_KEYS[key];
             if (!held || bet.status !== "cashed_out") return { text: describeBet(bet) };
             await this.deps.repos.bets.setHeldStatus(bet.id, held);
-            const gain = (bet.cashoutOfferOre ?? 0) - bet.stakeOre - heldProfitOre(bet, held);
+            const gain = cashoutGainOre({ ...bet, cashoutOfferOre: bet.cashoutOfferOre ?? 0 }, held);
             const verdict =
                 gain >= 0
                     ? `Cashing out paid ${kroner(gain)} more than holding.`
@@ -118,7 +112,7 @@ export class SettleFlow implements ButtonHandler {
     }
 
     private async settle(chatId: number, bet: Bet, settlement: SlipSettlement): Promise<Reply> {
-        const done = await this.deps.repos.bets.settleSlip(bet.id, { ...settlement, settledAt: this.now() });
+        const done = await this.deps.repos.bets.settle(bet.id, { ...settlement, settledAt: this.now() });
         if (!done) return { text: `${describeBet(bet)}\n\nAlready settled.` };
         const result = `${statusIcon(settlement.status)} ${settlement.status.replace("_", " ")} ${signedKroner(settlement.profitOre)}`;
         if (chatId !== this.deps.ownerChatId) {

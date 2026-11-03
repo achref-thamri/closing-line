@@ -111,16 +111,8 @@ export const bets = pgTable(
         stakeOre: integer("stake_ore").notNull(),
         lockedOdds: doublePrecision("locked_odds").notNull(),
         bookmaker: text().notNull(),
-        /** The player's own price, entered before seeing the odds (bettors only). */
-        fairPriceEntered: doublePrecision("fair_price_entered"),
         sharpFairOddsAtBet: doublePrecision("sharp_fair_odds_at_bet"),
         edgeAtBet: doublePrecision("edge_at_bet"),
-        reasonTags: text("reason_tags")
-            .array()
-            .notNull()
-            .default(sql`'{}'`),
-        note: text(),
-        wouldBetReal: boolean("would_bet_real"),
         selfReported: boolean("self_reported").notNull().default(false),
         tag: betTag(),
         /** The bookmaker's id for the bet slip; stops the same slip from being logged twice. */
@@ -128,9 +120,6 @@ export const bets = pgTable(
         /** When the bookmaker says the bet was placed (from the slip) and when we received the slip. */
         placedAt: timestamp("placed_at", { withTimezone: true }),
         receivedAt: timestamp("received_at", { withTimezone: true }),
-        live: boolean().notNull().default(false),
-        /** What the other books paid for the same selection, as the bettor reported it. */
-        otherBooksOdds: doublePrecision("other_books_odds"),
         /** The latest cash-out offer seen; for a cashed-out bet, what it paid. */
         cashoutOfferOre: integer("cashout_offer_ore"),
         /** The bookmaker's price implied by the cash-out offer: the props version of closing odds. */
@@ -170,26 +159,6 @@ export const bets = pgTable(
         check("bets_h2h_selection", sql`${table.market} <> 'h2h' or ${table.selection} in ('home', 'draw', 'away')`),
     ],
 );
-
-/** Games a bettor priced but chose not to bet: training data without selection bias. */
-export const passes = pgTable("passes", {
-    id: uuid().primaryKey(),
-    playerId: text("player_id")
-        .notNull()
-        .references(() => players.id),
-    fixtureId: text("fixture_id")
-        .notNull()
-        .references(() => fixtures.id),
-    market: text().notNull(),
-    selection: text(),
-    fairPriceEntered: doublePrecision("fair_price_entered"),
-    reasonTags: text("reason_tags")
-        .array()
-        .notNull()
-        .default(sql`'{}'`),
-    note: text(),
-    ...timestamps,
-});
 
 /** Credit balance after each paid API call, read from the response headers. */
 export const apiUsage = pgTable(

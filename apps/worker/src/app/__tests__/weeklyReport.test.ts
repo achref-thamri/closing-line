@@ -27,7 +27,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await handle.db.execute(
-        "truncate players, fixtures, odds_snapshots, bets, passes, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
+        "truncate players, fixtures, odds_snapshots, bets, api_usage, job_runs, worker_state, chat_sessions restart identity cascade",
     );
     await ensurePlayers(repos, config);
 });
@@ -97,7 +97,7 @@ describe("weeklyReport", () => {
                 selfReported: true,
                 tag,
             });
-            await repos.bets.settleSlip(bet?.id ?? "", {
+            await repos.bets.settle(bet?.id ?? "", {
                 status,
                 profitOre: status === "won" ? 200_000 : -100_000,
                 settledAt: now,
@@ -134,19 +134,13 @@ describe("bettorBreakdown", () => {
             stakeOre: 100_000,
             lockedOdds: 3,
             bookmaker: "nordicbet",
-            fairPriceEntered: null,
             sharpFairOddsAtBet: null,
             edgeAtBet: null,
-            reasonTags: [],
-            note: null,
-            wouldBetReal: null,
             selfReported: true,
             tag: "lineup",
             couponId: null,
             placedAt: null,
             receivedAt: null,
-            live: false,
-            otherBooksOdds: null,
             cashoutOfferOre: null,
             impliedCurrentOdds: null,
             heldStatus: null,

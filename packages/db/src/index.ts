@@ -17,5 +17,6 @@ export type {
     OddsSnapshot,
     Player,
     Repositories,
+    Settlement,
 } from "./repositories.ts";
 export * as schema from "./schema.ts";
