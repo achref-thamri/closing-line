@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 
 /** The runner ticks every minute; a heartbeat older than this means the process is stuck or dead. */
-export const MAX_HEARTBEAT_AGE_MS = 3 * 60_000;
+const MAX_HEARTBEAT_AGE_MS = 3 * 60_000;
 
 /** True when the heartbeat file was touched recently. */
 export function isHealthy(path: string, now = Date.now()): boolean {
