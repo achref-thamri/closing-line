@@ -1,6 +1,7 @@
 import { BankrollChart } from "../components/BankrollChart.tsx";
 import { BetsTable } from "../components/BetsTable.tsx";
 import { Pagination } from "../components/Pagination.tsx";
+import { PlayerFilter } from "../components/PlayerFilter.tsx";
 import { PlayerCard } from "../components/PlayerCard.tsx";
 import { playerColour } from "../components/players.ts";
 import { BETS_PER_PAGE, loadDashboard } from "../lib/data.ts";
@@ -9,9 +10,12 @@ import { BETS_PER_PAGE, loadDashboard } from "../lib/data.ts";
 export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[]>> }) {
-    const { page: requestedPage } = await searchParams;
-    const dashboard = await loadDashboard(typeof requestedPage === "string" ? requestedPage : undefined);
-    const { betCounts, page, pages } = dashboard;
+    const { page: requestedPage, player: requestedPlayer } = await searchParams;
+    const dashboard = await loadDashboard(
+        typeof requestedPage === "string" ? requestedPage : undefined,
+        typeof requestedPlayer === "string" ? requestedPlayer : undefined,
+    );
+    const { betCounts, page, pages, player } = dashboard;
     const first = (page - 1) * BETS_PER_PAGE + 1;
     const players = new Map(dashboard.players.map((summary) => [summary.player.id, summary.player]));
     const series = dashboard.players.map(({ player, series: points }) => ({
@@ -75,12 +79,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                         </p>
                     )}
                 </div>
+                <PlayerFilter players={dashboard.players.map((summary) => summary.player)} selected={player} />
                 {dashboard.bets.length === 0 ? (
                     <p className="text-sm text-zinc-500">No bets yet.</p>
                 ) : (
                     <>
                         <BetsTable bets={dashboard.bets} players={players} />
-                        <Pagination page={page} pages={pages} />
+                        <Pagination page={page} pages={pages} player={player} />
                     </>
                 )}
             </section>

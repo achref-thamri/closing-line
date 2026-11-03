@@ -196,7 +196,7 @@ describe("logging a bet step by step", () => {
         expect((await type("hi")).text).toBe("Tap one of the buttons above, or send /log to start again.");
         expect((await flow.tap(FRIEND, "w:tennis")).text).toBe("New bet. Which sport?");
         await tap(reply, "Football");
-        expect((await type("ab")).text).toBe("Which match? E.g. Bayern – Arsenal");
+        expect((await type("ab")).text).toBe("Which match? E.g. Bayern v Arsenal");
         reply = await type("Ajax – PSV");
         await tap(reply, "Fouls");
         expect((await type("x")).text).toBe("Which player? E.g. Davies");
@@ -242,7 +242,7 @@ describe("matches we track", () => {
         await tap(await flow.bet(FRIEND), "Football");
         const market = await type("Bayern – Dortmund");
         expect(market.text).toBe(
-            "✓ Kickoff Sun 18:15; a match-result bet gets a closing price.\nBayern Munich – Borussia Dortmund\nWhich market?",
+            "✓ Kickoff Sun 18:15; a match-result bet gets a closing price.\nBayern Munich v Borussia Dortmund\nWhich market?",
         );
         const pick = await tap(market, "Match result");
         const book = await tap(pick, "Bayern Munich");
@@ -252,7 +252,7 @@ describe("matches we track", () => {
         expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toMatchObject([
             {
                 fixtureId: fixture.id,
-                eventName: "Bayern Munich – Borussia Dortmund",
+                eventName: "Bayern Munich v Borussia Dortmund",
                 market: "h2h",
                 selection: "home",
                 lockedOdds: 1.85,
@@ -304,13 +304,13 @@ describe("from a tip", () => {
     it("fills in everything but the stake, as a new message, and logs it as a value tip", async () => {
         const odds = await flow.tap(FRIEND, `tb:${fixtureId}:away:nordicbet:3.25`);
         expect(odds).toMatchObject({
-            text: "Hull City – Watford\nDid you get 3.25? Tap it, or type the odds you got.",
+            text: "Hull City v Watford\nDid you get 3.25? Tap it, or type the odds you got.",
             newMessage: true,
         });
         expect((await tap(odds, "3.25")).text).toMatch(/^How much did you stake/);
         const logged = await type("1500");
         expect(logged.text).toBe(
-            "🧾 NordicBet · Hull City – Watford\nWatford to win\nOdds 3.25 · Stake 1,500 kr\n\n✅ Logged as 🔎 Value tip.\n/log logs another.",
+            "🧾 NordicBet · Hull City v Watford\nWatford to win\nOdds 3.25 · Stake 1,500 kr\n\n✅ Logged as 🔎 Value tip.\n/log logs another.",
         );
         expect(await repos.bets.forPlayer(`tg_${FRIEND}`)).toMatchObject([
             { fixtureId, market: "h2h", selection: "away", bookmaker: "nordicbet", lockedOdds: 3.25, tag: "value_tip" },
