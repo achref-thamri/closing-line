@@ -3,7 +3,7 @@ import { createRepositories, openDatabase, type DatabaseHandle, type Repositorie
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import type { Bet } from "@closing-line/db";
-import { bettorBreakdown, LESSONS, weeklyReport } from "../weeklyReport.ts";
+import { bettorBreakdown, LESSONS, tipsSection, weeklyReport } from "../weeklyReport.ts";
 
 const config = parseConfig({
     ODDS_API_KEY: "k",
@@ -44,6 +44,7 @@ async function settledBet(id: string, playerId: string, profitOre: number, settl
         stakeOre: 10_000,
         lockedOdds: 2.5,
         bookmaker: "unibet_se",
+        createdAt: new Date(settledAt.getTime() - 86_400_000),
     });
     if (!bet) throw new Error("not placed");
     await repos.bets.setClosing(bet.id, { fairOdds: 2.4, clv, provisional: true });
@@ -68,6 +69,9 @@ describe("weeklyReport", () => {
                 "Value scanner",
                 "This week: 1 settled, +150 kr",
                 "All time: 2 settled (1 won), ROI +25.0%, CLV +1.0%, bankroll 10,050 kr, 0 open",
+                "",
+                "🔎 Tips this week: 1",
+                "Average CLV: +4.0% over 1 with a closing price",
                 "",
                 "📚 Lesson of the week",
                 LESSONS[Math.floor(now.getTime() / (7 * 86_400_000)) % LESSONS.length],
@@ -199,5 +203,35 @@ describe("bettorBreakdown", () => {
         ]);
         const lostAnyway = bettorBreakdown("Sam", times(3, { ...cashed, heldStatus: "lost" }));
         expect(lostAnyway.lessons[0]).toMatch(/^Sam's cash-outs paid 4,500 kr more than holding over 3 bets/);
+    });
+});
+
+describe("tipsSection", () => {
+    const sentAt = new Date("2026-11-07T08:00:00Z");
+    const tip = (clv: number | null) => ({ lockedOdds: 2.5, createdAt: sentAt, clv }) as Bet;
+    const seen = (hours: number, price: number, kind = "poll") => ({
+        price,
+        takenAt: new Date(sentAt.getTime() + hours * 3_600_000),
+        kind,
+    });
+
+    it("says how often a tip's price lasted, and what to do once there are enough tips", () => {
+        const lasted = { bet: tip(0.03), later: [seen(3, 2.5), seen(9, 2.55, "closing")] };
+        const gone = { bet: tip(0.05), later: [seen(3, 2.4), seen(9, 2.3, "closing")] };
+        const unseen = { bet: tip(null), later: [] };
+        expect(tipsSection([lasted, gone, unseen])).toEqual([
+            "",
+            "🔎 Tips this week: 3",
+            "Price still there at the next poll: 1 of 2",
+            "Price still there just before kickoff: 1 of 2",
+            "Average CLV: +4.0% over 2 with a closing price",
+        ]);
+        expect(tipsSection(Array.from({ length: 5 }, () => gone)).at(-1)).toBe(
+            "Most tip prices are gone by kickoff: bet soon after a tip arrives.",
+        );
+        expect(tipsSection(Array.from({ length: 5 }, () => lasted)).at(-1)).toMatch(
+            /^Most tip prices last until kickoff/,
+        );
+        expect(tipsSection([])).toEqual([]);
     });
 });
