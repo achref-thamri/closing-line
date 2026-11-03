@@ -68,7 +68,14 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                         return (
                             <tr key={bet.id}>
                                 <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
-                                    {shortDate(bet.fixture?.kickoff ?? bet.placedAt ?? bet.createdAt)}
+                                    {bet.fixture ? (
+                                        shortDate(bet.fixture.kickoff)
+                                    ) : (
+                                        // A match we do not track has no kickoff, only when the bet was logged.
+                                        <span title="Kickoff unknown: when the bet was logged">
+                                            logged {shortDate(bet.placedAt ?? bet.createdAt)}
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="px-3 py-2 whitespace-nowrap">
                                     <span

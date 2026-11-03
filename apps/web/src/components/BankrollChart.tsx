@@ -1,6 +1,7 @@
 "use client";
 
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { timeAxis } from "../lib/timeAxis.ts";
 
 export interface ChartSeries {
     id: string;
@@ -10,7 +11,15 @@ export interface ChartSeries {
     points: { t: number; growth: number }[];
 }
 
-const dateLabel = (t: number) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const TIME_ZONE = "Europe/Copenhagen";
+const fullLabel = (t: number) =>
+    new Date(t).toLocaleString("en-GB", {
+        timeZone: TIME_ZONE,
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
 const percentLabel = (growth: number) => `${(growth * 100).toFixed(1)}%`;
 
 /**
@@ -19,7 +28,7 @@ const percentLabel = (growth: number) => `${(growth * 100).toFixed(1)}%`;
  */
 export function BankrollChart({ series }: { series: ChartSeries[] }) {
     const times = series.flatMap((line) => line.points.map((point) => point.t));
-    const ticks = evenTicks(Math.min(...times), Math.max(...times), 6);
+    const axis = timeAxis(Math.min(...times), Math.max(...times), TIME_ZONE);
     return (
         <div className="h-72 w-full" data-testid="bankroll-chart">
             <ResponsiveContainer>
@@ -30,12 +39,12 @@ export function BankrollChart({ series }: { series: ChartSeries[] }) {
                         type="number"
                         scale="time"
                         domain={["dataMin", "dataMax"]}
-                        ticks={ticks}
-                        tickFormatter={dateLabel}
+                        ticks={axis.ticks}
+                        tickFormatter={axis.label}
                     />
                     <YAxis tickFormatter={percentLabel} width={64} domain={["auto", "auto"]} />
                     <Tooltip
-                        labelFormatter={(t) => dateLabel(Number(t))}
+                        labelFormatter={(t) => fullLabel(Number(t))}
                         formatter={(growth) => percentLabel(Number(growth))}
                     />
                     <Legend />
@@ -56,9 +65,4 @@ export function BankrollChart({ series }: { series: ChartSeries[] }) {
             </ResponsiveContainer>
         </div>
     );
-}
-
-function evenTicks(from: number, to: number, count: number): number[] {
-    if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return [];
-    return Array.from({ length: count }, (_, i) => from + ((to - from) * i) / (count - 1));
 }
