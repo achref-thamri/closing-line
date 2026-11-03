@@ -1,5 +1,6 @@
 import type { Config } from "@closing-line/config";
 import {
+    calibration,
     cashoutGainOre,
     outcomeOf,
     statsBy,
@@ -36,7 +37,7 @@ export const LESSONS = [
 
 export interface WeeklyReportDeps {
     repos: Pick<Repositories, "players" | "bets" | "apiUsage" | "decisions">;
-    config: Pick<Config, "timezone">;
+    config: Pick<Config, "timezone" | "leagues">;
     now: () => Date;
 }
 
@@ -73,6 +74,14 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
 
     lines.push(...tipsSection(await deps.repos.bets.withLaterPrices(SCANNER, weekStart)));
     lines.push(...decisionsSection(await deps.repos.decisions.since(weekStart)));
+    const leagueNames = new Map(deps.config.leagues.map((league) => [league.oddsApiKey, league.name]));
+    lines.push(
+        ...allTimeSection(
+            await deps.repos.decisions.since(new Date(0)),
+            await deps.repos.bets.settledWithFixture(SCANNER),
+            leagueNames,
+        ),
+    );
 
     lines.push("", "📚 Lesson of the week", lessons[0] ?? LESSONS[weekNumber(now) % LESSONS.length] ?? "");
 
@@ -163,6 +172,68 @@ export function decisionsSection(decisions: readonly DecisionWithResult[]): stri
             `Backing the best price on each settled no-edge pass would have returned ${percent(roi)} over ${settled.length}.`,
         );
     }
+    return lines;
+}
+
+/** Settled matches before calibration says much; three forecasts each. */
+const CALIBRATION_MIN_MATCHES = 50;
+const CALIBRATION_BAND_MIN = 20;
+/** Settled bets in a league or timing group before it is shown. */
+const GROUP_MIN_BETS = 10;
+
+/**
+ * All-time insight once there is enough of it: how well Pinnacle's fair probabilities matched what happened (each
+ * match's first decision, so no match counts twice), and the scanner's results by league and by how long before
+ * kickoff it bet.
+ */
+export function allTimeSection(
+    decisions: readonly DecisionWithResult[],
+    scannerBets: readonly (Bet & { league: string; kickoff: Date })[],
+    leagueNames: ReadonlyMap<string, string>,
+): string[] {
+    const lines = ["", "📐 All time"];
+    const firstPerMatch = new Map<string, DecisionWithResult>();
+    for (const decision of decisions) {
+        if (decision.fairHome === null || decision.status !== "finished" || firstPerMatch.has(decision.fixtureId)) {
+            continue;
+        }
+        firstPerMatch.set(decision.fixtureId, decision);
+    }
+    const forecasts = [...firstPerMatch.values()].flatMap((decision) => {
+        if (decision.homeGoals === null || decision.awayGoals === null) return [];
+        const result = outcomeOf(decision.homeGoals, decision.awayGoals);
+        return [
+            { probability: decision.fairHome ?? 0, happened: result === "home" },
+            { probability: decision.fairDraw ?? 0, happened: result === "draw" },
+            { probability: decision.fairAway ?? 0, happened: result === "away" },
+        ];
+    });
+    const matches = forecasts.length / 3;
+    if (matches < CALIBRATION_MIN_MATCHES) {
+        lines.push(`Calibration: ${matches} of ${CALIBRATION_MIN_MATCHES} settled matches so far.`);
+    } else {
+        lines.push(`Calibration of Pinnacle's fair prices over ${matches} matches:`);
+        for (const band of calibration(forecasts, 0.2, CALIBRATION_BAND_MIN)) {
+            lines.push(
+                `${Math.round(band.from * 100)}–${percentPlain(band.to)}: said ${percentPlain(band.averageProbability)}, ` +
+                    `happened ${percentPlain(band.observedRate)} (${band.count})`,
+            );
+        }
+    }
+
+    const groups = (title: string, keyOf: (bet: (typeof scannerBets)[number]) => string) => {
+        const shown = [...statsBy(scannerBets, keyOf)].filter(([, stats]) => stats.settled >= GROUP_MIN_BETS);
+        if (shown.length === 0) return;
+        lines.push(title);
+        for (const [key, stats] of shown) {
+            lines.push(`${key}: ${stats.settled} bets, ROI ${percent(stats.roi)}, CLV ${percent(stats.averageClv)}`);
+        }
+    };
+    groups("Scanner by league:", (bet) => leagueNames.get(bet.league) ?? bet.league);
+    groups("Scanner by time before kickoff:", (bet) => {
+        const hours = (bet.kickoff.getTime() - bet.createdAt.getTime()) / 3_600_000;
+        return hours < 2 ? "under 2 h" : hours < 12 ? "2–12 h" : "12 h or more";
+    });
     return lines;
 }
 

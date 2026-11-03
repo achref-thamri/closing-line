@@ -311,6 +311,16 @@ export function createRepositories(db: Database) {
                     ),
                 }));
             },
+            /** A player's settled bets on tracked fixtures, with the fixture's league and kickoff, for breakdowns. */
+            async settledWithFixture(playerId: string): Promise<(Bet & { league: string; kickoff: Date })[]> {
+                const rows = await db
+                    .select({ bet: bets, league: fixtures.league, kickoff: fixtures.kickoff })
+                    .from(bets)
+                    .innerJoin(fixtures, eq(bets.fixtureId, fixtures.id))
+                    .where(and(eq(bets.playerId, playerId), sql`${bets.status} <> 'open'`))
+                    .orderBy(bets.settledAt);
+                return rows.map(({ bet, ...fixture }) => ({ ...bet, ...fixture }));
+            },
             /** Deletes a bet the player logged themselves, while it is open; false when there is no such bet. */
             async removeOwnOpen(id: string, playerId: string): Promise<boolean> {
                 const rows = await db
