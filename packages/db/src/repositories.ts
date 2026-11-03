@@ -245,6 +245,21 @@ export function createRepositories(db: Database) {
                     })
                     .where(eq(bets.id, id));
             },
+            /** Deletes a bet the player logged themselves, while it is open; false when there is no such bet. */
+            async removeOwnOpen(id: string, playerId: string): Promise<boolean> {
+                const rows = await db
+                    .delete(bets)
+                    .where(
+                        and(
+                            eq(bets.id, id),
+                            eq(bets.playerId, playerId),
+                            eq(bets.status, "open"),
+                            eq(bets.selfReported, true),
+                        ),
+                    )
+                    .returning({ id: bets.id });
+                return rows.length > 0;
+            },
             async get(id: string): Promise<Bet | undefined> {
                 const [row] = await db.select().from(bets).where(eq(bets.id, id));
                 return row;
