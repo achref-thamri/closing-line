@@ -7,7 +7,7 @@ import type { Logger } from "../../lib/logger.ts";
 export const COMMANDS = [
     { command: "log", description: "Log a bet you just placed" },
     { command: "open", description: "Settle your open bets" },
-    { command: "picks", description: "Best prices for the next two days" },
+    { command: "picks", description: "Best prices for the coming week" },
     { command: "tips", description: "Turn value tips on or off" },
     { command: "start", description: "Join or show the help" },
 ];
