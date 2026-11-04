@@ -51,7 +51,9 @@ hundreds of bets like it, the returns beat the stakes.
 Kelly says how much of a bankroll to stake to grow it fastest without going broke: edge / (odds − 1), here
 4.4% / 2.10 = 2.1%. Full Kelly swings too hard when the fair probabilities are even slightly off, so the scanner
 stakes a quarter of it, never more than 2% of its bankroll, in steps of 10 kr with a 50 kr minimum
-(`kellyStake`). On 10,000 kr that is 50 kr here.
+(`kellyStake`). On 10,000 kr that is 50 kr here. When a quarter of Kelly comes to less than 50 kr, which happens
+with small edges at longer odds, the scanner stakes 50 kr anyway (`scannerStake`), so every value bet it finds is
+placed and tipped.
 
 ## 5. Judge it by the closing line, not the result
 

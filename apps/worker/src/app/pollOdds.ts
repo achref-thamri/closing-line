@@ -6,8 +6,8 @@ import {
     fairProbabilities,
     favourite,
     findValueBets,
-    kellyStake,
     minimumOdds,
+    scannerStake,
     toOutcome,
     type CreditPriority,
     type Outcome,
@@ -153,7 +153,7 @@ async function scannerBets(
     let placed = 0;
     let sized = 0;
     for (const value of values) {
-        const stake = kellyStake(
+        const stake = scannerStake(
             bankroll.availableOre / 100,
             value.netOdds,
             value.fairProbability,
@@ -193,7 +193,7 @@ async function scannerBets(
     }
     if (placed > 0) return { placed, reason: "value" };
     if (values.length === 0) return { placed, reason: "no_edge" };
-    // Value, but every stake rounded below the minimum, or the scanner already backed these selections.
+    // Value, but the bankroll is too low for even the minimum stake, or the scanner already backed these selections.
     return { placed, reason: sized === 0 ? "stake_too_small" : "already_bet" };
 }
 
