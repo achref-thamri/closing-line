@@ -3,6 +3,14 @@ export function edge(offeredOdds: number, fairProbability: number): number {
     return offeredOdds * fairProbability - 1;
 }
 
+/**
+ * The lowest odds still worth backing at `minEdge` over the fair odds, rounded up to the next 0.01 so that any
+ * price at or above it clears the edge.
+ */
+export function minimumOdds(fairOdds: number, minEdge: number): number {
+    return Math.ceil(fairOdds * (1 + minEdge) * 100 - 1e-9) / 100;
+}
+
 /** Closing line value: how much better the locked odds were than the fair closing odds. */
 export function closingLineValue(lockedOdds: number, closingFairOdds: number): number {
     return lockedOdds / closingFairOdds - 1;

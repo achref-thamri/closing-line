@@ -35,6 +35,7 @@ const tip: Tip = {
     kickoff: new Date("2026-11-07T15:00:00Z"),
     pick: "Watford",
     fairOdds: 2.97,
+    minOdds: 3.03,
     offers: [
         { bookmaker: "unibet_se", offeredOdds: 3.1, netOdds: 3.1, edge: 0.044 },
         { bookmaker: "nordicbet", offeredOdds: 3.05, netOdds: 3.05, edge: 0.027 },
