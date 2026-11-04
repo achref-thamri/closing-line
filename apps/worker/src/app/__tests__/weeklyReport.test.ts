@@ -339,6 +339,7 @@ describe("allTimeSection", () => {
             "Calibration of Pinnacle's fair prices over 60 matches:",
             "20–40%: said 25%, happened 25% (120)",
             "40–60%: said 50%, happened 50% (60)",
+            "Log loss 1.040 (Pinnacle's early price in the back-test: 1.007), Brier 0.625. Lower is better.",
             "Scanner by league:",
             "Premier League: 11 bets, ROI +81.8%, CLV +2.0%",
             "Scanner by time before kickoff:",
