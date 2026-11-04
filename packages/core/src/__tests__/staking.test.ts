@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { kellyFraction, kellyStake, type StakeRules } from "../staking.ts";
+import { kellyFraction, kellyStake, scannerStake, type StakeRules } from "../staking.ts";
 
 const rules: StakeRules = { kellyMultiplier: 0.25, maxBankrollFraction: 0.02, minStake: 50, maxStake: 500, step: 10 };
 
@@ -48,5 +48,26 @@ describe("kellyStake", () => {
                 },
             ),
         );
+    });
+});
+
+describe("scannerStake", () => {
+    // 3.40 against fair 3.33 is a 2.1% edge: quarter-Kelly is about 22 kr on 10,000 kr.
+    const odds = 3.4;
+    const fair = 1 / 3.33;
+
+    it("raises a stake Kelly rounds below the minimum to the minimum", () => {
+        expect(kellyStake(10_000, odds, fair, rules)).toBe(0);
+        expect(scannerStake(10_000, odds, fair, rules)).toBe(50);
+    });
+
+    it("keeps Kelly's stake when it clears the minimum", () => {
+        expect(scannerStake(10_000, 2, 0.55, rules)).toBe(kellyStake(10_000, 2, 0.55, rules));
+    });
+
+    it("stakes nothing without an edge, or when the minimum would pass the bankroll cap", () => {
+        expect(scannerStake(10_000, 2, 0.5, rules)).toBe(0);
+        // 2% of 2,000 kr is 40 kr.
+        expect(scannerStake(2_000, odds, fair, rules)).toBe(0);
     });
 });

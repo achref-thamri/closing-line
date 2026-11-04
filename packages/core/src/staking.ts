@@ -25,3 +25,19 @@ export function kellyStake(bankroll: number, decimalOdds: number, fairProbabilit
     const stake = Math.min(Math.floor((bankroll * fraction) / rules.step) * rules.step, rules.maxStake);
     return stake >= rules.minStake ? stake : 0;
 }
+
+/**
+ * The live scanner's stake. Kelly under the caps, except that a stake Kelly rounds below the minimum is raised to
+ * it: every value bet is then placed, and so tipped. Zero only without an edge, or when the minimum would break the
+ * bankroll cap. The back-test keeps plain `kellyStake`, so ADR 0008's figures still hold.
+ */
+export function scannerStake(
+    bankroll: number,
+    decimalOdds: number,
+    fairProbability: number,
+    rules: StakeRules,
+): number {
+    const stake = kellyStake(bankroll, decimalOdds, fairProbability, rules);
+    if (stake > 0 || kellyFraction(decimalOdds, fairProbability) === 0) return stake;
+    return rules.minStake <= bankroll * rules.maxBankrollFraction ? rules.minStake : 0;
+}
