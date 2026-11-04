@@ -6,7 +6,7 @@ Date: 2026-11-01. Status: accepted.
 
 The Odds API's free plan has 500 credits a month and resets on the first (UTC). Each odds call costs one credit for
 up to ten named bookmakers. Running out mid-month would stop the scanner and the closing prices of open bets;
-a paid plan is a decision for the owner, not for the code.
+only the owner decides whether to pay for a plan.
 
 ## Decision
 
