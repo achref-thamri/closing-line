@@ -11,6 +11,7 @@ const tip: Tip = {
     kickoff: new Date("2026-11-07T15:00:00Z"),
     pick: "Watford",
     fairOdds: 3.1,
+    minOdds: 3.17,
     offers: [
         { bookmaker: "unibet_se", offeredOdds: 3.4, netOdds: 3.4, edge: 0.0968 },
         { bookmaker: "nordicbet", offeredOdds: 3.25, netOdds: 3.25, edge: 0.0484 },
@@ -30,7 +31,7 @@ describe("formatTip", () => {
                 "Also: NordicBet 3.25 (+4.8%), Marathonbet 3.20 (+3.2%)",
                 "Fair 3.10, edge 9.7%, paper stake 120 kr",
                 "💡 Pinnacle, the sharpest bookmaker, prices this at 3.10 once its margin is removed. 3.40 pays 9.7% more than the bet is worth, so it wins money over many bets like it, not every time.",
-                "Price seen 09:02; check it is still there before you bet.",
+                "Price seen 09:02. Worth it at 3.17 or better, so check your bookmaker's price first.",
             ].join("\n"),
         );
     });

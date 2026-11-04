@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { closingLineValue, edge, tipLifetime } from "../value.ts";
+import { closingLineValue, edge, minimumOdds, tipLifetime } from "../value.ts";
 
 describe("edge", () => {
     it("is the expected profit per unit staked", () => {
         expect(edge(2.3, 1 / 2.1)).toBeCloseTo(0.0952, 4);
         expect(edge(2, 0.5)).toBeCloseTo(0);
         expect(edge(1.9, 0.5)).toBeCloseTo(-0.05);
+    });
+});
+
+describe("minimumOdds", () => {
+    it("rounds up, so the price it names still clears the edge", () => {
+        expect(minimumOdds(2.54, 0.02)).toBe(2.6);
+        expect(edge(2.6, 1 / 2.54)).toBeGreaterThanOrEqual(0.02);
+        expect(edge(2.59, 1 / 2.54)).toBeLessThan(0.02);
+    });
+
+    it("keeps an exact price as it is", () => {
+        expect(minimumOdds(2, 0.05)).toBe(2.1);
     });
 });
 

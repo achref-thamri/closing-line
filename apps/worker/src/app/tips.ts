@@ -19,6 +19,8 @@ export interface Tip {
     /** The team backed, or "Draw". */
     pick: string;
     fairOdds: number;
+    /** The lowest price still worth backing at the scanner's edge threshold. */
+    minOdds: number;
     offers: ValueOffer[];
     /** The scanner's own paper stake at the best offer. */
     paperStakeKr: number;
@@ -44,7 +46,7 @@ export function formatTip(tip: Tip, timeZone: string): string | undefined {
         `💡 Pinnacle, the sharpest bookmaker, prices this at ${tip.fairOdds.toFixed(2)} once its margin is removed. ` +
             `${best.offeredOdds.toFixed(2)} pays ${percent(best.edge)} more than the bet is worth, so it wins money ` +
             `over many bets like it, not every time.`,
-        `Price seen ${time(tip.seenAt, {})}; check it is still there before you bet.`,
+        `Price seen ${time(tip.seenAt, {})}. Worth it at ${tip.minOdds.toFixed(2)} or better, so check your bookmaker's price first.`,
     ].join("\n");
 }
 

@@ -102,7 +102,7 @@ describe("pollOdds", () => {
             "🔎 Value bet: Arsenal @ 2.75 at Unibet\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 110 kr\n" +
                 "💡 Pinnacle, the sharpest bookmaker, prices this at 2.54 once its margin is removed. 2.75 pays 8.2% " +
                 "more than the bet is worth, so it wins money over many bets like it, not every time.\n" +
-                "Price seen 13:00; check it is still there before you bet.",
+                "Price seen 13:00. Worth it at 2.60 or better, so check your bookmaker's price first.",
         ]);
     });
 
