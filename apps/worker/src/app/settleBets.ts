@@ -72,7 +72,7 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
             report.fixtures++;
             const settled = await settleFixtureBets(deps, fixture.id, now, names);
             report.settledBets += settled.length;
-            lines.push(...settled.map((line) => `${line} — ${fixture.homeTeam} v ${fixture.awayTeam}`));
+            lines.push(...settled.map((line) => `${line} on ${fixture.homeTeam} v ${fixture.awayTeam}`));
         }
     }
 

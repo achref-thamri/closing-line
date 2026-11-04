@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/achref-thamri/closing-line/actions/workflows/ci.yml/badge.svg)](https://github.com/achref-thamri/closing-line/actions/workflows/ci.yml)
 
-A paper-betting system for European football that answers one question with data: **can a value scanner and an
-expert bettor beat the bookmakers?** Every player bets virtual money, and every bet is measured against the closing
+A paper-betting system for European football that answers one question with data: can a value scanner and an
+expert bettor beat the bookmakers? Every player bets virtual money, and every bet is measured against the closing
 line, the market's most accurate price. The scanner's finds go out as tips, the bettor logs real bets from Telegram,
 and a weekly report shows what works. Real money only follows a track record that clears rules fixed in advance.
 
@@ -19,32 +19,32 @@ _The dashboard running on its built-in demo data (`pnpm --filter @closing-line/w
 _A tip and a `/log` conversation, drawn from the bot's own message texts on demo data
 (`node apps/worker/scripts/screenshots.ts` regenerates all three images)._
 
-## Highlights
+## What it does
 
 New to odds, margins and closing line value? [How it works](docs/how-it-works.md) walks through one bet, from
 Pinnacle's price to the stake and the CLV, with the same maths as the code.
 
-- **Market-based value detection.** Pinnacle's prices, with the margin removed by the power method, are the fair
-  reference. The scanner backs any bookmaker price that beats it by 2% or more, after exchange commission.
-- **Measured against the closing line.** Each match-result bet records the fair closing price and its closing line
-  value (CLV), the standard skill signal that profit alone cannot give over a few hundred bets.
-- **A benchmark that cannot be gamed.** An "always back the favourite" player bets every match at the same moment,
-  so a strategy has to beat something simple, not just break even.
-- **Never runs out of free credits.** A credit guard spreads the monthly API quota over the days left, keeps a
-  reserve, warns at 70% and 90%, and pauses instead of failing when the quota is used up.
-- **A bet in a few taps.** `/log` asks for the match, market, player, line, bookmaker, odds and stake one at a time,
-  with buttons wherever the answers are known, and checks each answer before the next question. One more tap logs
-  the reason, and `/open` settles the bet later, cash-outs included. A typed match that names a fixture we track is
-  linked to it, so a match-result bet gets a closing price and CLV and settles itself, like the scanner's. Every tip
-  has "I bet this" buttons, one per bookmaker: a tap fills in the bet, so only the odds and stake are left. A bet
-  half entered survives a deploy or restart ([ADR 0009](docs/adr/0009-chat-state-in-the-database.md)).
-- **Correct by construction.** One bet per selection for automated players (a unique index), settlement only of
-  open bets,
-  jobs that run at most once and never late, money in integer øre, and check constraints for data that must never
-  exist.
-- **Tested at every level.** Property-based tests for the maths, use cases on a real Postgres engine in-process
-  (PGlite), adapters against recorded API responses, a CI job on Postgres 18, and a Docker smoke test that boots
-  the whole stack.
+Pinnacle's prices, with the margin removed by the power method, are the fair reference. The scanner backs any
+bookmaker price that beats them by 2% or more, after exchange commission. Each match-result bet records the fair
+closing price and its closing line value (CLV), because over a few hundred bets profit alone says little about
+skill and CLV says a lot. An "always back the favourite" player bets every match at the same moment, so a strategy
+has to beat something simple and can't get by on breaking even.
+
+The Odds API's free plan has 500 credits a month. A credit guard spreads them over the days left, keeps a reserve,
+warns at 70% and 90%, and pauses when they run out.
+
+Logging a bet takes a few taps. `/log` asks for the match, market, player, line, bookmaker, odds and stake one at a
+time, with buttons wherever the answers are known, and checks each answer before the next question. One more tap
+logs the reason, and `/open` settles the bet later, cash-outs included. A typed match that names a fixture we track
+is linked to it, so a match-result bet gets a closing price and CLV and settles itself, like the scanner's. Every
+tip has "I bet this" buttons, one per bookmaker: a tap fills in the bet, so only the odds and stake are left. A bet
+half entered survives a deploy or restart ([ADR 0009](docs/adr/0009-chat-state-in-the-database.md)).
+
+The database refuses data that shouldn't exist: automated players get one bet per selection (a unique index),
+only open bets settle, money is integer øre, and check constraints cover the rest. Jobs run at most once and never
+late. The maths has property-based tests, the use cases run against a real Postgres engine in-process (PGlite), the
+adapters are tested against recorded API responses, CI runs the repositories on Postgres 18, and a Docker smoke
+test boots the whole stack.
 
 ## How it works
 
@@ -55,13 +55,13 @@ flowchart LR
     P --> R["Hourly<br/>Settle results<br/>(free)"]
 ```
 
-1. **Sync** stores the coming fixtures from The Odds API.
-2. **Each poll** fetches match-result odds from nine bookmakers in one call (Pinnacle plus books a Danish bettor can
+1. Sync stores the coming fixtures from The Odds API.
+2. Each poll fetches match-result odds from nine bookmakers in one call (Pinnacle plus books a Danish bettor can
    use), stores every price, and lets the scanner bet on value with quarter-Kelly stakes. Each value bet goes out as a
    tip listing every book that pays enough.
-3. **The pre-kickoff poll** also records the fair closing price and CLV of every open match-result bet, and places the
+3. The pre-kickoff poll also records the fair closing price and CLV of every open match-result bet, and places the
    favourite benchmark bet.
-4. **Settlement** matches fixtures to football-data.org results by kickoff and team names, which differ between the
+4. Settlement matches fixtures to football-data.org results by kickoff and team names, which differ between the
    sources, and settles bets on the regular-time score. Matches called off for 48 hours are void.
 
 Bettors use the same Telegram bot: the owner approves who may join, `/log` walks through a bet question by question
