@@ -12,7 +12,7 @@ export { isOutcome, OUTCOMES, outcomeOf, settle1x2, toOutcome } from "./settleme
 export type { MatchResult, Outcome, Settlement } from "./settlement.ts";
 export { fixtureNamed, matchFixture, normalizeTeam, sameTeam } from "./teams.ts";
 export type { ResultCandidate } from "./teams.ts";
-export { kellyFraction, kellyStake } from "./staking.ts";
+export { kellyFraction, kellyStake, scannerStake } from "./staking.ts";
 export type { StakeRules } from "./staking.ts";
 export { closingLineValue, edge, minimumOdds, tipLifetime } from "./value.ts";
 export type { LaterPrice, TipLifetime } from "./value.ts";
