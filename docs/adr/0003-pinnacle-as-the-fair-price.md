@@ -20,5 +20,5 @@ before they are compared, and exchange bets are locked at those net odds.
   price; both are implemented and property-tested.
 - Pinnacle cannot be used for betting from Denmark; it is a reference only. Its prices in The Odds API come from
   its public site and may lag, hence the freshness rule.
-- In efficient markets such as the Premier League, value of 3% or more is rare. That is the expected result, not a
-  bug.
+- In efficient markets such as the Premier League, value of 3% or more is rare. That is what an efficient market
+  looks like.
