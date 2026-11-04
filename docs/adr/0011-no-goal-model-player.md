@@ -39,8 +39,9 @@ Blending the model into the fair price and running the scanner at 2% against the
 Every share of the model makes the forecast worse and the bets lose value. Used as a filter instead (only the
 scanner's bets the model agrees with), CLV did not improve either.
 
-So the model does not become a live player, and paid live data is not justified by it. The code stays in the
-back-tester so the check can be rerun on new seasons or with a better model.
+So the model does not become a live player, and paid live data is not justified by it. Its code was removed from
+the back-tester afterwards, since nothing else uses it; commit e724877 has the model and the walk-forward check if
+the test is ever rerun.
 
 ## Consequences
 

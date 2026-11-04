@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseResults, parseSeason } from "../seasons.ts";
+import { parseSeason } from "../seasons.ts";
 import { backtest } from "../simulate.ts";
 
 const header =
@@ -34,19 +34,6 @@ describe("parseSeason", () => {
     it("finds the first column behind a byte order mark read as latin1", () => {
         const decoded = Buffer.from(`\uFEFF${csv}`, "utf8").toString("latin1");
         expect(parseSeason(decoded)[0]?.league).toBe("E1");
-    });
-});
-
-describe("parseResults", () => {
-    it("keeps every finished match, priced or not, and reads two-digit years", () => {
-        const results = parseResults([csv, "E1,11/11/24,Leeds,Hull,3,1", "E1,12/11/2024,Derby,Luton,,"].join("\n"));
-        expect(results.map((result) => `${result.home} ${result.homeGoals}-${result.awayGoals}`)).toEqual([
-            "Hull 1-2",
-            "Leeds 2-0",
-            "Luton 0-0",
-            "Leeds 3-1",
-        ]);
-        expect(results[3]?.playedAt).toEqual(new Date("2024-11-11T00:00:00Z"));
     });
 });
 

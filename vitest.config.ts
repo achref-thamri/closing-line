@@ -13,7 +13,6 @@ export default defineConfig({
                 "packages/db/src/schema.ts",
                 "apps/worker/src/main.ts",
                 "apps/backtest/src/main.ts",
-                "apps/backtest/src/modelMain.ts",
                 "apps/web/**",
             ],
             reporter: ["text-summary", "html", "json-summary"],

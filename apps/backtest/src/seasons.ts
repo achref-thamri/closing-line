@@ -1,5 +1,4 @@
 import { OUTCOMES, type Outcome } from "@closing-line/core";
-import type { PlayedMatch } from "./goalModel.ts";
 
 /** Bookmakers in football-data.co.uk files that stand in for the soft books we poll (column prefix → name). */
 export const SOFT_BOOKS = { B365: "bet365", BW: "bwin", WH: "williamhill", "1XB": "1xbet" } as const;
@@ -7,8 +6,13 @@ export const SOFT_BOOKS = { B365: "bet365", BW: "bwin", WH: "williamhill", "1XB"
 export type Prices = Record<Outcome, number>;
 
 /** A finished match from a season file, with its division code (E0, SP2, …). */
-export interface SeasonResult extends PlayedMatch {
+export interface SeasonResult {
     league: string;
+    home: string;
+    away: string;
+    homeGoals: number;
+    awayGoals: number;
+    playedAt: Date;
 }
 
 /** One match from a season file: Pinnacle's early and closing prices, the soft books' early prices, the score. */
@@ -22,14 +26,6 @@ export interface PastMatch extends SeasonResult {
 const SUFFIX: Record<Outcome, string> = { home: "H", draw: "D", away: "A" };
 // The files start with a UTF-8 byte order mark, which reads as these three characters when decoded as latin1.
 const BYTE_ORDER_MARK = /^(\uFEFF|\u00EF\u00BB\u00BF)/;
-
-/** Every finished match in a football-data.co.uk season CSV, with or without prices: what the goal model learns from. */
-export function parseResults(csv: string): SeasonResult[] {
-    return rowsOf(csv).flatMap((value) => {
-        const result = resultOf(value);
-        return result ? [result] : [];
-    });
-}
 
 /**
  * Parses a football-data.co.uk season CSV. Matches without a score or without Pinnacle's early and closing prices
