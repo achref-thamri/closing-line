@@ -88,8 +88,7 @@ export function backtest(matches: readonly PastMatch[], options: BacktestOptions
     };
 }
 
-/** The soft books' early prices as quotes for the scanner. */
-export function quotesOf(match: PastMatch): PriceQuote[] {
+function quotesOf(match: PastMatch): PriceQuote[] {
     const updatedAt = new Date(0);
     return Object.entries(match.soft).flatMap(([prefix, prices]) =>
         OUTCOMES.map((selection) => ({

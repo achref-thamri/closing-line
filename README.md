@@ -106,7 +106,7 @@ flowchart TB
 ```
 apps/worker/      jobs, Telegram bet flow, adapters, use cases, scheduler, entry point
 apps/web/         Next.js dashboard (server components read the database; demo data without one)
-apps/backtest/    replays the scanner and tests a goal model on past seasons (command line)
+apps/backtest/    replays the scanner on past seasons (command line)
 packages/core/    pure betting maths and rules, no I/O
 packages/db/      Drizzle schema, SQL migrations, repositories
 packages/config/  zod-validated settings and secrets
@@ -163,13 +163,8 @@ curl -L -o E1_2425.csv https://football-data.co.uk/mmz4281/2425/E1.csv
 pnpm --filter @closing-line/backtest backtest E1_2425.csv --edges 0.015,0.02,0.03
 ```
 
-The same files test a Dixon-Coles goal model against Pinnacle, refitted every Monday on earlier results only. Pass
-both divisions of each country and a couple of seasons before `--from`, so promoted teams have history. It does not
-beat Pinnacle, so it is not a live player; see [ADR 0011](docs/adr/0011-no-goal-model-player.md).
-
-```sh
-pnpm --filter @closing-line/backtest model E0_*.csv E1_*.csv --from 2020-08-01 --half-life 365 --prior 1
-```
+A Dixon-Coles goal model was tested on the same files and does not beat Pinnacle, so it is not a live player and its
+code was removed; see [ADR 0011](docs/adr/0011-no-goal-model-player.md).
 
 ## Deployment
 
