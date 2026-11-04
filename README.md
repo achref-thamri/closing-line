@@ -2,201 +2,87 @@
 
 [![CI](https://github.com/achref-thamri/closing-line/actions/workflows/ci.yml/badge.svg)](https://github.com/achref-thamri/closing-line/actions/workflows/ci.yml)
 
-A paper-betting system for European football that answers one question with data: can a value scanner and an
-expert bettor beat the bookmakers? Every player bets virtual money, and every bet is measured against the closing
-line, the market's most accurate price. The scanner's finds go out as tips, the bettor logs real bets from Telegram,
-and a weekly report shows what works. Real money only follows a track record that clears rules fixed in advance.
+Can a program, or a good bettor, beat the bookmakers? Closing Line tests that on European football with paper money.
+It looks for bookmakers that pay more than a bet is worth, sends those bets as tips on Telegram, lets people log
+their own bets, and measures everyone the same way. Real money comes only after a long track record.
 
 ![Dashboard with demo data: leaderboard, bankroll chart and latest bets](docs/images/dashboard-demo.png)
-
-_The dashboard running on its built-in demo data (`pnpm --filter @closing-line/web dev`)._
 
 <p>
   <img src="docs/images/telegram-tip.png" width="380" alt="A value tip in Telegram with an I bet this button per bookmaker">
   <img src="docs/images/telegram-log.png" width="300" alt="Logging a bet in Telegram with /log, one question at a time">
 </p>
 
-_A tip and a `/log` conversation, drawn from the bot's own message texts on demo data
-(`node apps/worker/scripts/screenshots.ts` regenerates all three images)._
+_The dashboard, a tip and a logged bet, all on demo data._
 
-## What it does
+## The idea
 
-New to odds, margins and closing line value? [How it works](docs/how-it-works.md) walks through one bet, from
-Pinnacle's price to the stake and the CLV, with the same maths as the code.
+Pinnacle is the sharpest bookmaker, so its odds with its margin taken off are treated as the fair price. When
+another bookmaker pays at least 2% more than that, the scanner bets and sends a tip.
 
-Pinnacle's prices, with the margin removed by the power method, are the fair reference. The scanner backs any
-bookmaker price that beats them by 2% or more, after exchange commission. Each match-result bet records the fair
-closing price and its closing line value (CLV), because over a few hundred bets profit alone says little about
-skill and CLV says a lot. An "always back the favourite" player bets every match at the same moment, so a strategy
-has to beat something simple and can't get by on breaking even.
+Whether one bet wins is mostly luck, so bets are judged by closing line value (CLV): did you get a better price than
+the market's last one before kickoff? Over a few hundred bets, positive CLV is the best sign of real skill. A player
+also has to beat a simple benchmark that backs the favourite in every match.
 
-The Odds API's free plan has 500 credits a month. A credit guard spreads them over the days left, keeps a reserve,
-warns at 70% and 90%, and pauses when they run out.
+[How it works](docs/how-it-works.md) follows one bet from the odds to the stake and the CLV, with real numbers.
 
-Logging a bet takes a few taps. `/log` asks for the match, market, player, line, bookmaker, odds and stake one at a
-time, with buttons wherever the answers are known, and checks each answer before the next question. One more tap
-logs the reason, and `/open` settles the bet later, cash-outs included. A typed match that names a fixture we track
-is linked to it, so a match-result bet gets a closing price and CLV and settles itself, like the scanner's. Every
-tip has "I bet this" buttons, one per bookmaker: a tap fills in the bet, so only the odds and stake are left. A bet
-half entered survives a deploy or restart ([ADR 0009](docs/adr/0009-chat-state-in-the-database.md)).
+| Player        | Bets on                                                                    |
+| ------------- | -------------------------------------------------------------------------- |
+| Value scanner | Any price at least 2% above the fair price; pauses after a bad week        |
+| Favourite     | Pinnacle's favourite in every match, flat stake (the benchmark)            |
+| Bettors       | Their own real bets, logged on Telegram, from a tip or their own judgement |
 
-The database refuses data that shouldn't exist: automated players get one bet per selection (a unique index),
-only open bets settle, money is integer øre, and check constraints cover the rest. Jobs run at most once and never
-late. The maths has property-based tests, the use cases run against a real Postgres engine in-process (PGlite), the
-adapters are tested against recorded API responses, CI runs the repositories on Postgres 18, and a Docker smoke
-test boots the whole stack.
-
-## How it works
+## What happens each day
 
 ```mermaid
 flowchart LR
-    S["06:00<br/>Sync fixtures<br/>(free)"] --> M["09:00 on match days<br/>Morning poll"]
-    M --> P["15 min before each kickoff<br/>Pre-kickoff poll"]
-    P --> R["Hourly<br/>Settle results<br/>(free)"]
+    S["06:00<br/>Fetch fixtures"] --> M["Match-day morning<br/>Odds poll"]
+    M --> P["15 min before kickoff<br/>Odds poll + closing prices"]
+    P --> R["Hourly<br/>Settle results"]
 ```
 
-1. Sync stores the coming fixtures from The Odds API.
-2. Each poll fetches match-result odds from nine bookmakers in one call (Pinnacle plus books a Danish bettor can
-   use), stores every price, and lets the scanner bet on value with quarter-Kelly stakes. Each value bet goes out as a
-   tip listing every book that pays enough and the lowest price still worth taking. If a later poll finds every book
-   below the fair price, everyone who got the tip hears that the price has gone.
-3. The pre-kickoff poll also records the fair closing price and CLV of every open match-result bet, and places the
-   favourite benchmark bet.
-4. Settlement matches fixtures to football-data.org results by kickoff and team names, which differ between the
-   sources, and settles bets on the regular-time score. Matches called off for 48 hours are void.
+- Each odds poll reads nine bookmakers in one call. The scanner bets on value and sends a tip with the lowest price
+  still worth taking. If a later poll finds no bookmaker paying the fair price any more, everyone who got the tip
+  hears that the price has gone.
+- Just before kickoff, every open match-result bet gets its CLV, and the benchmark places its bet.
+- Finished matches settle within the hour.
 
-Bettors use the same Telegram bot: the owner approves who may join, `/log` walks through a bet question by question
-and ends with reason buttons (lineup, skewed price, game read, slow live price, value tip), asking first when the same
-bet was already logged that day; `/undo` deletes the last bet while it is open, `/open` settles bets, `/picks` lists
-the best prices above fair for the coming week (refreshing odds older than 12 hours within the credit guard), and a
-morning reminder lists bets still open.
+## On Telegram
 
-Telegram also carries settlements, credit warnings, failed jobs and the Monday report, which breaks each bettor's
-results down by reason, shows how often a tip's price was still on offer at the next poll and just before kickoff
-(read from the prices already stored, so it costs no credits), what the scanner decided for every match it looked
-at, passes included ([ADR 0010](docs/adr/0010-record-every-decision.md)), all-time calibration of Pinnacle's fair
-prices and the scanner's results by league and by time before kickoff (each once there is enough data), and ends
-with a lesson of the week. A dashboard shows the leaderboard, ranked by bankroll
-growth since the start (bettors and the automated players start with different bankrolls), each player's growth
-over time and every bet, 50 to a page, for everyone or one player, with how many are open and settled.
+| Command  | What it does                                                      |
+| -------- | ----------------------------------------------------------------- |
+| `/log`   | Log a bet, one question at a time, with buttons for known answers |
+| `/open`  | Settle an open bet, cash-outs included                            |
+| `/undo`  | Delete your last bet while it is open                             |
+| `/picks` | The best prices above fair for the coming week                    |
 
-| Player        | Bets on                                                                           |
-| ------------- | --------------------------------------------------------------------------------- |
-| Value scanner | Any price at least 2% above Pinnacle's fair price; pauses after a bad week        |
-| Favourite     | Pinnacle's favourite in every match, flat stake (benchmark)                       |
-| Bettors       | Their real bets, logged in Telegram with `/log` or from a tip, often player props |
+The bot also sends tips with an "I bet this" button per bookmaker, a morning reminder of open bets, and a Monday
+report with everyone's results and a lesson of the week.
 
-## Architecture
+## Running it
 
-```mermaid
-flowchart TB
-    main["apps/worker<br/>main.ts · compose.ts"] --> runner["scheduler<br/>minute planner + job runs"]
-    runner --> app
-    subgraph app["use cases"]
-        direction LR
-        a1[syncFixtures] ~~~ a2[pollOdds] ~~~ a3[settleBets] ~~~ a4[CreditGuard]
-        a5[Bettors] ~~~ a6[BetFlow] ~~~ a7[SettleFlow] ~~~ a8[tips] ~~~ a9[weeklyReport]
-    end
-    app --> core["packages/core: pure<br/>devig · value · staking · settlement · slips · credits · schedule"]
-    app --> ports["ports<br/>OddsSource · ResultsSource"]
-    adapters["adapters<br/>The Odds API · football-data.org · Telegram"] -. implement .-> ports
-    app --> db["packages/db<br/>Drizzle schema · migrations · repositories"]
-    db --> pg[("PostgreSQL 18<br/>PGlite in tests")]
-```
-
-```
-apps/worker/      jobs, Telegram bet flow, adapters, use cases, scheduler, entry point
-apps/web/         Next.js dashboard (server components read the database; demo data without one)
-apps/backtest/    replays the scanner on past seasons (command line)
-packages/core/    pure betting maths and rules, no I/O
-packages/db/      Drizzle schema, SQL migrations, repositories
-packages/config/  zod-validated settings and secrets
-docs/adr/         architecture decision records
-docker/           Dockerfile and backup script
-```
-
-Dependencies point inward: `core` imports nothing, use cases reach vendors only through ports, and only adapters
-know vendor APIs. `compose.ts` is the one place that builds the adapters and wires them into the jobs and the
-Telegram flows; `main.ts` only starts and stops the result. Decisions and their trade-offs are in [docs/adr](docs/adr/).
-
-## Tech stack
-
-TypeScript (strict, ESM, erasable syntax only) on Node 24 · pnpm workspaces + Turborepo · PostgreSQL 18 + Drizzle
-ORM · PGlite · zod · pino · grammY · Next.js (App Router, server components) · Tailwind CSS · Recharts · Vitest + fast-check
-· Playwright · ESLint (typescript-eslint strict) · Prettier · husky + lint-staged · Docker Compose · GitHub Actions.
-
-Node runs the TypeScript sources directly, so there is no build step: the container runs exactly what was tested.
-
-## Getting started
-
-Requirements: Node 24 (`.nvmrc`) and pnpm (via Corepack). No Docker needed locally: without `DATABASE_URL` the
-worker uses an embedded PGlite database.
+Needs Node 24 and pnpm. No Docker or database needed locally.
 
 ```sh
 pnpm install
-pnpm check                       # format, lint, typecheck, tests
-cp .env.example .env             # add the API keys
-node --env-file=.env apps/worker/src/main.ts
+pnpm check                             # format, lint, typecheck, tests
+pnpm --filter @closing-line/web dev    # dashboard on demo data, http://localhost:3300
 ```
 
-Dashboard with demo data (no database or keys needed):
-
-```sh
-pnpm --filter @closing-line/web dev   # http://localhost:3300
-```
-
-| Script                                       | What it does                                   |
-| -------------------------------------------- | ---------------------------------------------- |
-| `pnpm check`                                 | Everything CI runs, except Postgres and Docker |
-| `pnpm test:coverage`                         | Tests with a coverage report and thresholds    |
-| `pnpm --filter @closing-line/db db:generate` | SQL migration from schema changes              |
-
-Settings (leagues, bookmakers, thresholds, stakes, credit reserve) have defaults in
-`packages/config/src/schema.ts` and can be overridden with a JSON file via `CONFIG_PATH`.
-
-### Back-test
-
-`apps/backtest` replays the scanner on free football-data.co.uk season files (Pinnacle's early and closing prices
-plus four soft books) to choose the edge threshold; see [ADR 0008](docs/adr/0008-edge-threshold-from-the-back-test.md).
-
-```sh
-curl -L -o E1_2425.csv https://football-data.co.uk/mmz4281/2425/E1.csv
-pnpm --filter @closing-line/backtest backtest E1_2425.csv --edges 0.015,0.02,0.03
-```
-
-A Dixon-Coles goal model was tested on the same files and does not beat Pinnacle, so it is not a live player and its
-code was removed; see [ADR 0011](docs/adr/0011-no-goal-model-player.md).
-
-## Deployment
-
-Docker Compose runs Postgres 18, the worker, the dashboard and a nightly `pg_dump` (14 days kept) on a small VPS.
-The dashboard listens on the server's loopback only and opens through an SSH tunnel:
-
-```sh
-ssh -N -L 3300:localhost:3000 <server>   # then http://localhost:3300
-```
-
-`docker/check-backup.sh` proves a backup restores: it loads the newest dump into a scratch database and compares
-row counts with the live one (`docker compose exec -T backup sh -s < docker/check-backup.sh`).
-
-Merges to `main` deploy after CI passes ([deploy.yml](.github/workflows/deploy.yml)): GitHub Actions streams the
-tree over SSH with a key that can only run [server-deploy.sh](scripts/server-deploy.sh), which unpacks aside,
-removes files deleted from the repo since the last deploy, rebuilds and fails the deploy unless the worker reports
-healthy within three minutes. The workflows run with a read-only token and actions pinned to commit SHAs, which
-Dependabot keeps current. Deploys rebuild the worker and dashboard but never pull Postgres: take a minor release
-with `docker compose pull postgres && docker compose up -d postgres`, and a major one only by dump and restore.
+To run the bot itself, copy `.env.example` to `.env`, add the API keys, and start
+`node --env-file=.env apps/worker/src/main.ts`.
 
 ## Status
 
-Phase 1 (scanner, benchmark, settlement) runs on the Premier League, Championship, Bundesliga, La Liga, Serie A and
-Ligue 1 with the free API plans; value-bet tips go to every approved bettor. Phase 2 is live: bettors log real bets
-in Telegram with `/log` or a tip's "I bet this", tag them with a reason and settle them with `/open` (match results
-on tracked fixtures settle themselves); the Monday report breaks their results down. A player qualifies for real
-money only after at least 300 settled bets over at least three months, with positive average CLV, a better ROI than
-the favourite benchmark, and a drawdown under 30%.
+Live since 1 November 2026 on the Premier League, Championship, Bundesliga, La Liga, Serie A and Ligue 1, on free
+data plans. A player qualifies for real money only after 300 settled bets over at least three months, with positive
+average CLV, a better ROI than the favourite benchmark, and a drawdown under 30%.
 
-Not betting advice. This is a personal project.
+## More
 
-## License
+- [How it works](docs/how-it-works.md): the maths of one bet
+- [Architecture](docs/architecture.md): code layout, tech stack and tests
+- [Running and deploying](docs/operations.md): settings, the back-test, deployment and backups
+- [Decision records](docs/adr/): why things are built the way they are
 
-[MIT](LICENSE)
+Not betting advice. This is a personal project, under the [MIT license](LICENSE).
