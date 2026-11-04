@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calibration } from "../calibration.ts";
+import { calibration, forecastScores } from "../calibration.ts";
 
 describe("calibration", () => {
     const forecasts = (probability: number, count: number, happened: number) =>
@@ -23,5 +23,34 @@ describe("calibration", () => {
         const [band] = calibration(forecasts(1, 5, 5), 0.2, 1);
         expect(band?.from).toBeCloseTo(0.8);
         expect(band?.to).toBe(1);
+    });
+});
+
+describe("forecastScores", () => {
+    const even = { home: 0.5, draw: 0.25, away: 0.25 };
+
+    it("averages log loss and Brier score over matches", () => {
+        const scores = forecastScores([
+            { probabilities: even, result: "home" },
+            { probabilities: even, result: "away" },
+        ]);
+        // -ln 0.5 = 0.693 and -ln 0.25 = 1.386; Brier 0.375 and 0.875.
+        expect(scores?.logLoss).toBeCloseTo(1.0397, 4);
+        expect(scores?.brier).toBeCloseTo(0.625, 4);
+    });
+
+    it("scores a certain, correct forecast as perfect and keeps a zero probability finite", () => {
+        expect(forecastScores([{ probabilities: { home: 1, draw: 0, away: 0 }, result: "home" }])).toEqual({
+            logLoss: 0,
+            brier: 0,
+        });
+        expect(forecastScores([{ probabilities: { home: 1, draw: 0, away: 0 }, result: "away" }])?.logLoss).toBeCloseTo(
+            34.54,
+            2,
+        );
+    });
+
+    it("has nothing to say without matches", () => {
+        expect(forecastScores([])).toBeUndefined();
     });
 });

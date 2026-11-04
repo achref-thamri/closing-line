@@ -2,12 +2,15 @@ import type { Config } from "@closing-line/config";
 import {
     calibration,
     cashoutGainOre,
+    forecastScores,
+    OUTCOMES,
     outcomeOf,
     statsBy,
     statsFromTotals,
     tipLifetime,
     totalsOf,
     type LaterPrice,
+    type MatchForecast,
     type PlayerStats,
 } from "@closing-line/core";
 import type { Bet, DecisionWithResult, Repositories } from "@closing-line/db";
@@ -178,6 +181,8 @@ export function decisionsSection(decisions: readonly DecisionWithResult[]): stri
 /** Settled matches before calibration says much; three forecasts each. */
 const CALIBRATION_MIN_MATCHES = 50;
 const CALIBRATION_BAND_MIN = 20;
+/** Pinnacle's early-price log loss over 20,839 matches, 2020/21 to 2025/26 (ADR 0011). */
+const BACKTEST_PINNACLE_EARLY_LOG_LOSS = 1.0073;
 /** Settled bets in a league or timing group before it is shown. */
 const GROUP_MIN_BETS = 10;
 
@@ -199,16 +204,24 @@ export function allTimeSection(
         }
         firstPerMatch.set(decision.fixtureId, decision);
     }
-    const forecasts = [...firstPerMatch.values()].flatMap((decision) => {
-        if (decision.homeGoals === null || decision.awayGoals === null) return [];
-        const result = outcomeOf(decision.homeGoals, decision.awayGoals);
-        return [
-            { probability: decision.fairHome ?? 0, happened: result === "home" },
-            { probability: decision.fairDraw ?? 0, happened: result === "draw" },
-            { probability: decision.fairAway ?? 0, happened: result === "away" },
-        ];
-    });
-    const matches = forecasts.length / 3;
+    const matchForecasts: MatchForecast[] = [...firstPerMatch.values()].flatMap((decision) =>
+        decision.homeGoals === null || decision.awayGoals === null
+            ? []
+            : [
+                  {
+                      probabilities: {
+                          home: decision.fairHome ?? 0,
+                          draw: decision.fairDraw ?? 0,
+                          away: decision.fairAway ?? 0,
+                      },
+                      result: outcomeOf(decision.homeGoals, decision.awayGoals),
+                  },
+              ],
+    );
+    const forecasts = matchForecasts.flatMap(({ probabilities, result }) =>
+        OUTCOMES.map((outcome) => ({ probability: probabilities[outcome], happened: outcome === result })),
+    );
+    const matches = matchForecasts.length;
     if (matches < CALIBRATION_MIN_MATCHES) {
         lines.push(`Calibration: ${matches} of ${CALIBRATION_MIN_MATCHES} settled matches so far.`);
     } else {
@@ -217,6 +230,13 @@ export function allTimeSection(
             lines.push(
                 `${Math.round(band.from * 100)}–${percentPlain(band.to)}: said ${percentPlain(band.averageProbability)}, ` +
                     `happened ${percentPlain(band.observedRate)} (${band.count})`,
+            );
+        }
+        const scores = forecastScores(matchForecasts);
+        if (scores) {
+            lines.push(
+                `Log loss ${scores.logLoss.toFixed(3)} (Pinnacle's early price in the back-test: ` +
+                    `${BACKTEST_PINNACLE_EARLY_LOG_LOSS.toFixed(3)}), Brier ${scores.brier.toFixed(3)}. Lower is better.`,
             );
         }
     }
