@@ -142,6 +142,8 @@ export const bets = pgTable(
         /** True when a better closing source may still replace the value (ADR 0006). */
         closingProvisional: boolean("closing_provisional"),
         clv: doublePrecision(),
+        /** A scanner tip: when a later poll found no bookmaker paying the fair price any more. */
+        priceGoneAt: timestamp("price_gone_at", { withTimezone: true }),
         profitOre: integer("profit_ore"),
         ...timestamps,
         settledAt: timestamp("settled_at", { withTimezone: true }),

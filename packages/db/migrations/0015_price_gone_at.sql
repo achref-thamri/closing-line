@@ -1,0 +1,1 @@
+ALTER TABLE "bets" ADD COLUMN "price_gone_at" timestamp with time zone;

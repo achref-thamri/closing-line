@@ -158,6 +158,7 @@ describe("bettorBreakdown", () => {
             status: "won",
             closingFairOdds: null,
             closingProvisional: null,
+            priceGoneAt: null,
             clv: null,
             profitOre: 200_000,
             createdAt: now,

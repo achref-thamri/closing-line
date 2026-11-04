@@ -252,6 +252,10 @@ export function createRepositories(db: Database) {
                 return db.select().from(bets).where(eq(bets.playerId, playerId)).orderBy(bets.createdAt);
             },
             /** Records closing odds and CLV; `provisional` marks values a better closing source may replace later. */
+            /** Marks a scanner tip whose price has gone, so it is announced once. */
+            async markPriceGone(id: string, at: Date): Promise<void> {
+                await db.update(bets).set({ priceGoneAt: at }).where(eq(bets.id, id));
+            },
             async setClosing(
                 id: string,
                 closing: { fairOdds: number; clv: number; provisional: boolean },
