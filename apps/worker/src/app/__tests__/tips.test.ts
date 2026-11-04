@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
 import type { Reply } from "../chat.ts";
-import { createTipSender, formatTip, tipKeyboard, tipRecipients, type Tip } from "../tips.ts";
+import {
+    createPriceGoneSender,
+    createTipSender,
+    formatPriceGone,
+    formatTip,
+    tipKeyboard,
+    tipRecipients,
+    type PriceGone,
+    type Tip,
+} from "../tips.ts";
 
 const tip: Tip = {
     fixtureId: "f".repeat(32),
@@ -96,6 +105,46 @@ describe("createTipSender", () => {
         await sendTip(tip);
         expect(send).toHaveBeenCalledTimes(2);
         expect(warn).toHaveBeenCalledWith({ chatId: 1, error: "blocked" }, "value tip not delivered");
+    });
+});
+
+describe("price gone", () => {
+    const gone: PriceGone = {
+        homeTeam: "Hull City",
+        awayTeam: "Watford",
+        kickoff: new Date("2026-11-07T15:00:00Z"),
+        pick: "Watford",
+        tippedOdds: 3.4,
+        tippedAt: new Date("2026-11-07T08:02:00Z"),
+        fairOdds: 3.15,
+    };
+
+    it("says what the best price is now, or that nobody lists it", () => {
+        expect(formatPriceGone({ ...gone, best: { bookmaker: "nordicbet", offeredOdds: 3.05 } }, TZ)).toBe(
+            [
+                "⌛ Price gone: Watford, tipped at 3.40 on Sat 09:02",
+                "Hull City v Watford, Sat 16:00",
+                "Best now 3.05 at NordicBet, below the fair 3.15. If you haven't bet it, skip it. If you have, you got the better price.",
+            ].join("\n"),
+        );
+        expect(formatPriceGone(gone, TZ)).toContain("No bookmaker lists it now; fair is 3.15.");
+    });
+
+    it("goes to everyone who gets tips", async () => {
+        const send = vi.fn((_chatId: number, _reply: Reply) => Promise.resolve());
+        const sendGone = createPriceGoneSender({
+            timeZone: TZ,
+            logger: silentLogger,
+            send,
+            recipients: () =>
+                Promise.resolve([
+                    { chatId: 1, muted: false },
+                    { chatId: 4, muted: true },
+                ]),
+        });
+        await sendGone(gone);
+        expect(send.mock.calls.map(([chatId]) => chatId)).toEqual([1]);
+        expect(send.mock.calls[0]?.[1].keyboard).toBeUndefined();
     });
 });
 
