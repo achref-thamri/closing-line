@@ -21,5 +21,5 @@ describe("seedDemo", () => {
         expect(favourite.settled).toBe(100);
         expect(favourite.open).toBe(10);
         await handle.close();
-    });
+    }, 30_000); // A PGlite start plus the whole demo seed: over 5 s when the full suite runs in parallel.
 });
