@@ -34,4 +34,11 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   threshold, is the way to more tips.
 - The samples are small and the soft books differ from the ones we poll, with one early snapshot instead of two
   polls a match day. Treat this as evidence, not proof; the live CLV decides in the end.
-- Seasons from 2025/26 have no Pinnacle columns, so the back-test cannot be extended forward with this source.
+- 2025/26 can be added, but it says little (checked 2026-11-04). Its files have Pinnacle prices only until mid-January
+  2026 (1,158 of 2,304 matches in the six live leagues), and the William Hill and 1xBet columns are empty, so only
+  Bet365 and bwin are left as soft books. At 2% that gives 7 bets, +1.1% average CLV. Replaying 2023/24 and 2024/25
+  with the same two books gives 21 bets in 4,608 matches, +5.5% CLV: about the same rate of bets per match, so the
+  drop comes from the thinner file, not from the market. Seven bets cannot move the threshold, so it stays at 2%.
+- With four soft books, the same two seasons gave 108 bets; with two, 21. Most value comes from the softer books,
+  which is another reason why more books and leagues, not a lower threshold, is the way to more tips.
+- The source is getting thinner, so later seasons will add less. The live CLV is what decides from here.
