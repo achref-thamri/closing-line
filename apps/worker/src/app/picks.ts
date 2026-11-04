@@ -1,5 +1,12 @@
 import type { Config } from "@closing-line/config";
-import { bookName, fairProbabilities, findValueBets, isOutcome, type PriceQuote } from "@closing-line/core";
+import {
+    bookName,
+    fairProbabilities,
+    findValueBets,
+    isOutcome,
+    minimumOdds,
+    type PriceQuote,
+} from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
 
 const HOUR_MS = 3_600_000;
@@ -20,6 +27,8 @@ interface Candidate {
     bookmaker: string;
     price: number;
     edge: number;
+    /** The lowest price still worth backing at the scanner's edge threshold. */
+    minOdds: number;
     seenAt: Date;
 }
 
@@ -65,6 +74,7 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
                 bookmaker: value.bookmaker,
                 price: value.offeredOdds,
                 edge: value.edge,
+                minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge),
                 seenAt,
             });
         }
@@ -85,7 +95,7 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
         const mark = pick.edge >= config.scanner.minEdge ? "✅" : "🟡";
         return (
             `${mark} ${pick.team} @ ${pick.price.toFixed(2)} at ${bookName(pick.bookmaker)} (+${(pick.edge * 100).toFixed(1)}%)\n` +
-            `   ${pick.fixture.homeTeam} v ${pick.fixture.awayTeam}, ${time(pick.fixture.kickoff, true)} · seen ${time(pick.seenAt, false)}`
+            `   ${pick.fixture.homeTeam} v ${pick.fixture.awayTeam}, ${time(pick.fixture.kickoff, true)} · seen ${time(pick.seenAt, false)} · worth it at ${pick.minOdds.toFixed(2)}+`
         );
     });
     return [
