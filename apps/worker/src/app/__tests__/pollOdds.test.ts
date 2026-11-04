@@ -6,7 +6,7 @@ import type { Spent } from "../creditGuard.ts";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import { pollOdds, type PollOddsDeps } from "../pollOdds.ts";
 import { syncFixtures } from "../syncFixtures.ts";
-import type { Tip } from "../tips.ts";
+import type { PriceGone, Tip } from "../tips.ts";
 
 const config = parseConfig({
     ODDS_API_KEY: "k",
@@ -103,6 +103,44 @@ describe("pollOdds", () => {
                 "💡 Pinnacle, the sharpest bookmaker, prices this at 2.54 once its margin is removed. 2.75 pays 8.2% " +
                 "more than the bet is worth, so it wins money over many bets like it, not every time.\n" +
                 "Price seen 13:00. Worth it at 2.60 or better, so check your bookmaker's price first.",
+        ]);
+    });
+
+    it("says once when no bookmaker pays the fair price for a tip any more", async () => {
+        await pollOdds(deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75))]), "soccer_epl", "scan");
+        expect(messages).toHaveLength(1);
+
+        now = new Date(now.getTime() + 3_600_000);
+        const later = deps([event(23 * 60, quotes("unibet_se", 2.9, 3.4, 2.45))]);
+        await pollOdds(later, "soccer_epl", "scan");
+        // The tip time is the bet's createdAt, which the database sets from its own clock.
+        expect(messages[1]).toMatch(
+            /^⌛ Price gone: Arsenal, tipped at 2\.75 on \w{3} \d\d:\d\d\nLiverpool v Arsenal, Mon 13:00\nBest now 2\.45 at Unibet, below the fair 2\.54\. If you haven't bet it, skip it\. If you have, you got the better price\.$/,
+        );
+        const [bet] = await repos.bets.forPlayer(SCANNER);
+        expect(bet?.priceGoneAt).toEqual(now);
+
+        now = new Date(now.getTime() + 3_600_000);
+        await pollOdds(deps([event(22 * 60, quotes("unibet_se", 2.9, 3.4, 2.45))]), "soccer_epl", "scan");
+        expect(messages).toHaveLength(2);
+    });
+
+    it("keeps quiet while a bookmaker still pays at least the fair price", async () => {
+        const gone: PriceGone[] = [];
+        const poll = (events: EventOdds[]) => ({
+            ...deps(events),
+            priceGone: (alert: PriceGone) => {
+                gone.push(alert);
+                return Promise.resolve();
+            },
+        });
+        await pollOdds(poll([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75))]), "soccer_epl", "scan");
+        now = new Date(now.getTime() + 3_600_000);
+        await pollOdds(poll([event(23 * 60, quotes("unibet_se", 2.9, 3.4, 2.6))]), "soccer_epl", "scan");
+        expect(gone).toEqual([]);
+        await pollOdds(poll([event(23 * 60, quotes("unibet_se", 2.9, 3.4, 2.5))]), "soccer_epl", "scan");
+        expect(gone).toMatchObject([
+            { pick: "Arsenal", tippedOdds: 2.75, best: { bookmaker: "unibet_se", offeredOdds: 2.5 } },
         ]);
     });
 

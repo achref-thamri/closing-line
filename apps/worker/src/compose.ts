@@ -12,8 +12,9 @@ import { remindOpenBets } from "./app/reminders.ts";
 import { SettleFlow } from "./app/settleFlow.ts";
 import { settleBets } from "./app/settleBets.ts";
 import { syncFixtures } from "./app/syncFixtures.ts";
-import { createTipSender, tipRecipients } from "./app/tips.ts";
+import { createPriceGoneSender, createTipSender, tipRecipients } from "./app/tips.ts";
 import { weeklyReport } from "./app/weeklyReport.ts";
+import type { Reply } from "./app/chat.ts";
 import type { Logger } from "./lib/logger.ts";
 import { createTextSender, type Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
@@ -52,13 +53,15 @@ export function compose(options: { config: Config; db: Database; logger: Logger;
         warn: notify,
     });
     // Value-bet tips go to the owner and every approved bettor; other alerts stay with the owner.
-    const tip = createTipSender({
+    const tipOptions = {
         timeZone: config.timezone,
         logger,
-        send: (chatId, reply) => bot.messenger.send(chatId, reply),
+        send: (chatId: number, reply: Reply) => bot.messenger.send(chatId, reply),
         recipients: async () => tipRecipients(await repos.players.list(), ownerChatId),
-    });
-    const pollDeps = { source: odds, guard, repos, config, now, notify, tip };
+    };
+    const tip = createTipSender(tipOptions);
+    const priceGone = createPriceGoneSender(tipOptions);
+    const pollDeps = { source: odds, guard, repos, config, now, notify, tip, priceGone };
 
     const handlers: JobHandlers = {
         sync: async () => ({

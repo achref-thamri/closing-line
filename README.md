@@ -58,7 +58,8 @@ flowchart LR
 1. Sync stores the coming fixtures from The Odds API.
 2. Each poll fetches match-result odds from nine bookmakers in one call (Pinnacle plus books a Danish bettor can
    use), stores every price, and lets the scanner bet on value with quarter-Kelly stakes. Each value bet goes out as a
-   tip listing every book that pays enough.
+   tip listing every book that pays enough and the lowest price still worth taking. If a later poll finds every book
+   below the fair price, everyone who got the tip hears that the price has gone.
 3. The pre-kickoff poll also records the fair closing price and CLV of every open match-result bet, and places the
    favourite benchmark bet.
 4. Settlement matches fixtures to football-data.org results by kickoff and team names, which differ between the

@@ -12,11 +12,11 @@ import {
     type CreditPriority,
     type Outcome,
 } from "@closing-line/core";
-import type { NewDecision, NewOddsSnapshot, Repositories } from "@closing-line/db";
+import type { Bet, NewDecision, NewOddsSnapshot, Repositories } from "@closing-line/db";
 import type { EventOdds, OddsSource } from "../ports/odds.ts";
 import type { CreditGuard } from "./creditGuard.ts";
 import { FAVOURITE, SCANNER } from "./players.ts";
-import { formatTip, type Tip } from "./tips.ts";
+import { formatPriceGone, formatTip, type PriceGone, type Tip } from "./tips.ts";
 
 const WEEK_MS = 7 * 86_400_000;
 
@@ -40,6 +40,8 @@ export interface PollOddsDeps {
     notify: (message: string) => Promise<void>;
     /** Value-bet tips, the same for every bettor. Without it the owner gets them through `notify`. */
     tip?: (tip: Tip) => Promise<void>;
+    /** Tells bettors a tip's price has gone. Without it the owner hears through `notify`. */
+    priceGone?: (gone: PriceGone) => Promise<void>;
 }
 
 export type PollReport =
@@ -48,8 +50,8 @@ export type PollReport =
 
 /**
  * One paid odds poll for a league: stores every price, lets the scanner bet on value, records what it decided for
- * each match (bet, or pass and why), and, close to kickoff, records closing prices for open bets and places the
- * favourite benchmark bet.
+ * each match (bet, or pass and why), says when an earlier tip's price has gone, and, close to kickoff, records
+ * closing prices for open bets and places the favourite benchmark bet.
  */
 export async function pollOdds(deps: PollOddsDeps, league: string, priority: CreditPriority): Promise<PollReport> {
     const { config } = deps;
@@ -75,6 +77,10 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
     const scanner = (await isScannerPaused(deps, now)) ? undefined : { availableOre: await scannerAvailableOre(deps) };
 
     const decisions: NewDecision[] = [];
+    // Tips from earlier polls; read before this poll bets, so a new tip is not checked against its own prices.
+    const tipped = (await deps.repos.bets.open(result.data.map((event) => event.id))).filter(
+        (bet) => bet.playerId === SCANNER && bet.market === "h2h" && bet.priceGoneAt === null,
+    );
 
     for (const event of result.data) {
         const minutes = Math.round(minutesToKickoff(event));
@@ -91,6 +97,9 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
         if (!fair) {
             decisions.push({ ...decided, outcome: "pass", reason: "no_fresh_sharp" });
             continue;
+        }
+        for (const bet of tipped.filter((tip) => tip.fixtureId === event.id)) {
+            await checkPriceGone(deps, event, fair, bet, now);
         }
 
         const best = bestOffer(event.quotes, fair, {
@@ -186,6 +195,37 @@ async function scannerBets(
     if (values.length === 0) return { placed, reason: "no_edge" };
     // Value, but every stake rounded below the minimum, or the scanner already backed these selections.
     return { placed, reason: sized === 0 ? "stake_too_small" : "already_bet" };
+}
+
+/** A tip's price has gone when no bookmaker pays the fair price for its selection any more. */
+async function checkPriceGone(
+    deps: PollOddsDeps,
+    event: EventOdds,
+    fair: Record<Outcome, number>,
+    bet: Bet,
+    now: Date,
+): Promise<void> {
+    const { config } = deps;
+    const selection = toOutcome(bet.selection);
+    const best = findValueBets(event.quotes, fair, {
+        sharpBookmaker: config.sharpBookmaker,
+        commission: config.exchangeCommission,
+        minEdge: -Infinity,
+    }).find((value) => value.selection === selection);
+    if (best && best.edge >= 0) return;
+    await deps.repos.bets.markPriceGone(bet.id, now);
+    const gone: PriceGone = {
+        homeTeam: event.homeTeam,
+        awayTeam: event.awayTeam,
+        kickoff: event.kickoff,
+        pick: teamOf(event, selection),
+        tippedOdds: bet.lockedOdds,
+        tippedAt: bet.createdAt,
+        fairOdds: 1 / fair[selection],
+        ...(best ? { best: { bookmaker: best.bookmaker, offeredOdds: best.offeredOdds } } : {}),
+    };
+    if (deps.priceGone) await deps.priceGone(gone);
+    else await deps.notify(formatPriceGone(gone, config.timezone));
 }
 
 async function favouriteBet(deps: PollOddsDeps, event: EventOdds, fair: Record<Outcome, number>): Promise<number> {
