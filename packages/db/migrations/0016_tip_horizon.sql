@@ -1,0 +1,1 @@
+ALTER TYPE "public"."decision_reason" ADD VALUE 'too_early';
