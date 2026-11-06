@@ -1,5 +1,5 @@
 import type { LaterPrice, PlayerTotals } from "@closing-line/core";
-import { and, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
 import {
@@ -255,8 +255,14 @@ export function createRepositories(db: Database) {
             },
             /** Records closing odds and CLV; `provisional` marks values a better closing source may replace later. */
             /** Marks a scanner tip whose price has gone, so it is announced once. */
-            async markPriceGone(id: string, at: Date): Promise<void> {
-                await db.update(bets).set({ priceGoneAt: at }).where(eq(bets.id, id));
+            /** Marks a tip's price as gone; false when it was already marked, so two polls cannot both alert. */
+            async markPriceGone(id: string, at: Date): Promise<boolean> {
+                const rows = await db
+                    .update(bets)
+                    .set({ priceGoneAt: at })
+                    .where(and(eq(bets.id, id), isNull(bets.priceGoneAt)))
+                    .returning({ id: bets.id });
+                return rows.length > 0;
             },
             async setClosing(
                 id: string,
