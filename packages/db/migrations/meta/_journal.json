@@ -120,6 +120,13 @@
             "when": 1793985440909,
             "tag": "0016_tip_horizon",
             "breakpoints": true
+        },
+        {
+            "idx": 17,
+            "version": "7",
+            "when": 1793987103542,
+            "tag": "0017_cashout_clv",
+            "breakpoints": true
         }
     ]
 }
