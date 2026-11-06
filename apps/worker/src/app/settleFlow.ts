@@ -1,4 +1,4 @@
-import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout, priceMove } from "@closing-line/core";
+import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout } from "@closing-line/core";
 import type { Bet, Repositories, Settlement } from "@closing-line/db";
 import { z } from "zod";
 import type { Logger } from "../lib/logger.ts";
@@ -93,7 +93,7 @@ export class SettleFlow implements ButtonHandler {
             status: "cashed_out",
             profitOre: offerOre - bet.stakeOre,
             cashoutOfferOre: offerOre,
-            ...(implied === undefined ? {} : { impliedCurrentOdds: implied, clv: priceMove(bet.lockedOdds, implied) }),
+            ...(implied === undefined ? {} : { impliedCurrentOdds: implied }),
         });
         const move =
             implied === undefined

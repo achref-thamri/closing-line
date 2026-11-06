@@ -283,7 +283,6 @@ describe("bets", () => {
             settledAt,
             cashoutOfferOre: 14_000,
             impliedCurrentOdds: 3.6,
-            clv: 3.44,
         });
         await repos.bets.setClosing(won?.id ?? "", { fairOdds: 2.4, clv: 0.06, provisional: false });
         await repos.bets.setClosing(lost?.id ?? "", { fairOdds: 3, clv: -0.02, provisional: false });
