@@ -49,21 +49,9 @@ jobs:
                   TELEGRAM_OWNER_CHAT_ID=1
                   POSTGRES_PASSWORD=ci-password
                   ENV
-            - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-            # Layers come from the Actions cache, one scope per image so the two builds don't evict each other.
-            - name: Build the worker and dashboard images
-              uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
-              with:
-                  files: docker-compose.yml
-                  targets: worker,web
-                  load: true
-                  set: |
-                      worker.cache-from=type=gha,scope=worker
-                      worker.cache-to=type=gha,scope=worker,mode=max
-                      web.cache-from=type=gha,scope=web
-                      web.cache-to=type=gha,scope=web,mode=max
+            - run: docker compose build worker web
             - name: Start Postgres, the worker and the dashboard
-              run: docker compose up -d --no-build postgres worker web
+              run: docker compose up -d postgres worker web
             # Runs the image's own healthcheck command every few seconds; Docker's 60s interval would idle a billed minute.
             - name: Wait for the worker to report healthy
               run: |
