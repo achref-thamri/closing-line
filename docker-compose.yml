@@ -70,6 +70,10 @@ services:
         volumes:
             - ./docker/backup.sh:/backup.sh:ro
             - backups:/backups
+        # The postgres image declares a data volume this container never uses. Without a mount there, Docker makes a
+        # new anonymous volume on every recreate and leaves the old one dangling.
+        tmpfs:
+            - /var/lib/postgresql
         depends_on:
             postgres:
                 condition: service_healthy
