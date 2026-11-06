@@ -60,9 +60,9 @@ export function BetsTable({ bets, players }: { bets: BetWithFixture[]; players: 
                         <th className="px-3 py-2 text-right font-medium">Stake</th>
                         <th
                             className="px-3 py-2 text-right font-medium"
-                            title="Closing line value; for player props, the price move read from a cash-out"
+                            title="Closing line value: the odds taken against Pinnacle's fair price just before kickoff"
                         >
-                            CLV / move
+                            CLV
                         </th>
                         <th className="px-3 py-2 text-right font-medium">Result</th>
                     </tr>
