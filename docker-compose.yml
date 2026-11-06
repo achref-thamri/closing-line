@@ -3,7 +3,7 @@
 name: closing-line
 services:
     postgres:
-        image: postgres:18
+        image: postgres:18@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b547f540c730478583
         restart: unless-stopped
         environment:
             POSTGRES_USER: closing_line
@@ -59,7 +59,7 @@ services:
         logging: *logging
 
     backup:
-        image: postgres:18
+        image: postgres:18@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b547f540c730478583
         restart: unless-stopped
         entrypoint: ["/bin/sh", "/backup.sh"]
         environment:
