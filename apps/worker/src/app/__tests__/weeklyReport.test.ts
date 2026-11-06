@@ -198,10 +198,16 @@ describe("bettorBreakdown", () => {
     });
 
     it("shows what cash-outs did against holding, with a lesson once there are three", () => {
-        const cashed = { status: "cashed_out" as const, cashoutOfferOre: 150_000, profitOre: 50_000, clv: 0.5 };
+        // Locked at 3, the cash-out implies 2: a 50% move.
+        const cashed = {
+            status: "cashed_out" as const,
+            cashoutOfferOre: 150_000,
+            profitOre: 50_000,
+            impliedCurrentOdds: 2,
+        };
         const { lines, lessons } = bettorBreakdown("Sam", [
             ...times(3, { ...cashed, heldStatus: "won" }),
-            bet({ ...cashed, heldStatus: null, clv: null }),
+            bet({ ...cashed, heldStatus: null, impliedCurrentOdds: null }),
         ]);
         // Each held bet would have paid +2,000 kr; each cash-out paid +500 kr.
         expect(lines).toContain("Cash-outs: 4, price moved +50.0% on average; against holding: −4,500 kr over 3");

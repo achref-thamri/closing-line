@@ -75,7 +75,7 @@ describe("totals", () => {
             bet("won", 10_000, 15_000, 0.05),
             bet("lost", 20_000, -20_000, -0.01),
             bet("open", 12_000, null, 0.02),
-            bet("cashed_out", 5_000, 9_000, 3.44),
+            bet("cashed_out", 5_000, 9_000, null),
         ];
         const totals = totalsOf(bets);
         expect(totals).toMatchObject({ openStakeOre: 12_000, clvSum: 0.06, clvCount: 3 });

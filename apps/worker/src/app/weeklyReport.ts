@@ -5,6 +5,7 @@ import {
     forecastScores,
     OUTCOMES,
     outcomeOf,
+    priceMove,
     statsBy,
     statsFromTotals,
     tipLifetime,
@@ -273,7 +274,9 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
 
     const cashed = bets.filter((bet) => bet.status === "cashed_out");
     if (cashed.length > 0) {
-        const moves = cashed.flatMap((bet) => (bet.clv === null ? [] : [bet.clv]));
+        const moves = cashed.flatMap((bet) =>
+            bet.impliedCurrentOdds === null ? [] : [priceMove(bet.lockedOdds, bet.impliedCurrentOdds)],
+        );
         const answered = cashed.flatMap((bet) =>
             bet.heldStatus === null || bet.heldStatus === "open" || bet.heldStatus === "cashed_out"
                 ? []

@@ -147,7 +147,8 @@ describe("cash-outs", () => {
         const stored = await repos.bets.get(bet.id);
         expect(stored).toMatchObject({ status: "cashed_out", profitOre: 89_717, cashoutOfferOre: 255_717 });
         expect(stored?.impliedCurrentOdds).toBeCloseTo(2.012, 3);
-        expect(stored?.clv).toBeCloseTo(0.5405, 4);
+        // The move from 3.10 to 2.01 is the cash-out's own number; clv stays for closing prices.
+        expect(stored?.clv).toBeNull();
 
         const held = await flow.tap(FRIEND, button(cashed, "Would have won"));
         expect(held.text).toContain("It would have won. Holding would have paid 2,588.83 kr more.");
