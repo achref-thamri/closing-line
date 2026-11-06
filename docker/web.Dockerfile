@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Next.js needs a build; its standalone output keeps the runtime image small.
-FROM node:24-bookworm-slim AS build
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS build
 WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NEXT_TELEMETRY_DISABLED=1
@@ -17,7 +17,7 @@ COPY packages/db ./packages/db
 COPY apps/web ./apps/web
 RUN pnpm --filter @closing-line/web build
 
-FROM node:24-bookworm-slim
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \

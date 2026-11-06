@@ -2,7 +2,7 @@
 
 # Node 24 runs the TypeScript sources directly (type stripping), so there is no build step: install the worker's
 # production dependencies in the workspace layout, then add the sources.
-FROM node:24-bookworm-slim AS deps
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS deps
 WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
@@ -13,7 +13,7 @@ COPY packages/db/package.json packages/db/
 COPY apps/worker/package.json apps/worker/
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts --filter "@closing-line/worker..."
 
-FROM node:24-bookworm-slim
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
 ENV NODE_ENV=production \
     HEARTBEAT_PATH=/data/heartbeat \
     TZ=UTC
