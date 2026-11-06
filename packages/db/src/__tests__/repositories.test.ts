@@ -218,18 +218,36 @@ describe("bets", () => {
         expect(await repos.bets.open()).toEqual([]);
     });
 
-    it("lists recent bets with their match, newest first", async () => {
-        await repos.bets.place(bet());
-        await repos.bets.place(bet({ playerId: "friend", selection: "draw" }));
-        const recent = await repos.bets.recent(10);
-        expect(recent.map((row) => [row.playerId, row.fixture?.homeTeam, row.fixture?.awayTeam])).toEqual([
-            ["friend", "Liverpool", "Arsenal"],
-            ["scanner", "Liverpool", "Arsenal"],
+    it("lists open bets by kickoff, soonest first, then settled bets by latest result", async () => {
+        await repos.fixtures.upsert([
+            { ...fixture, id: "late", kickoff: new Date(kickoff.getTime() + 7 * 86_400_000) },
+            { ...fixture, id: "soon", kickoff: new Date(kickoff.getTime() + 3_600_000) },
         ]);
-        expect((await repos.bets.recent(10, "scanner")).map((row) => row.playerId)).toEqual(["scanner"]);
-        expect(await repos.bets.recent(1)).toHaveLength(1);
-        expect((await repos.bets.recent(1, undefined, 1)).map((row) => row.playerId)).toEqual(["scanner"]);
-        expect(await repos.bets.recent(10, undefined, 2)).toEqual([]);
+        // Placed in this order, so creation order differs from kickoff order.
+        const settledFirst = await repos.bets.place(bet({ selection: "home" }));
+        const settledLast = await repos.bets.place(bet({ selection: "draw" }));
+        await repos.bets.place(bet({ fixtureId: "late" }));
+        await repos.bets.place(bet({ fixtureId: "soon" }));
+        await repos.bets.place(bet({ playerId: "friend", selection: "draw" }));
+        await repos.bets.settle(settledFirst?.id ?? "", { status: "lost", profitOre: -15_000, settledAt: kickoff });
+        await repos.bets.settle(settledLast?.id ?? "", {
+            status: "won",
+            profitOre: 20_000,
+            settledAt: new Date(kickoff.getTime() + 60_000),
+        });
+
+        const listed = await repos.bets.listing(10);
+        expect(listed.map((row) => [row.fixtureId, row.playerId, row.status])).toEqual([
+            ["evt1", "friend", "open"],
+            ["soon", "scanner", "open"],
+            ["late", "scanner", "open"],
+            ["evt1", "scanner", "won"],
+            ["evt1", "scanner", "lost"],
+        ]);
+        expect(listed[0]?.fixture).toMatchObject({ homeTeam: "Liverpool", awayTeam: "Arsenal" });
+        expect((await repos.bets.listing(10, "friend")).map((row) => row.playerId)).toEqual(["friend"]);
+        expect((await repos.bets.listing(2, undefined, 1)).map((row) => row.fixtureId)).toEqual(["soon", "late"]);
+        expect(await repos.bets.listing(10, undefined, 5)).toEqual([]);
     });
 
     it("stores a bet from a slip on an event we do not track", async () => {
@@ -243,7 +261,7 @@ describe("bets", () => {
             }),
         );
         expect(placed).toMatchObject({ fixtureId: null, sport: "counter_strike", tag: "game_read" });
-        const [listed] = await repos.bets.recent(1);
+        const [listed] = await repos.bets.listing(1);
         expect(listed).toMatchObject({ eventName: "Aurora – Team Liquid", fixture: null });
     });
 

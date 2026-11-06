@@ -174,8 +174,12 @@ export function createRepositories(db: Database) {
                     .where(and(eq(bets.status, "open"), fixtureIds && inArray(bets.fixtureId, fixtureIds)))
                     .orderBy(bets.createdAt);
             },
-            /** Newest first, with the match each bet is on, for listings; `offset` skips that many for paging. */
-            async recent(limit: number, playerId?: string, offset = 0): Promise<BetWithFixture[]> {
+            /**
+             * Bets with their match, for the dashboard table: open bets first, soonest kickoff first (a bet on an
+             * untracked match by when it was logged), then settled bets, latest result first. `offset` skips that
+             * many for paging.
+             */
+            async listing(limit: number, playerId?: string, offset = 0): Promise<BetWithFixture[]> {
                 const rows = await db
                     .select({
                         bet: bets,
@@ -189,7 +193,13 @@ export function createRepositories(db: Database) {
                     .from(bets)
                     .leftJoin(fixtures, eq(bets.fixtureId, fixtures.id))
                     .where(playerId ? eq(bets.playerId, playerId) : undefined)
-                    .orderBy(desc(bets.createdAt), desc(bets.id))
+                    .orderBy(
+                        sql`${bets.status} = 'open' desc`,
+                        sql`case when ${bets.status} = 'open' then coalesce(${fixtures.kickoff}, ${bets.receivedAt}, ${bets.createdAt}) end asc`,
+                        desc(bets.settledAt),
+                        desc(bets.createdAt),
+                        desc(bets.id),
+                    )
                     .limit(limit)
                     .offset(offset);
                 return rows.map((row) => ({ ...row.bet, fixture: row.fixture }));
