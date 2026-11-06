@@ -61,6 +61,7 @@ describe("parseConfig", () => {
         expect(config.scanner).toEqual({
             minEdge: 0.02,
             maxSharpAgeMinutes: 10,
+            maxHoursToKickoff: 72,
             stake: { kellyMultiplier: 0.25, maxBankrollFraction: 0.02, minStake: 50, maxStake: 500, step: 10 },
         });
         expect(config.bettors.maxBankrollFraction).toBe(0.05);

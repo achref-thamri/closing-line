@@ -134,6 +134,7 @@ const PASS_REASONS: Record<string, string> = {
     stake_too_small: "stake below the minimum",
     paused: "scanner paused",
     already_bet: "already bet",
+    too_early: "too far from kickoff",
 };
 
 /**
@@ -252,7 +253,9 @@ export function allTimeSection(
     groups("Scanner by league:", (bet) => leagueNames.get(bet.league) ?? bet.league);
     groups("Scanner by time before kickoff:", (bet) => {
         const hours = (bet.kickoff.getTime() - bet.createdAt.getTime()) / 3_600_000;
-        return hours < 2 ? "under 2 h" : hours < 12 ? "2–12 h" : "12 h or more";
+        if (hours < 2) return "under 2 h";
+        if (hours < 12) return "2–12 h";
+        return hours < 72 ? "12–72 h" : "3 days or more";
     });
     return lines;
 }

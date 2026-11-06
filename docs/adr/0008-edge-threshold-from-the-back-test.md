@@ -42,3 +42,8 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
 - With four soft books, the same two seasons gave 108 bets; with two, 21. Most value comes from the softer books,
   which is one more reason to add books and leagues.
 - The source is getting thinner, so later seasons will add less. The live CLV is what decides from here.
+- The back-test's prices were taken a day or two before kickoff, so it says nothing about prices weeks out. Since
+  2026-11-06 the scanner only bets and tips matches within 72 hours of kickoff (`scanner.maxHoursToKickoff`); matches
+  further out are recorded as `too_early` passes with their best price. This followed a /picks refresh on
+  2026-11-04 that produced 22 tips in one minute, most 14-18 days out, with edges up to 16%. The 22 bets stay on the
+  books and will show whether those early edges held.

@@ -207,6 +207,17 @@ describe("pollOdds", () => {
         expect(await repos.odds.latest("b".repeat(32))).toHaveLength(6);
     });
 
+    it("records a pass and sends no tip for a match more than three days out", async () => {
+        const far = event(72 * 60 + 1, quotes("unibet_se", 2.9, 3.4, 2.75));
+        expect(await pollOdds(deps([far]), "soccer_epl", "scan")).toMatchObject({ scannerBets: 0 });
+        expect(messages).toEqual([]);
+        const [decision] = await repos.decisions.since(now);
+        expect(decision).toMatchObject({ outcome: "pass", reason: "too_early", bestBookmaker: "unibet_se" });
+
+        now = new Date(now.getTime() + 60_000);
+        expect(await pollOdds(deps([far]), "soccer_epl", "scan")).toMatchObject({ scannerBets: 1 });
+    });
+
     it("gives closing prices to match-result bets only", async () => {
         await repos.fixtures.upsert([event(30)]);
         await repos.bets.place({
