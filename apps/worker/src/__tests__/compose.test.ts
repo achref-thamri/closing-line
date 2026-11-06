@@ -36,8 +36,24 @@ afterEach(() => {
 });
 
 /** Composes the worker with Telegram answered locally; returns the chats each message went to. */
+const botInfo = {
+    id: 9,
+    is_bot: true,
+    first_name: "Closing Line",
+    username: "closing_line_test_bot",
+    can_join_groups: false,
+    can_read_all_group_messages: false,
+    supports_inline_queries: false,
+    can_connect_to_business: false,
+    has_main_web_app: false,
+    has_topics_enabled: false,
+    allows_users_to_create_topics: false,
+    can_manage_bots: false,
+    supports_join_request_queries: false,
+} as const;
+
 function composeOffline(now?: () => Date): { worker: Worker; chats: number[] } {
-    const worker = compose({ config, db: handle.db, logger: silentLogger, ...(now ? { now } : {}) });
+    const worker = compose({ config, db: handle.db, logger: silentLogger, botInfo, ...(now ? { now } : {}) });
     const chats: number[] = [];
     worker.bot.api.config.use((_prev, method, payload) => {
         if (method === "sendMessage") chats.push((payload as { chat_id: number }).chat_id);
@@ -105,6 +121,59 @@ describe("compose", () => {
             status: "succeeded",
         });
         expect(chats.sort()).toEqual([1, 2]);
+    });
+
+    it("shares one /picks refresh between bettors asking at once, and skips leagues polled in the last 12 hours", async () => {
+        // The first odds request waits until both /picks have arrived, so the two really overlap.
+        let release: () => void = () => undefined;
+        const gate = new Promise<void>((resolve) => (release = resolve));
+        const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+            await gate;
+            return new Response(recording("odds-h2h.json"), {
+                headers: { "content-type": "application/json", ...credits },
+            });
+        });
+        let clock = new Date("2026-11-01T09:00:00Z");
+        const { worker, chats } = composeOffline(() => clock);
+        const picks = (updateId: number) =>
+            worker.bot.handleUpdate({
+                update_id: updateId,
+                message: {
+                    message_id: updateId,
+                    date: 0,
+                    chat: { id: 1, type: "private", first_name: "Owner" },
+                    from: { id: 1, is_bot: false, first_name: "Owner" },
+                    text: "/picks",
+                    entities: [{ type: "bot_command", offset: 0, length: 6 }],
+                },
+            });
+        const oddsCalls = (league = "") =>
+            fetch.mock.calls.filter(([input]) => (input as URL | string).toString().includes(`${league}/odds`)).length;
+
+        const first = picks(1);
+        await vi.waitFor(() => {
+            expect(fetch).toHaveBeenCalled();
+        });
+        const second = picks(2);
+        release();
+        await Promise.all([first, second]);
+        expect(oddsCalls()).toBe(config.leagues.length);
+        expect(chats).toEqual([1, 1]);
+
+        // The recording only has Premier League matches, so only that league has fresh odds an hour later.
+        clock = new Date(clock.getTime() + 3_600_000);
+        await picks(3);
+        expect(oddsCalls("soccer_epl")).toBe(1);
+        expect(oddsCalls()).toBe(2 * config.leagues.length - 1);
+    });
+
+    it("runs the reminder job", async () => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+        const { runner } = composeOffline().worker;
+        expect(await runner.handlers.remind({ key: "r", kind: "remind" })).toEqual({
+            status: "succeeded",
+            message: "0 reminded",
+        });
     });
 
     it("reports a poll the credit guard refused as skipped", async () => {
