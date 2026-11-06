@@ -404,4 +404,20 @@ describe("restarts", () => {
         expect((await type("Bayern – Arsenal")).text).toBe("Send /log to log a bet, or /open to settle one.");
         expect(await repos.chats.get(FRIEND, "bet_draft")).toBeUndefined();
     });
+
+    it("drops a stored draft with a market it no longer offers", async () => {
+        await letFriendIn();
+        const draft = { sport: "football", eventName: "Bayern v Arsenal", market: "player_tackles" };
+        await repos.chats.put(FRIEND, "bet_draft", { step: "pick", draft }, clock);
+        expect((await type("over 1.5")).text).toBe("Send /log to log a bet, or /open to settle one.");
+    });
+
+    it("will not log a stored draft that is missing an answer", async () => {
+        await letFriendIn();
+        const draft = { sport: "football", eventName: "Bayern v Arsenal", market: "match_result", selection: "home" };
+        await repos.chats.put(FRIEND, "bet_draft", { step: "reason", draft }, clock);
+        expect((await flow.tap(FRIEND, "t:g")).text).toBe("This bet is missing an answer. Send /log to start again.");
+        expect(await repos.bets.recent(10)).toEqual([]);
+        expect(await repos.chats.get(FRIEND, "bet_draft")).toBeUndefined();
+    });
 });

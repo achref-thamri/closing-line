@@ -15,6 +15,7 @@ export const TAGS = {
     p: { tag: "value_tip", label: "🔎 Value tip" },
 } as const;
 type TagKey = keyof typeof TAGS;
+const isTagKey = (value: string): value is TagKey => value in TAGS;
 
 /** Markets offered as buttons: `line` asks over/under, `result` home/draw/away, `team` a side, `free` a typed pick. */
 const MARKETS = {
@@ -28,8 +29,11 @@ const MARKETS = {
     other: { label: "Other", kind: "free", player: false },
 } as const;
 type MarketKey = keyof typeof MARKETS;
+const MARKET_KEYS = Object.keys(MARKETS) as [MarketKey, ...MarketKey[]];
+const isMarketKey = (value: string): value is MarketKey => value in MARKETS;
 
-type Sport = "football" | "counter_strike";
+const SPORTS = ["football", "counter_strike"] as const;
+type Sport = (typeof SPORTS)[number];
 const SPORT_MARKETS: Record<Sport, MarketKey[]> = {
     football: [
         "player_shots_on_target",
@@ -73,35 +77,29 @@ const STEPS = ["sport", "match", "market", "player", "pick", "book", "odds", "st
 type Step = (typeof STEPS)[number];
 
 /** A complete bet as entered, one answer at a time. */
-export interface Draft {
-    sport: Sport;
-    eventName: string;
+const draftSchema = z.object({
+    sport: z.enum(SPORTS),
+    eventName: z.string(),
     /** The fixture the typed match names, when it is one we track; null otherwise. */
-    fixtureId: string | null;
-    market: string;
-    playerName: string | null;
-    selection: string;
-    line: number | null;
-    bookmaker: string;
-    odds: number;
-    stakeOre: number;
-}
+    fixtureId: z.string().nullable(),
+    market: z.enum(MARKET_KEYS),
+    playerName: z.string().nullable(),
+    selection: z.string(),
+    line: z.number().nullable(),
+    bookmaker: z.string(),
+    odds: z.number(),
+    stakeOre: z.int(),
+});
+export type Draft = z.infer<typeof draftSchema>;
 
-/** A stored draft is read back through this, so a row written by an older version cannot break the flow. */
+/**
+ * A stored draft is read back through this, so a row written by an older version cannot break the flow: one that
+ * does not fit (a market since removed, say) is dropped and the bettor starts again.
+ */
 const storedDraft = z.object({
     step: z.enum(STEPS),
-    draft: z
-        .object({
-            sport: z.enum(["football", "counter_strike"]),
-            eventName: z.string(),
-            fixtureId: z.string().nullable(),
-            market: z.string(),
-            playerName: z.string().nullable(),
-            selection: z.string(),
-            line: z.number().nullable(),
-            bookmaker: z.string(),
-            odds: z.number(),
-            stakeOre: z.int(),
+    draft: draftSchema
+        .extend({
             /** Started from a tip's "I bet this" button: logged as a value tip once the stake is in. */
             fromTip: z.boolean(),
         })
@@ -246,8 +244,8 @@ export class BetFlow implements ButtonHandler {
             return { text: "Cancelled. /log starts a new one." };
         }
         const [tag = "", again] = value.split(":");
-        if (action === "t" && tag in TAGS && pending.step === "reason") {
-            return this.log(chatId, pending, tag as TagKey, again === "again");
+        if (action === "t" && isTagKey(tag) && pending.step === "reason") {
+            return this.log(chatId, pending, tag, again === "again");
         }
         if (action !== "w") return { text: "Unknown button." };
         const reply = this.choose(pending, value);
@@ -262,10 +260,10 @@ export class BetFlow implements ButtonHandler {
             draft.sport = value;
             return this.ask(pending, "match");
         }
-        if (pending.step === "market" && value in MARKETS) {
+        if (pending.step === "market" && isMarketKey(value)) {
             draft.market = value;
             draft.playerName = null;
-            return this.ask(pending, MARKETS[value as MarketKey].player ? "player" : "pick");
+            return this.ask(pending, MARKETS[value].player ? "player" : "pick");
         }
         if (pending.step === "pick" && value !== "") {
             const [selection = "", line] = value.split("|");
@@ -349,7 +347,7 @@ export class BetFlow implements ButtonHandler {
     /** A typed pick: "over 9.5" for line markets, the backed side or outcome otherwise. */
     private typedPick(pending: Pending, answer: string): Reply {
         const { draft } = pending;
-        if (MARKETS[draft.market as MarketKey].kind === "line") {
+        if (marketOf(draft).kind === "line") {
             const match = /^(over|under|o|u)\s*(\d+(?:[.,]\d+)?)$/i.exec(answer);
             if (!match) return { text: "Type the line like over 9.5 or under 2.5" };
             draft.selection = match[1]?.toLowerCase().startsWith("u") ? "under" : "over";
@@ -408,9 +406,11 @@ export class BetFlow implements ButtonHandler {
             case "stake":
                 return { text: "How much did you stake, in kroner? E.g. 1500", keyboard: [[CANCEL]] };
             case "reason": {
+                const complete = draftSchema.safeParse(draft);
+                if (!complete.success) return INCOMPLETE;
                 const tags = Object.entries(TAGS).map(([key, { label }]) => ({ text: label, data: `t:${key}` }));
                 return {
-                    text: `${describeBet(cardOf(draft as Draft))}\n\nWhy did you take it? Tap a reason to log the bet.`,
+                    text: `${describeBet(cardOf(complete.data))}\n\nWhy did you take it? Tap a reason to log the bet.`,
                     keyboard: [...rows(tags, 2), [CANCEL]],
                 };
             }
@@ -418,7 +418,7 @@ export class BetFlow implements ButtonHandler {
     }
 
     private askPick(draft: Answers): Reply {
-        const market = MARKETS[draft.market as MarketKey];
+        const market = marketOf(draft);
         if (market.kind === "line") {
             const subject = draft.playerName ? `${draft.playerName}, ${market.label.toLowerCase()}` : market.label;
             const buttons = LINES.map((line) => ({ text: `Over ${line}`, data: `w:over|${line}` }));
@@ -448,7 +448,12 @@ export class BetFlow implements ButtonHandler {
 
     /** Logs the bet; one identical to a bet logged in the last day is checked with the bettor first. */
     private async log(chatId: number, pending: Pending, tagKey: TagKey, again = false): Promise<Reply> {
-        const draft = pending.draft as Draft;
+        const complete = draftSchema.safeParse(pending.draft);
+        if (!complete.success) {
+            await this.deps.repos.chats.remove(chatId, "bet_draft");
+            return INCOMPLETE;
+        }
+        const draft = complete.data;
         const playerId = await this.deps.bettors.ensure(chatId, "");
         const bet = this.toBet(playerId, draft, TAGS[tagKey].tag);
         const card = describeBet(cardOf(draft));
@@ -557,6 +562,13 @@ export class BetFlow implements ButtonHandler {
 }
 
 const CANCEL: Button = { text: "✖ Cancel", data: "x" };
+/** Only reachable through a stored draft missing an answer; the steps fill every field before "reason". */
+const INCOMPLETE: Reply = { text: "This bet is missing an answer. Send /log to start again." };
+
+/** The draft's market; the steps before "pick" always set it, so "other" is only a type-level fallback. */
+function marketOf(draft: Answers) {
+    return MARKETS[draft.market ?? "other"];
+}
 
 /** A complete draft as the card the bettor sees. */
 function cardOf(draft: Draft): BetCard {
