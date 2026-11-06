@@ -216,7 +216,8 @@ async function checkPriceGone(
         minEdge: -Infinity,
     }).find((value) => value.selection === selection);
     if (best && best.edge >= 0) return;
-    await deps.repos.bets.markPriceGone(bet.id, now);
+    // A /picks refresh can poll the same league as a scheduled poll; only the one that marks the tip alerts.
+    if (!(await deps.repos.bets.markPriceGone(bet.id, now))) return;
     const gone: PriceGone = {
         homeTeam: event.homeTeam,
         awayTeam: event.awayTeam,
