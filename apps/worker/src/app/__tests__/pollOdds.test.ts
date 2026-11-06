@@ -205,20 +205,6 @@ describe("pollOdds", () => {
         expect(bet?.lockedOdds).toBeCloseTo(2.71);
     });
 
-    it("does not bet without a fresh sharp price or after kickoff", async () => {
-        const stale = event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75));
-        stale.quotes = [
-            ...quotes("pinnacle", 2.96, 3.43, 2.47, new Date(now.getTime() - 30 * 60_000)),
-            ...stale.quotes.slice(3),
-        ];
-        const started = event(-5, quotes("unibet_se", 2.9, 3.4, 2.75), "b".repeat(32));
-        expect(await pollOdds(deps([stale, started]), "soccer_epl", "scan")).toMatchObject({
-            scannerBets: 0,
-            events: 2,
-        });
-        expect(await repos.odds.latest("b".repeat(32))).toHaveLength(6);
-    });
-
     it("records a pass and sends no tip for a match more than three days out", async () => {
         const far = event(72 * 60 + 1, quotes("unibet_se", 2.9, 3.4, 2.75));
         expect(await pollOdds(deps([far]), "soccer_epl", "scan")).toMatchObject({ scannerBets: 0 });
@@ -332,8 +318,12 @@ describe("pollOdds", () => {
             ...stale.quotes.slice(3),
         ];
         const started = event(-5, quotes("unibet_se", 2.9, 3.4, 2.75), "d".repeat(32));
-        await pollOdds(deps([value, none, stale, started]), "soccer_epl", "scan");
+        expect(await pollOdds(deps([value, none, stale, started]), "soccer_epl", "scan")).toMatchObject({
+            scannerBets: 1,
+        });
         await pollOdds(deps([value]), "soccer_epl", "scan");
+        // A match already under way gets no decision, but its prices are still stored.
+        expect(await repos.odds.latest("d".repeat(32))).toHaveLength(6);
 
         const decisions = await repos.decisions.since(now);
         expect(decisions.map((decision) => [decision.fixtureId[0], decision.outcome, decision.reason])).toEqual([

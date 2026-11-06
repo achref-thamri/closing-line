@@ -4,16 +4,6 @@ const MAX_ITERATIONS = 200;
 const TOLERANCE = 1e-12;
 
 /**
- * Fair probabilities with the margin spread in proportion to each implied probability.
- * Simple, but it overstates longshots, which carry more of the margin in practice.
- */
-export function devigProportional(decimalOdds: readonly number[]): number[] {
-    const implied = decimalOdds.map(impliedProbability);
-    const total = implied.reduce((sum, probability) => sum + probability, 0);
-    return implied.map((probability) => probability / total);
-}
-
-/**
  * Fair probabilities by the power method: find k so that the implied probabilities raised to k sum to one.
  * Longshots lose relatively more margin than favourites, which matches how bookmakers price.
  */
