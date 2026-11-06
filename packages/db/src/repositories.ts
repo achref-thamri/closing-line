@@ -201,6 +201,8 @@ export function createRepositories(db: Database) {
              */
             async totals(options: { settledSince?: Date } = {}): Promise<Map<string, PlayerTotals>> {
                 const decided = sql`${bets.status} in ('won', 'lost', 'cashed_out')`;
+                // A cash-out's `clv` is the price move up to the cash-out, not a closing line value; see `totalsOf`.
+                const hasClv = sql`${bets.clv} is not null and ${bets.status} <> 'cashed_out'`;
                 const count = (condition: ReturnType<typeof sql>) =>
                     sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
                 const sum = (column: ReturnType<typeof sql>, condition: ReturnType<typeof sql>) =>
@@ -215,8 +217,8 @@ export function createRepositories(db: Database) {
                         stakedOre: sum(sql`${bets.stakeOre}`, decided),
                         profitOre: sum(sql`${bets.profitOre}`, sql`${bets.status} <> 'open'`),
                         openStakeOre: sum(sql`${bets.stakeOre}`, sql`${bets.status} = 'open'`),
-                        clvSum: sum(sql`${bets.clv}`, sql`${bets.clv} is not null`),
-                        clvCount: count(sql`${bets.clv} is not null`),
+                        clvSum: sum(sql`${bets.clv}`, hasClv),
+                        clvCount: count(hasClv),
                     })
                     .from(bets)
                     .where(options.settledSince && gte(bets.settledAt, options.settledSince))

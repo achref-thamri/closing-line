@@ -276,6 +276,15 @@ describe("bets", () => {
         const lost = await repos.bets.place(bet({ selection: "home", stakeOre: 10_000 }));
         await repos.bets.place(bet({ selection: "draw", stakeOre: 5_000 }));
         await repos.bets.place(bet({ playerId: "friend", stakeOre: 20_000 }));
+        const cashed = await repos.bets.place(bet({ playerId: "friend", selection: "home", stakeOre: 5_000 }));
+        await repos.bets.settle(cashed?.id ?? "", {
+            status: "cashed_out",
+            profitOre: 9_000,
+            settledAt,
+            cashoutOfferOre: 14_000,
+            impliedCurrentOdds: 3.6,
+            clv: 3.44,
+        });
         await repos.bets.setClosing(won?.id ?? "", { fairOdds: 2.4, clv: 0.06, provisional: false });
         await repos.bets.setClosing(lost?.id ?? "", { fairOdds: 3, clv: -0.02, provisional: false });
         await repos.bets.settle(won?.id ?? "", { status: "won", profitOre: 23_100, settledAt });
@@ -293,7 +302,7 @@ describe("bets", () => {
             clvSum: expect.closeTo(0.04, 10) as number,
             clvCount: 2,
         });
-        expect(totals.get("friend")).toMatchObject({ open: 1, openStakeOre: 20_000, settled: 0 });
+        expect(totals.get("friend")).toMatchObject({ open: 1, openStakeOre: 20_000, settled: 1, clvCount: 0 });
 
         const sinceSettlement = await repos.bets.totals({ settledSince: new Date(settledAt.getTime() + 1) });
         expect(sinceSettlement.get("scanner")).toBeUndefined();

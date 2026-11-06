@@ -17,7 +17,7 @@ export interface PlayerStats {
     profitOre: number;
     /** Profit per unit staked on settled bets; undefined before the first one. */
     roi: number | undefined;
-    /** Average closing line value over bets that have one; undefined before the first one. */
+    /** Average closing line value over bets that have one (cash-outs left out); undefined before the first one. */
     averageClv: number | undefined;
 }
 
@@ -55,7 +55,9 @@ export function statsFromTotals(totals: PlayerTotals): PlayerStats {
 export function totalsOf(bets: readonly MetricsBet[]): PlayerTotals {
     const decided = bets.filter((bet) => bet.status === "won" || bet.status === "lost" || bet.status === "cashed_out");
     const open = bets.filter((bet) => bet.status === "open");
-    const clvs = bets.flatMap((bet) => (bet.clv === null ? [] : [bet.clv]));
+    // A cash-out stores the price move up to the cash-out in `clv`. It says how the bet was going, not whether it beat
+    // the closing line, and a long shot shortening from 16 to 3.6 would swamp every real CLV in the average.
+    const clvs = bets.flatMap((bet) => (bet.clv === null || bet.status === "cashed_out" ? [] : [bet.clv]));
     return {
         settled: decided.length,
         won: decided.filter((bet) => bet.status === "won").length,
