@@ -53,6 +53,10 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
 
     const firstSaturday = new Date(now.getTime() - WEEKS * 7 * DAY_MS);
     firstSaturday.setUTCHours(15, 0, 0, 0);
+    // The last round must still be to come, or late in the UTC evening the demo has no open bets at all.
+    if (firstSaturday.getTime() + WEEKS * 7 * DAY_MS <= now.getTime()) {
+        firstSaturday.setTime(firstSaturday.getTime() + DAY_MS);
+    }
     for (let week = 0; week <= WEEKS; week++) {
         const order = [...TEAMS].sort(() => next() - 0.5);
         for (let match = 0; match < 10; match++) {

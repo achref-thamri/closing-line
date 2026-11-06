@@ -22,4 +22,13 @@ describe("seedDemo", () => {
         expect(favourite.open).toBe(10);
         await handle.close();
     }, 30_000); // A PGlite start plus the whole demo seed: over 5 s when the full suite runs in parallel.
+
+    it("still has open bets late in the UTC evening", async () => {
+        const handle = await openDatabase({ kind: "pglite" });
+        const repos = createRepositories(handle.db);
+        await seedDemo(repos, new Date("2026-11-06T23:00:00Z"));
+
+        expect(playerStats(await repos.bets.forPlayer("favourite")).open).toBe(10);
+        await handle.close();
+    }, 30_000);
 });
