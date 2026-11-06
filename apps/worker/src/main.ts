@@ -6,6 +6,7 @@ import { markStarted, markStopped } from "./app/lifecycle.ts";
 import { ensurePlayers } from "./app/players.ts";
 import { compose } from "./compose.ts";
 import { messageOf } from "./lib/errors.ts";
+import { keepPolling } from "./lib/keepPolling.ts";
 import { createLogger } from "./lib/logger.ts";
 import { createPinger } from "./lib/ping.ts";
 import { tick } from "./scheduler/runner.ts";
@@ -21,9 +22,7 @@ mkdirSync(dirname(config.heartbeatPath), { recursive: true });
 logger.info({ leagues: worker.runner.leagues, database: config.database.kind }, "worker started");
 await markStarted({ repos: worker.repos, now: () => new Date(), logger, notify: worker.notify });
 
-void worker.bot.start().catch((error: unknown) => {
-    logger.error({ error: messageOf(error) }, "telegram bot stopped");
-});
+const polling = keepPolling({ start: () => worker.bot.start(), logger, notify: worker.notify });
 logger.info({}, "bet flow listening on Telegram");
 
 let running: Promise<void> | undefined;
@@ -35,7 +34,8 @@ function schedule(): void {
         () => {
             const now = new Date();
             writeFileSync(config.heartbeatPath, now.toISOString());
-            ping?.(now);
+            // Without polling nobody can log bets, so the dead man's switch should fire even though the scheduler runs.
+            if (polling.isUp()) ping?.(now);
             running ??= tick(worker.runner)
                 .catch((error: unknown) => {
                     logger.error({ error: messageOf(error) }, "tick failed");
@@ -53,7 +53,9 @@ schedule();
 async function shutdown(signal: string): Promise<void> {
     logger.info({ signal }, "shutting down");
     clearTimeout(timer);
+    polling.stop();
     await worker.bot.stop();
+    await polling.done;
     await running;
     await markStopped({ repos: worker.repos });
     await database.close();
