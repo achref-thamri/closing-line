@@ -59,7 +59,7 @@ export function BetsTable({
             <table className="w-full text-sm" data-testid="bets-table">
                 <thead className="bg-zinc-50 text-left text-xs text-zinc-500 dark:bg-zinc-900">
                     <tr>
-                        <th className="px-3 py-2 font-medium">Kickoff</th>
+                        <th className="px-3 py-2 font-medium">Match time</th>
                         <th className="px-3 py-2 font-medium">Player</th>
                         <th className="px-3 py-2 font-medium">Match</th>
                         <th className="px-3 py-2 font-medium">Pick</th>
@@ -99,7 +99,7 @@ export function BetsTable({
                                             shortDate(bet.fixture.kickoff)
                                         ) : (
                                             // A match we do not track has no kickoff, only when the bet was logged.
-                                            <span title="Kickoff unknown: when the bet was logged">
+                                            <span title="Match time unknown: when the bet was logged">
                                                 logged {shortDate(bet.receivedAt ?? bet.createdAt)}
                                             </span>
                                         )}
