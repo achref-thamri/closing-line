@@ -417,7 +417,7 @@ describe("restarts", () => {
         const draft = { sport: "football", eventName: "Bayern v Arsenal", market: "match_result", selection: "home" };
         await repos.chats.put(FRIEND, "bet_draft", { step: "reason", draft }, clock);
         expect((await flow.tap(FRIEND, "t:g")).text).toBe("This bet is missing an answer. Send /log to start again.");
-        expect(await repos.bets.recent(10)).toEqual([]);
+        expect(await repos.bets.listing(10)).toEqual([]);
         expect(await repos.chats.get(FRIEND, "bet_draft")).toBeUndefined();
     });
 });

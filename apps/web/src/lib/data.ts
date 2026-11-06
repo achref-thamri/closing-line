@@ -108,7 +108,7 @@ export async function loadDashboard(requestedPage?: string, requestedPlayer?: st
         page,
         pages,
         player,
-        bets: await repos.bets.recent(BETS_PER_PAGE, player, (page - 1) * BETS_PER_PAGE),
+        bets: await repos.bets.listing(BETS_PER_PAGE, player, (page - 1) * BETS_PER_PAGE),
         credits: usage && { used: usage.used, remaining: usage.remaining },
     };
 }
