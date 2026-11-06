@@ -34,11 +34,22 @@ export interface Worker {
 }
 
 /** The composition root: builds the adapters once and wires them into the jobs and the Telegram flows. */
-export function compose(options: { config: Config; db: Database; logger: Logger; now?: () => Date }): Worker {
+export function compose(options: {
+    config: Config;
+    db: Database;
+    logger: Logger;
+    now?: () => Date;
+    /** Known bot details, so tests can feed updates without Telegram's getMe. */
+    botInfo?: Parameters<typeof createTelegramBot>[0]["botInfo"];
+}): Worker {
     const { config, logger } = options;
     const now = options.now ?? (() => new Date());
     const repos = createRepositories(options.db);
-    const bot = createTelegramBot({ botToken: config.telegram.botToken, logger });
+    const bot = createTelegramBot({
+        botToken: config.telegram.botToken,
+        logger,
+        ...(options.botInfo ? { botInfo: options.botInfo } : {}),
+    });
     const sendText = createTextSender({ api: bot.api, logger });
     const ownerChatId = config.telegram.ownerChatId;
     const notify: Notify = (text) => sendText(ownerChatId, text);
