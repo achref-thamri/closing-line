@@ -27,7 +27,14 @@ const from = { id: 200, is_bot: false, first_name: "Sam" } as const;
 let calls: { method: string; payload: Record<string, unknown> }[];
 
 /** Stand-in flows: each owns its real button prefixes and does only what a test passes in. */
-function setup(flows: { bettors?: Partial<Bettors>; bets?: Partial<BetFlow>; settle?: Partial<SettleFlow> } = {}) {
+function setup(
+    flows: {
+        bettors?: Partial<Bettors>;
+        bets?: Partial<BetFlow>;
+        settle?: Partial<SettleFlow>;
+        picks?: () => Promise<string>;
+    } = {},
+) {
     const bot = createTelegramBot({ botToken: "1:secret", logger: silentLogger, botInfo });
     bot.api.config.use((_prev, method, payload) => {
         calls.push({ method, payload });
@@ -38,6 +45,7 @@ function setup(flows: { bettors?: Partial<Bettors>; bets?: Partial<BetFlow>; set
         bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as Bettors,
         bets: { owns: owns(["w", "t", "x", "tb"]), ...flows.bets } as BetFlow,
         settle: { owns: owns(["st", "hd"]), amount: () => Promise.resolve(undefined), ...flows.settle } as SettleFlow,
+        ...(flows.picks ? { picks: flows.picks } : {}),
     });
     return bot;
 }
@@ -149,12 +157,38 @@ describe("bet bot", () => {
         ]);
     });
 
-    it("keeps /bet working and puts the commands in Telegram's menu on start", async () => {
+    it("keeps /bet working and lists the commands for Telegram's menu", async () => {
         const bet = vi.fn().mockResolvedValue(question);
         const bot = setup({ bets: { bet } });
         await bot.handleUpdate(command("/bet"));
         expect(bet).toHaveBeenCalledWith(200);
         expect(COMMANDS.map((each) => each.command)).toEqual(["log", "open", "undo", "picks", "tips", "start"]);
+    });
+
+    it("answers /undo, and /picks for bettors only", async () => {
+        const undo = vi.fn().mockResolvedValue({ text: "Nothing to undo." });
+        const isAllowed = vi.fn((chatId: number) => Promise.resolve(chatId === 200));
+        const picks = vi.fn().mockResolvedValue("🔎 Best prices");
+        const bot = setup({ bets: { undo }, bettors: { isAllowed }, picks });
+        await bot.handleUpdate(command("/undo"));
+        await bot.handleUpdate(command("/picks", 2));
+        await bot.handleUpdate({
+            ...command("/picks", 3),
+            message: { ...command("/picks").message, chat: { ...chat, id: 9 } },
+        });
+        expect(undo).toHaveBeenCalledWith(200);
+        expect(picks).toHaveBeenCalledTimes(1);
+        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["Nothing to undo.", "🔎 Best prices"]);
+    });
+
+    it("answers a tap on a message without a chat and does nothing else", async () => {
+        const tap = vi.fn();
+        const bot = setup({ bets: { tap } });
+        const update = tapUpdate("w:football");
+        const { message: _message, ...inline } = update.callback_query;
+        await bot.handleUpdate({ ...update, callback_query: { ...inline, inline_message_id: "i" } });
+        expect(tap).not.toHaveBeenCalled();
+        expect(calls.map((call) => call.method)).toEqual(["answerCallbackQuery"]);
     });
 
     it("sends messages with or without buttons", async () => {
