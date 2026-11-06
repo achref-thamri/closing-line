@@ -96,6 +96,9 @@ export const settingsSchema = z
                 // 2% since 2026-11-02 (owner): more tips, still clear of price noise; the record decides later.
                 minEdge: z.number().gt(0).lt(1).default(0.02),
                 maxSharpAgeMinutes: z.int().positive().default(10),
+                // The back-test (ADR 0008) only checked prices taken a day or two before kickoff. On 2026-11-04 the
+                // scanner tipped 22 matches up to 18 days out, edges up to 16%, which are more likely stale soft lines.
+                maxHoursToKickoff: z.int().positive().default(72),
                 stake: stakeRulesSchema.prefault({}),
             })
             .prefault({}),

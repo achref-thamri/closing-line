@@ -107,7 +107,10 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
             commission: config.exchangeCommission,
         });
         let reason: Reason;
-        if (scanner) {
+        if (minutes > config.scanner.maxHoursToKickoff * 60) {
+            // Still recorded with the best price, so the report can show what the scanner left alone.
+            reason = "too_early";
+        } else if (scanner) {
             const bets = await scannerBets(deps, event, fair, scanner);
             report.scannerBets += bets.placed;
             reason = bets.reason;
