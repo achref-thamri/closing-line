@@ -34,27 +34,6 @@ jobs:
                       for (const k of ["statements", "branches", "functions", "lines"]) console.log(`| ${k} | ${t[k].pct}% |`);' >> "$GITHUB_STEP_SUMMARY"
                   fi
 
-    postgres:
-        name: Postgres 18
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        services:
-            postgres:
-                image: postgres:18
-                env:
-                    POSTGRES_USER: bot
-                    POSTGRES_PASSWORD: bot
-                    POSTGRES_DB: closing_line_test
-                ports: ["5432:5432"]
-                options: >-
-                    --health-cmd "pg_isready -U bot" --health-interval 5s --health-timeout 5s --health-retries 10
-        env:
-            TEST_DATABASE_URL: postgres://bot:bot@localhost:5432/closing_line_test
-        steps:
-            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-            - uses: ./.github/actions/setup
-            - run: pnpm exec vitest run --project @closing-line/db
-
     docker:
         name: Docker smoke test
         runs-on: ubuntu-latest
@@ -73,14 +52,12 @@ jobs:
             - run: docker compose build worker web
             - name: Start Postgres, the worker and the dashboard
               run: docker compose up -d postgres worker web
+            # Runs the image's own healthcheck command every few seconds; Docker's 60s interval would idle a billed minute.
             - name: Wait for the worker to report healthy
               run: |
-                  container=$(docker compose ps -q worker)
-                  for _ in $(seq 1 40); do
-                      status=$(docker inspect --format '{{.State.Health.Status}}' "$container")
-                      echo "worker: $status"
-                      [ "$status" = healthy ] && exit 0
-                      sleep 5
+                  for _ in $(seq 1 60); do
+                      docker compose exec -T worker node apps/worker/src/healthcheck.ts && exit 0
+                      sleep 3
                   done
                   docker compose logs worker
                   exit 1
@@ -96,13 +73,28 @@ jobs:
               if: always()
               run: docker compose logs --tail=50 worker web
 
+    # Postgres runs here rather than in its own job: billing rounds every job up to a whole minute.
     dashboard:
-        name: Dashboard end-to-end
+        name: Dashboard end-to-end and Postgres 18
         runs-on: ubuntu-latest
         timeout-minutes: 15
+        services:
+            postgres:
+                image: postgres:18
+                env:
+                    POSTGRES_USER: bot
+                    POSTGRES_PASSWORD: bot
+                    POSTGRES_DB: closing_line_test
+                ports: ["5432:5432"]
+                options: >-
+                    --health-cmd "pg_isready -U bot" --health-interval 5s --health-timeout 5s --health-retries 10
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
             - uses: ./.github/actions/setup
+            - name: Repository tests on Postgres 18
+              run: pnpm exec vitest run --project @closing-line/db
+              env:
+                  TEST_DATABASE_URL: postgres://bot:bot@localhost:5432/closing_line_test
             - run: pnpm --filter @closing-line/web build
             - run: pnpm --filter @closing-line/web exec playwright install --with-deps chromium
             - run: pnpm --filter @closing-line/web e2e
