@@ -16,6 +16,7 @@ import { createPriceGoneSender, createTipSender, tipRecipients } from "./app/tip
 import { weeklyReport } from "./app/weeklyReport.ts";
 import type { Reply } from "./app/chat.ts";
 import type { Logger } from "./lib/logger.ts";
+import { singleFlight } from "./lib/singleFlight.ts";
 import { createTextSender, type Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
 
@@ -89,20 +90,18 @@ export function compose(options: { config: Config; db: Database; logger: Logger;
         },
     };
 
-    // /picks: refresh a league's odds when the stored ones are over 12 hours old, within the credit guard.
-    const picks = () =>
-        bestPicks({
-            repos,
-            config,
-            now,
-            refresh: async () => {
-                for (const league of config.leagues) {
-                    const last = await repos.odds.lastTakenAt(league.oddsApiKey);
-                    if (last && now().getTime() - last.getTime() < PICKS_REFRESH_MS) continue;
-                    await pollOdds(pollDeps, league.oddsApiKey, "scan");
-                }
-            },
-        });
+    // /picks: refresh a league's odds when the stored ones are over 12 hours old, within the credit guard. Bettors
+    // asking at the same time share one refresh, so the credits are spent once. These polls run outside the
+    // scheduler, so job_runs has no row for them; the log line is their record.
+    const refresh = singleFlight(async () => {
+        for (const league of config.leagues) {
+            const last = await repos.odds.lastTakenAt(league.oddsApiKey);
+            if (last && now().getTime() - last.getTime() < PICKS_REFRESH_MS) continue;
+            const report = await pollOdds(pollDeps, league.oddsApiKey, "scan");
+            logger.info({ league: league.oddsApiKey, ...pollOutcome(report) }, "picks refresh polled");
+        }
+    });
+    const picks = () => bestPicks({ repos, config, now, refresh });
 
     // Bettors log, settle and look up bets in Telegram.
     const bettors = new Bettors({ repos, config, messenger: bot.messenger, now });
