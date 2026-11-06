@@ -1,3 +1,5 @@
+import { heldProfitOre } from "./slips.ts";
+
 export const OUTCOMES = ["home", "draw", "away"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
@@ -30,9 +32,11 @@ export function settle1x2(
     bet: { selection: Outcome; stakeOre: number; decimalOdds: number },
     result: MatchResult,
 ): Settlement {
-    if (result.status === "void") return { status: "void", profitOre: 0 };
-    if (outcomeOf(result.homeGoals, result.awayGoals) !== bet.selection) {
-        return { status: "lost", profitOre: -bet.stakeOre };
-    }
-    return { status: "won", profitOre: Math.round(bet.stakeOre * (bet.decimalOdds - 1)) };
+    const status =
+        result.status === "void"
+            ? "void"
+            : outcomeOf(result.homeGoals, result.awayGoals) === bet.selection
+              ? "won"
+              : "lost";
+    return { status, profitOre: heldProfitOre({ stakeOre: bet.stakeOre, lockedOdds: bet.decimalOdds }, status) };
 }

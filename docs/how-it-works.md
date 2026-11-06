@@ -16,7 +16,7 @@ Say Pinnacle prices a match like this:
 | 2.60 | 3.40 | 2.90 |
 
 The implied probabilities add up to 38.5% + 29.4% + 34.5% = 102.4%, not 100%. The extra 2.4% is Pinnacle's margin
-(`overround`), what it keeps whatever happens. Most bookmakers take 5–8%. Pinnacle takes little and lets winning
+(the overround), what it keeps whatever happens. Most bookmakers take 5–8%. Pinnacle takes little and lets winning
 bettors stay, so its prices move with the best information in the market. That is why it is the fair
 reference ([ADR 0003](adr/0003-pinnacle-as-the-fair-price.md)).
 

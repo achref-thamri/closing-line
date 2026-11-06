@@ -5,8 +5,3 @@ export function impliedProbability(decimalOdds: number): number {
     }
     return 1 / decimalOdds;
 }
-
-/** The bookmaker's margin on a complete market: implied probabilities summed, minus one. */
-export function overround(decimalOdds: readonly number[]): number {
-    return decimalOdds.reduce((sum, odds) => sum + impliedProbability(odds), 0) - 1;
-}
