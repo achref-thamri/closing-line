@@ -1,6 +1,6 @@
 [
     {
-        "id": "6a3819cdbe2ba2fe5a3d8f9b4b459965",
+        "id": "fd06be97210250c718cf9ac3a61bdad0",
         "sport_key": "soccer_epl",
         "sport_title": "EPL",
         "commence_time": "2026-11-01T16:30:00Z",
@@ -18,15 +18,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.3
+                                "price": 2.26
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 2.88
+                                "price": 2.78
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.3
+                                "price": 3.35
                             }
                         ]
                     }
@@ -43,15 +43,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.38
+                                "price": 2.28
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 2.88
+                                "price": 2.89
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.3
+                                "price": 3.26
                             }
                         ]
                     }
@@ -68,7 +68,7 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.54
+                                "price": 2.43
                             },
                             {
                                 "name": "Liverpool",
@@ -76,7 +76,7 @@
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.5
+                                "price": 3.34
                             }
                         ]
                     },
@@ -86,15 +86,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.58
+                                "price": 2.56
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 3.1
+                                "price": 2.97
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.55
+                                "price": 3.4
                             }
                         ]
                     }
@@ -111,15 +111,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.47
+                                "price": 2.45
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 2.96
+                                "price": 3.06
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.43
+                                "price": 3.3
                             }
                         ]
                     }
@@ -136,15 +136,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.5
+                                "price": 2.43
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 3
+                                "price": 3.04
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.5
+                                "price": 3.66
                             }
                         ]
                     }
@@ -161,15 +161,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.43
+                                "price": 2.45
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 2.88
+                                "price": 2.85
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.35
+                                "price": 3.51
                             }
                         ]
                     }
@@ -186,15 +186,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.42
+                                "price": 2.31
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 2.92
+                                "price": 3.02
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.4
+                                "price": 3.33
                             }
                         ]
                     }
@@ -211,15 +211,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.41
+                                "price": 2.32
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 2.93
+                                "price": 2.82
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.38
+                                "price": 3.32
                             }
                         ]
                     }
@@ -236,15 +236,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.53
+                                "price": 2.61
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 2.97
+                                "price": 2.88
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.47
+                                "price": 3.5
                             }
                         ]
                     }
@@ -261,15 +261,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.54
+                                "price": 2.58
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 3
+                                "price": 2.96
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.5
+                                "price": 3.52
                             }
                         ]
                     },
@@ -279,15 +279,15 @@
                         "outcomes": [
                             {
                                 "name": "Arsenal",
-                                "price": 2.58
+                                "price": 2.47
                             },
                             {
                                 "name": "Liverpool",
-                                "price": 3.1
+                                "price": 2.96
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.55
+                                "price": 3.45
                             }
                         ]
                     }
@@ -296,7 +296,7 @@
         ]
     },
     {
-        "id": "0f552d9c6990c69474f50ff2fb54e9a3",
+        "id": "926245ab51e4c72b22d67408b55d7310",
         "sport_key": "soccer_epl",
         "sport_title": "EPL",
         "commence_time": "2026-11-02T20:00:00Z",
@@ -314,15 +314,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 2.9
+                                "price": 2.95
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.25
+                                "price": 2.23
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.4
+                                "price": 3.34
                             }
                         ]
                     }
@@ -339,15 +339,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 2.9
+                                "price": 2.92
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.3
+                                "price": 2.29
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.5
+                                "price": 3.43
                             }
                         ]
                     }
@@ -364,15 +364,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 3.1
+                                "price": 3.19
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.46
+                                "price": 2.51
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.6
+                                "price": 3.51
                             }
                         ]
                     },
@@ -382,15 +382,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 3.15
+                                "price": 3.17
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.5
+                                "price": 2.51
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.65
+                                "price": 3.79
                             }
                         ]
                     }
@@ -407,15 +407,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 2.93
+                                "price": 3.0
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.43
+                                "price": 2.38
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.56
+                                "price": 3.73
                             }
                         ]
                     }
@@ -432,15 +432,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 3
+                                "price": 2.89
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.4
+                                "price": 2.38
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.65
+                                "price": 3.74
                             }
                         ]
                     }
@@ -457,7 +457,7 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 2.9
+                                "price": 2.8
                             },
                             {
                                 "name": "Newcastle United",
@@ -465,7 +465,7 @@
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.5
+                                "price": 3.34
                             }
                         ]
                     }
@@ -482,15 +482,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 2.88
+                                "price": 2.93
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.42
+                                "price": 2.48
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.45
+                                "price": 3.48
                             }
                         ]
                     }
@@ -507,15 +507,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 2.87
+                                "price": 2.98
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.41
+                                "price": 2.37
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.47
+                                "price": 3.54
                             }
                         ]
                     }
@@ -532,15 +532,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 3.04
+                                "price": 3.07
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.43
+                                "price": 2.45
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.57
+                                "price": 3.55
                             }
                         ]
                     }
@@ -557,15 +557,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 3.1
+                                "price": 3.21
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.46
+                                "price": 2.57
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.6
+                                "price": 3.59
                             }
                         ]
                     },
@@ -575,15 +575,15 @@
                         "outcomes": [
                             {
                                 "name": "Everton",
-                                "price": 3.15
+                                "price": 3.2
                             },
                             {
                                 "name": "Newcastle United",
-                                "price": 2.5
+                                "price": 2.39
                             },
                             {
                                 "name": "Draw",
-                                "price": 3.65
+                                "price": 3.72
                             }
                         ]
                     }
