@@ -64,13 +64,15 @@ report with everyone's results and a lesson of the week.
 Needs Node 24 and pnpm. No Docker or database needed locally.
 
 ```sh
+corepack enable
 pnpm install
 pnpm check                             # format, lint, typecheck, tests
 pnpm --filter @closing-line/web dev    # dashboard on demo data, http://localhost:3300
 ```
 
-To run the bot itself, copy `.env.example` to `.env`, add the API keys, and start
-`node --env-file=.env apps/worker/src/main.ts`.
+To run the bot itself, copy `.env.example` to `.env`, add four free keys and start
+`node --env-file=.env apps/worker/src/main.ts`. [Running and deploying](docs/operations.md) says where to get the
+keys, how to pick bookmakers outside Denmark, and how to host it on your own server.
 
 ## Status
 
