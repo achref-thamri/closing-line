@@ -37,7 +37,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560626,
+            "id": 778563,
             "utcDate": "2026-10-31T12:30:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -62,25 +62,18 @@
                 "winner": "HOME_TEAM",
                 "duration": "REGULAR",
                 "fullTime": {
-                    "home": 2,
-                    "away": 0
+                    "home": 3,
+                    "away": 2
                 },
                 "halfTime": {
-                    "home": 0,
-                    "away": 0
+                    "home": 3,
+                    "away": 2
                 }
             },
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 11309,
-                    "name": "Peter Bankes",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -103,7 +96,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560623,
+            "id": 463861,
             "utcDate": "2026-10-31T15:00:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -129,7 +122,7 @@
                 "duration": "REGULAR",
                 "fullTime": {
                     "home": 0,
-                    "away": 1
+                    "away": 3
                 },
                 "halfTime": {
                     "home": 0,
@@ -139,14 +132,7 @@
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 11585,
-                    "name": "Craig Pawson",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -169,7 +155,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560624,
+            "id": 740595,
             "utcDate": "2026-10-31T15:00:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -191,28 +177,21 @@
                 "crest": "https://crests.football-data.org/341.png"
             },
             "score": {
-                "winner": "HOME_TEAM",
+                "winner": "AWAY_TEAM",
                 "duration": "REGULAR",
                 "fullTime": {
-                    "home": 2,
-                    "away": 0
+                    "home": 0,
+                    "away": 3
                 },
                 "halfTime": {
-                    "home": 1,
-                    "away": 0
+                    "home": 0,
+                    "away": 1
                 }
             },
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 11405,
-                    "name": "Michael Salisbury",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -235,7 +214,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560625,
+            "id": 905550,
             "utcDate": "2026-10-31T15:00:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -260,7 +239,7 @@
                 "winner": "HOME_TEAM",
                 "duration": "REGULAR",
                 "fullTime": {
-                    "home": 3,
+                    "home": 2,
                     "away": 1
                 },
                 "halfTime": {
@@ -271,14 +250,7 @@
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 11430,
-                    "name": "Simon Hooper",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -301,7 +273,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560629,
+            "id": 517225,
             "utcDate": "2026-10-31T15:00:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -326,8 +298,8 @@
                 "winner": "DRAW",
                 "duration": "REGULAR",
                 "fullTime": {
-                    "home": 2,
-                    "away": 2
+                    "home": 3,
+                    "away": 3
                 },
                 "halfTime": {
                     "home": 0,
@@ -337,14 +309,7 @@
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 214210,
-                    "name": "Thomas Kirk",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -367,7 +332,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560630,
+            "id": 571007,
             "utcDate": "2026-10-31T15:00:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -392,25 +357,18 @@
                 "winner": "HOME_TEAM",
                 "duration": "REGULAR",
                 "fullTime": {
-                    "home": 2,
-                    "away": 0
+                    "home": 3,
+                    "away": 2
                 },
                 "halfTime": {
                     "home": 1,
-                    "away": 0
+                    "away": 1
                 }
             },
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 11469,
-                    "name": "Darren England",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -433,7 +391,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560627,
+            "id": 676947,
             "utcDate": "2026-10-31T17:30:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -455,28 +413,21 @@
                 "crest": "https://crests.football-data.org/354.png"
             },
             "score": {
-                "winner": "HOME_TEAM",
+                "winner": "AWAY_TEAM",
                 "duration": "REGULAR",
                 "fullTime": {
                     "home": 2,
-                    "away": 0
+                    "away": 3
                 },
                 "halfTime": {
                     "home": 1,
-                    "away": 0
+                    "away": 3
                 }
             },
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 11605,
-                    "name": "Michael Oliver",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -499,7 +450,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560628,
+            "id": 341960,
             "utcDate": "2026-10-31T20:00:00Z",
             "status": "FINISHED",
             "matchday": 9,
@@ -521,28 +472,21 @@
                 "crest": "https://crests.football-data.org/63.png"
             },
             "score": {
-                "winner": "DRAW",
+                "winner": "HOME_TEAM",
                 "duration": "REGULAR",
                 "fullTime": {
                     "home": 1,
-                    "away": 1
+                    "away": 0
                 },
                 "halfTime": {
-                    "home": 1,
+                    "home": 0,
                     "away": 0
                 }
             },
             "odds": {
                 "msg": "Activate Odds-Package in User-Panel to retrieve odds."
             },
-            "referees": [
-                {
-                    "id": 213813,
-                    "name": "Sam Barrott",
-                    "type": "REFEREE",
-                    "nationality": "England"
-                }
-            ]
+            "referees": []
         },
         {
             "area": {
@@ -565,7 +509,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560631,
+            "id": 343224,
             "utcDate": "2026-11-01T16:30:00Z",
             "status": "TIMED",
             "matchday": 9,
@@ -624,7 +568,7 @@
                 "currentMatchday": 9,
                 "winner": null
             },
-            "id": 560622,
+            "id": 790504,
             "utcDate": "2026-11-02T20:00:00Z",
             "status": "TIMED",
             "matchday": 9,
