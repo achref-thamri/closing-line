@@ -25,4 +25,4 @@ them, and a join request sent before a restart lost the person's name.
 - Changing the shape of a draft needs no migration: old rows are dropped on read, at worst asking one person to
   start a bet again.
 - The worker is still the only process that talks to Telegram, so two writers racing on the same row is not a
-  concern; it would be if the bot ever ran as more than one instance.
+  concern; it would be if the worker ever ran as more than one instance.

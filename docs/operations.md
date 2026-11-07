@@ -19,13 +19,13 @@ The worker needs four keys, all free:
 | ------------------------ | ------------------------------------------------------------------------------ |
 | `ODDS_API_KEY`           | Sign up at [the-odds-api.com](https://the-odds-api.com) (500 credits a month)  |
 | `FOOTBALL_DATA_TOKEN`    | Register at [football-data.org](https://www.football-data.org/client/register) |
-| `TELEGRAM_BOT_TOKEN`     | Create a bot with [@BotFather](https://t.me/BotFather)                         |
-| `TELEGRAM_OWNER_CHAT_ID` | Your own chat id with the bot. See below                                       |
+| `TELEGRAM_BOT_TOKEN`     | Register a Telegram account for it with [@BotFather](https://t.me/BotFather)   |
+| `TELEGRAM_OWNER_CHAT_ID` | Your own chat id with that account. See below                                  |
 
-For the chat id, send your new bot any message before starting the worker, then open
+For the chat id, send the new account any message before starting the worker, then open
 `https://api.telegram.org/bot<token>/getUpdates` and copy `message.chat.id`. Once the worker runs it reads the
 updates itself and that page stays empty. The owner gets the alerts and the Allow button when someone else sends the
-bot `/start`.
+account `/start`.
 
 The dashboard runs on demo data without a database or keys:
 
@@ -78,7 +78,7 @@ Any Linux server with Docker will do. Clone the repo, fill in `.env` (with `POST
 
 To deploy from GitHub Actions like this repo does:
 
-1. Create a `bot` user on the server (the workflow logs in as `bot`) and copy
+1. Create a user called `bot` on the server (the workflow logs in with that name) and copy
    [server-deploy.sh](../scripts/server-deploy.sh) to `/home/bot/bin/deploy-closing-line`.
 2. Make an SSH key pair for the deploy. Add the public half to `/home/bot/.ssh/authorized_keys` with the forced
    command from the top of `server-deploy.sh`, so the key can run nothing else.

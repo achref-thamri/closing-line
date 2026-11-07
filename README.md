@@ -56,7 +56,7 @@ flowchart LR
 | `/undo`  | Delete your last bet while it is open                             |
 | `/picks` | The best prices above fair for the coming week                    |
 
-The bot also sends tips with an "I bet this" button per bookmaker, a morning reminder of open bets, and a Monday
+Telegram also gets tips with an "I bet this" button per bookmaker, a morning reminder of open bets, and a Monday
 report with everyone's results and a lesson of the week.
 
 ## Running it
@@ -70,7 +70,7 @@ pnpm check                             # format, lint, typecheck, tests
 pnpm --filter @closing-line/web dev    # dashboard on demo data, http://localhost:3300
 ```
 
-To run the bot itself, copy `.env.example` to `.env`, add four free keys and start
+To run Closing Line itself, copy `.env.example` to `.env`, add four free keys and start
 `node --env-file=.env apps/worker/src/main.ts`. [Running and deploying](docs/operations.md) says where to get the
 keys, how to pick bookmakers outside Denmark, and how to host it on your own server.
 

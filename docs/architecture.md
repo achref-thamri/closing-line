@@ -1,6 +1,6 @@
 # Architecture
 
-One worker process runs the jobs and the Telegram bot. A Next.js dashboard reads the same Postgres database.
+One worker process runs the jobs and the Telegram conversations. A Next.js dashboard reads the same Postgres database.
 
 ```mermaid
 flowchart TB
