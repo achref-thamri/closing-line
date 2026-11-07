@@ -1,4 +1,4 @@
-# Production: Postgres, the worker, the dashboard and a nightly backup, on the same server as the trading bot.
+# Production: Postgres, the worker, the dashboard and a nightly backup, on one small server.
 # Secrets come from .env (see .env.example); POSTGRES_PASSWORD is only needed here.
 name: closing-line
 services:
