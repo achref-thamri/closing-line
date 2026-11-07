@@ -80,7 +80,7 @@ async function logConversation(): Promise<Message[]> {
     messages.push({ from: "bettor", text: "/log" });
     bot(await flow.bet(OWNER));
     await tap("Football");
-    await type("Arsenal – Chelsea");
+    await type("Arsenal v Chelsea");
     await tap("Shots on target");
     await type("Saka");
     await tap("Over 0.5");
@@ -127,7 +127,7 @@ function chat(title: string, messages: Message[]): string {
 const browser = await chromium.launch();
 const page = await browser.newPage({ deviceScaleFactor: 2 });
 
-// The top of the page: leaderboard, chart and the first bets, wide enough for every column of the table.
+// The top of the page: leaderboard, chart and the first bets. 1440 px shows every column of the table.
 await page.setViewportSize({ width: 1440, height: 1000 });
 await page.goto("http://localhost:3100");
 await page.getByTestId("bankroll-chart").locator("svg").first().waitFor();
