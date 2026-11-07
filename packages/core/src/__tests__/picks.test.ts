@@ -42,3 +42,16 @@ describe("bookName", () => {
         expect(bookName("expekt")).toBe("Expekt");
     });
 });
+
+describe("teamsOf with odd whitespace", () => {
+    it("splits across tabs and runs of spaces", () => {
+        expect(teamsOf("Bayern \t v   Arsenal")).toEqual(["Bayern", "Arsenal"]);
+        expect(teamsOf("Paris Saint-Germain  –  Lille")).toEqual(["Paris Saint-Germain", "Lille"]);
+    });
+
+    it("stays fast on a long run of spaces", () => {
+        const started = performance.now();
+        expect(teamsOf(`a${" ".repeat(50_000)}b`)).toEqual([]);
+        expect(performance.now() - started).toBeLessThan(100);
+    });
+});
