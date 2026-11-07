@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Fetch } from "../../../lib/http.ts";
 import { FootballDataClient } from "../client.ts";
 
+// Made-up data in the exact shape of a real API response (ids, prices and scores are invented).
 const recording = readFileSync(new URL("recordings/pl-matches.json", import.meta.url), "utf8");
 
 function client(body: string) {
@@ -25,8 +26,8 @@ describe("FootballDataClient", () => {
             home: ["Chelsea FC", "Chelsea"],
             away: ["Manchester United FC", "Man United"],
             status: "finished",
-            homeGoals: 2,
-            awayGoals: 0,
+            homeGoals: 3,
+            awayGoals: 2,
         });
         expect(results.find((result) => result.home.includes("Liverpool FC"))).toMatchObject({
             status: "pending",

@@ -5,6 +5,7 @@ import type { Fetch } from "../../../lib/http.ts";
 import { OutOfCreditsError } from "../../../ports/odds.ts";
 import { OddsApiClient } from "../client.ts";
 
+// Made-up data in the exact shape of a real API response (ids, prices and scores are invented).
 const recording = (name: string) => readFileSync(new URL(`recordings/${name}`, import.meta.url), "utf8");
 const now = new Date("2026-11-01T09:00:00Z");
 const credits = { "x-requests-used": "1", "x-requests-remaining": "499", "x-requests-last": "1" };
@@ -37,7 +38,7 @@ describe("OddsApiClient.odds", () => {
         expect(data).toHaveLength(2);
         const [match] = data;
         expect(match).toMatchObject({
-            id: "6a3819cdbe2ba2fe5a3d8f9b4b459965",
+            id: "fd06be97210250c718cf9ac3a61bdad0",
             league: "soccer_epl",
             homeTeam: "Liverpool",
             awayTeam: "Arsenal",
@@ -114,7 +115,7 @@ describe("OddsApiClient.events and balance", () => {
         );
         expect(data).toHaveLength(3);
         expect(data[0]).toEqual({
-            id: "6a3819cdbe2ba2fe5a3d8f9b4b459965",
+            id: "fd06be97210250c718cf9ac3a61bdad0",
             league: "soccer_epl",
             homeTeam: "Liverpool",
             awayTeam: "Arsenal",
