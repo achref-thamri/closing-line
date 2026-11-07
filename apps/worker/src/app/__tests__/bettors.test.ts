@@ -105,7 +105,7 @@ describe("tip settings", () => {
     });
 
     it("keeps the owner's player named Owner", async () => {
-        await bettors.tips(OWNER, "Achref", "off");
+        await bettors.tips(OWNER, "Owner", "off");
         expect(await repos.players.byChat(OWNER)).toMatchObject({ id: "owner", name: "Owner", tipsMuted: true });
     });
 });

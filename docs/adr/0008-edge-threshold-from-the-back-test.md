@@ -38,7 +38,8 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   2026 (1,158 of 2,304 matches in the six live leagues), and the William Hill and 1xBet columns are empty, so only
   Bet365 and bwin are left as soft books. At 2% that gives 7 bets, +1.1% average CLV. Replaying 2023/24 and 2024/25
   with the same two books gives 21 bets in 4,608 matches, +5.5% CLV: about the same rate of bets per match, so the
-  drop comes from the thinner file and says nothing about the market. Seven bets cannot move the threshold, so it stays at 2%.
+  drop comes from the thinner file and says nothing about the market. Seven bets cannot move the threshold, so it
+  stays at 2%.
 - With four soft books, the same two seasons gave 108 bets; with two, 21. Most value comes from the softer books,
   which is one more reason to add books and leagues.
 - The source is getting thinner, so later seasons will add less. The live CLV is what decides from here.
