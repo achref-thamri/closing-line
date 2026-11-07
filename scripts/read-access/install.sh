@@ -8,6 +8,8 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 key="$HOME/.ssh/hetzner_read"
+# The server address comes from the owner's `hetzner` alias, so it isn't written in the repo.
+host=$(ssh -G hetzner | awk '$1 == "hostname" { print $2 }')
 
 [[ -f $key ]] || ssh-keygen -q -t ed25519 -N "" -C "closing-line read-only" -f "$key"
 
@@ -16,7 +18,7 @@ if ! grep -q "^Host hetzner-read$" "$HOME/.ssh/config" 2>/dev/null; then
 
 # Read-only checks on Closing Line: the server only lets this key run db-read and cl-logs.
 Host hetzner-read
-  HostName 95.217.213.59
+  HostName $host
   User bot
   IdentityFile $key
   IdentitiesOnly yes

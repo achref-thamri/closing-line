@@ -48,5 +48,5 @@ the test is ever rerun.
 - The scanner, which borrows Pinnacle's price instead of competing with it, stays the automated player.
 - A model built only on goals and dates knows less than the market, which also sees lineups, injuries, shots and
   money. Beating Pinnacle would need that kind of data, most of it paid.
-- The 2025/26 files now carry Pinnacle's prices (ADR 0008 found none in them at the time), so the scanner's
-  back-test and this check can both grow with each season.
+- This check can't grow much with new seasons. The 2025/26 files have Pinnacle prices only until 8 January 2026
+  (ADR 0008) and the 2026/27 files have none (ADR 0006), so new data would have to come from another source.
