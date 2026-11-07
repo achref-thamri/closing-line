@@ -29,7 +29,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     }));
 
     return (
-        <main className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+        <main className="mx-auto max-w-[88rem] space-y-8 px-4 py-8">
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-semibold">Closing Line</h1>
