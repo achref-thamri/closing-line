@@ -99,6 +99,10 @@ export const settingsSchema = z
                 // The back-test (ADR 0008) only checked prices taken a day or two before kickoff. On 2026-11-04 the
                 // scanner tipped 22 matches up to 18 days out, edges up to 16%, which are more likely stale soft lines.
                 maxHoursToKickoff: z.int().positive().default(72),
+                // Outsiders don't beat the close: in four past seasons, tips at odds of 5+ averaged -1.6% CLV against
+                // +2.8% below 5, and the first live week agreed (-7.2%, 3 of 9). Pinnacle's early outsider prices are
+                // too rough to price an edge against (ADR 0008, 2026-11-08).
+                maxFairOdds: z.number().gt(1).default(5),
                 stake: stakeRulesSchema.prefault({}),
             })
             .prefault({}),

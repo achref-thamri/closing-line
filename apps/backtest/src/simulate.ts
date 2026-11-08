@@ -12,6 +12,8 @@ import { SOFT_BOOKS, type PastMatch, type Prices } from "./seasons.ts";
 
 export interface BacktestOptions {
     minEdge: number;
+    /** Leave out selections at these fair odds or longer, like the live scanner. */
+    maxFairOdds?: number;
     startingBankroll: number;
     stake: StakeRules;
 }
@@ -56,6 +58,7 @@ export function backtest(matches: readonly PastMatch[], options: BacktestOptions
             sharpBookmaker: "pinnacle",
             commission: {},
             minEdge: options.minEdge,
+            ...(options.maxFairOdds === undefined ? {} : { maxFairOdds: options.maxFairOdds }),
         });
         for (const value of values) {
             const stake = kellyStake(bankroll, value.netOdds, value.fairProbability, options.stake);

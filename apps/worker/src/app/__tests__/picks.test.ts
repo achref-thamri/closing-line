@@ -61,6 +61,13 @@ describe("bestPicks", () => {
         expect(text).toContain("✅ value (2%+), like the tips.");
     });
 
+    it("marks an outsider 🟡 even with a big edge, since the scanner does not tip it", async () => {
+        await priced("c".repeat(32), "Burnley", "Stoke", { pinnacle: [1.4, 4.8, 8.5], unibet_se: [1.4, 4.8, 9.5] });
+        const text = await bestPicks({ repos, config, now: () => now, refresh: () => Promise.resolve() });
+        expect(text.split("\n")[2]).toMatch(/^🟡 Stoke @ 9.50 at Unibet \(\+\d+\.\d%\)$/);
+        expect(text).toContain("or an outsider (fair odds 5+)");
+    });
+
     it("says so when nothing is above fair, or Pinnacle's price is too old", async () => {
         await priced("c".repeat(32), "Leeds", "Derby", { pinnacle: [1.8, 3.8, 4.6], nordicbet: [1.7, 3.5, 4.2] });
         expect(await bestPicks({ repos, config, now: () => now })).toMatch(/^🎯 No prices above the fair price/);
