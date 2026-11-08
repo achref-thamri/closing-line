@@ -1,51 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { fixtureNamed, matchFixture, normalizeTeam, sameTeam } from "../teams.ts";
 
-// Premier League 2026/27 as named by The Odds API and by football-data.org (name, short name), 1 November 2026.
-const ODDS_API = [
-    "Arsenal",
-    "Aston Villa",
-    "Bournemouth",
-    "Brentford",
-    "Brighton and Hove Albion",
-    "Chelsea",
-    "Coventry City",
-    "Crystal Palace",
-    "Everton",
-    "Fulham",
-    "Hull City",
-    "Ipswich Town",
-    "Leeds United",
-    "Liverpool",
-    "Manchester City",
-    "Manchester United",
-    "Newcastle United",
-    "Nottingham Forest",
-    "Sunderland",
-    "Tottenham Hotspur",
-];
-const FOOTBALL_DATA = [
-    ["Arsenal FC", "Arsenal"],
-    ["Aston Villa FC", "Aston Villa"],
-    ["Chelsea FC", "Chelsea"],
-    ["Everton FC", "Everton"],
-    ["Fulham FC", "Fulham"],
-    ["Liverpool FC", "Liverpool"],
-    ["Manchester City FC", "Man City"],
-    ["Manchester United FC", "Man United"],
-    ["Newcastle United FC", "Newcastle"],
-    ["Sunderland AFC", "Sunderland"],
-    ["Tottenham Hotspur FC", "Tottenham"],
-    ["Hull City AFC", "Hull City"],
-    ["Leeds United FC", "Leeds United"],
-    ["Ipswich Town FC", "Ipswich Town"],
-    ["Nottingham Forest FC", "Nottingham"],
-    ["Crystal Palace FC", "Crystal Palace"],
-    ["Brighton & Hove Albion FC", "Brighton Hove"],
-    ["Brentford FC", "Brentford"],
-    ["AFC Bournemouth", "Bournemouth"],
-    ["Coventry City FC", "Coventry City"],
-];
+import teamNames from "./team-names.json" with { type: "json" };
+
+// Every club in the six live leagues, 2026/27, as The Odds API names it and as football-data.org does (name, short
+// name). Taken from production fixtures and the football-data.org teams endpoint on 2026-11-09.
+const LEAGUES: Record<string, { oddsApi: string[]; footballData: string[][] }> = teamNames;
 
 describe("normalizeTeam", () => {
     it("drops filler words, accents and punctuation", () => {
@@ -56,11 +16,23 @@ describe("normalizeTeam", () => {
 });
 
 describe("sameTeam", () => {
-    it("maps every Premier League club to exactly one club in the other source", () => {
-        for (const name of ODDS_API) {
-            const matches = FOOTBALL_DATA.filter((aliases) => sameTeam(name, aliases));
+    it.each(Object.keys(LEAGUES))("pairs every %s club one-to-one with the results feed", (league) => {
+        const { oddsApi, footballData } = LEAGUES[league] ?? { oddsApi: [], footballData: [] };
+        for (const name of oddsApi) {
+            const matches = footballData.filter((aliases) => sameTeam(name, aliases));
             expect(matches, name).toHaveLength(1);
         }
+        for (const aliases of footballData) {
+            const matches = oddsApi.filter((name) => sameTeam(name, aliases));
+            expect(matches, aliases[0]).toHaveLength(1);
+        }
+    });
+
+    it("keeps clubs apart when one name sits inside another", () => {
+        expect(sameTeam("Barcelona", ["RCD Espanyol de Barcelona", "Espanyol"])).toBe(false);
+        expect(sameTeam("Inter Milan", ["AC Milan", "Milan"])).toBe(false);
+        expect(sameTeam("Paris FC", ["Paris Saint-Germain FC", "PSG"])).toBe(false);
+        expect(sameTeam("Paris Saint Germain", ["Paris FC", "Paris FC"])).toBe(false);
     });
 
     it("keeps the two Manchester clubs apart", () => {

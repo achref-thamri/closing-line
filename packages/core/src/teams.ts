@@ -16,27 +16,39 @@ export function normalizeTeam(name: string): string[] {
 }
 
 /**
- * Clubs whose names in the two feeds share no word, keyed by the odds feed's name (normalized). The Odds API says
- * "Rennes"; football-data.org says "Stade Rennais FC 1901", and Rennes v Lille went unsettled on 2026-11-08.
+ * Clubs where the usual word matching goes wrong, keyed by the odds feed's name (normalized), with the
+ * football-data.org names they must equal. "Rennes" shares no word with "Stade Rennais FC 1901" (Rennes v Lille went
+ * unsettled on 2026-11-08), and the others are contained in a second club's name: "Barcelona" in "RCD Espanyol de
+ * Barcelona", "Paris FC" in "Paris Saint-Germain FC", "Inter Milan" holds "AC Milan".
  */
-const OTHER_NAMES: Readonly<Record<string, readonly string[]>> = {
-    rennes: ["Stade Rennais"],
+const PINNED_NAMES: Readonly<Record<string, readonly string[]>> = {
+    rennes: ["Stade Rennais FC 1901", "Stade Rennais"],
+    barcelona: ["FC Barcelona", "Barça"],
+    paris: ["Paris FC"],
+    "paris saint germain": ["Paris Saint-Germain FC", "PSG"],
+    "inter milan": ["FC Internazionale Milano", "Inter"],
 };
+
+const sameWords = (a: readonly string[], b: readonly string[]) =>
+    a.length === b.length && a.every((word, i) => word === b[i]);
 
 /**
  * Whether two names mean the same club: equal once normalized, or every word of one appears in the other
- * ("Nottingham" and "Nottingham Forest FC"). Any of `aliases` (e.g. a full and a short name) may match.
+ * ("Nottingham" and "Nottingham Forest FC"). Any of `aliases` (e.g. a full and a short name) may match. A name in
+ * `PINNED_NAMES` matches only itself or its listed names.
  */
 export function sameTeam(name: string, aliases: readonly string[]): boolean {
-    const names = [name, ...(OTHER_NAMES[normalizeTeam(name).join(" ")] ?? [])];
-    return names.some((variant) => {
-        const words = normalizeTeam(variant);
-        return aliases.some((alias) => {
-            const other = normalizeTeam(alias);
-            if (words.length === 0 || other.length === 0) return false;
-            const [shorter, longer] = words.length <= other.length ? [words, other] : [other, words];
-            return shorter.every((word) => longer.includes(word));
-        });
+    const words = normalizeTeam(name);
+    const pinned = PINNED_NAMES[words.join(" ")];
+    if (pinned) {
+        const allowed = [words, ...pinned.map(normalizeTeam)];
+        return aliases.some((alias) => allowed.some((option) => sameWords(normalizeTeam(alias), option)));
+    }
+    return aliases.some((alias) => {
+        const other = normalizeTeam(alias);
+        if (words.length === 0 || other.length === 0) return false;
+        const [shorter, longer] = words.length <= other.length ? [words, other] : [other, words];
+        return shorter.every((word) => longer.includes(word));
     });
 }
 
