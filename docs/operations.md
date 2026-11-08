@@ -47,7 +47,8 @@ running on port 3100.
 Leagues, bookmakers, thresholds, stakes and the credit reserve have defaults in `packages/config/src/schema.ts`. A
 JSON file at `CONFIG_PATH` overrides any of them and leaves the rest at their defaults.
 
-The default bookmakers are the ones a bettor in Denmark can use, and money is in kroner. Somewhere else, pick up to
+The default bookmakers are the ones with a Danish betting licence, so winnings are tax-free there, and money is in
+kroner. Somewhere else, pick up to
 ten from [The Odds API's list](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html), keeping `pinnacle` as
 the fair price:
 

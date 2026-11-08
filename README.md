@@ -42,7 +42,7 @@ flowchart LR
     P --> R["Hourly<br/>Settle results"]
 ```
 
-- Each odds poll reads nine bookmakers in one call. The scanner bets on value and sends a tip with the lowest price
+- Each odds poll reads seven bookmakers in one call. The scanner bets on value and sends a tip with the lowest price
   still worth taking. If a later poll finds no bookmaker paying the fair price any more, everyone who got the tip
   hears that the price has gone.
 - Just before kickoff, every open match-result bet gets its CLV, and the benchmark places its bet.

@@ -51,20 +51,12 @@ const stakeRulesSchema = z
     }) satisfies z.ZodType<StakeRules>;
 
 /**
- * Pinnacle as the reference plus books a Danish bettor can use (2026-11-02): the friend's NordicBet and Marathonbet,
- * and Danish-facing brands. Exchanges were dropped; the friend's other books are not in The Odds API.
+ * Pinnacle as the reference, plus only books with a Danish betting licence, where winnings are tax-free. Checked
+ * against Spillemyndigheden's list on 2026-11-08: Unibet, LeoVegas, NordicBet and Betsson, 888 and Marathonbet have
+ * one. Casumo and Coolbet don't, so they were dropped. William Hill and 1xBet aren't licensed either. Other licensed
+ * brands (Bet365, bwin, Betano, Danske Spil) aren't in The Odds API.
  */
-const DEFAULT_BOOKMAKERS = [
-    "pinnacle",
-    "nordicbet",
-    "marathonbet",
-    "betsson",
-    "unibet_se",
-    "leovegas_se",
-    "sport888",
-    "casumo",
-    "coolbet",
-];
+const DEFAULT_BOOKMAKERS = ["pinnacle", "nordicbet", "marathonbet", "betsson", "unibet_se", "leovegas_se", "sport888"];
 
 /** Tunable settings with defaults (spec §2, §5, §6). Money is in kroner. `prefault` runs nested defaults too. */
 export const settingsSchema = z
