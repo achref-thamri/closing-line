@@ -7,7 +7,7 @@
         "dev": "next dev --port 3300",
         "build": "next build",
         "start": "next start",
-        "typecheck": "tsc",
+        "typecheck": "next typegen && tsc",
         "e2e": "playwright test"
     },
     "dependencies": {
