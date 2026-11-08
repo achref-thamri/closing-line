@@ -53,8 +53,6 @@ describe("parseConfig", () => {
             "unibet_se",
             "leovegas_se",
             "sport888",
-            "casumo",
-            "coolbet",
         ]);
         expect(config.sharpBookmaker).toBe("pinnacle");
         expect(config.exchangeCommission).toEqual({});
