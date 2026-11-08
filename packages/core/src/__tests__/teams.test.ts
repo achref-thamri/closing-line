@@ -68,6 +68,11 @@ describe("sameTeam", () => {
         expect(sameTeam("Manchester United", ["Manchester City FC", "Man City"])).toBe(false);
     });
 
+    it("knows clubs whose two names share no word", () => {
+        expect(sameTeam("Rennes", ["Stade Rennais FC 1901", "Stade Rennais"])).toBe(true);
+        expect(sameTeam("Rennes", ["Lille OSC", "Lille"])).toBe(false);
+    });
+
     it("never matches an empty name", () => {
         expect(sameTeam("FC", ["Arsenal FC"])).toBe(false);
         expect(sameTeam("Arsenal", [""])).toBe(false);
