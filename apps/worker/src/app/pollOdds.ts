@@ -152,6 +152,7 @@ async function scannerBets(
         sharpBookmaker: config.sharpBookmaker,
         commission: config.exchangeCommission,
         minEdge: config.scanner.minEdge,
+        maxFairOdds: config.scanner.maxFairOdds,
     });
     let placed = 0;
     let sized = 0;

@@ -70,6 +70,16 @@ describe("findValueBets", () => {
     it("never bets against the sharp bookmaker itself", () => {
         expect(findValueBets([quote("pinnacle", "away", 3.0)], fair, options)).toEqual([]);
     });
+
+    it("leaves out outsiders at the fair-odds cap or longer", () => {
+        // Fair odds 1/0.2 = 5 for the draw, 1/0.5 = 2 for home; both have 10% edge at these prices.
+        const outsider = { home: 0.5, draw: 0.2, away: 0.3 };
+        const quotes = [quote("unibet_se", "home", 2.2), quote("unibet_se", "draw", 5.5)];
+        expect(findValueBets(quotes, outsider, options).map((bet) => bet.selection)).toEqual(["home", "draw"]);
+        expect(findValueBets(quotes, outsider, { ...options, maxFairOdds: 5 }).map((bet) => bet.selection)).toEqual([
+            "home",
+        ]);
+    });
 });
 
 describe("netOdds", () => {
