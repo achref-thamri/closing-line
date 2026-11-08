@@ -27,6 +27,7 @@ interface Candidate {
     bookmaker: string;
     price: number;
     edge: number;
+    fairOdds: number;
     /** The lowest price still worth backing at the scanner's edge threshold. */
     minOdds: number;
     seenAt: Date;
@@ -74,6 +75,7 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
                 bookmaker: value.bookmaker,
                 price: value.offeredOdds,
                 edge: value.edge,
+                fairOdds: value.fairOdds,
                 minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge),
                 seenAt,
             });
@@ -92,7 +94,8 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
         return "🎯 No prices above the fair price for the coming week right now. Value is rare; try again after the next price check (match-day mornings and before kickoffs).";
     }
     const lines = picks.slice(0, options.limit ?? 8).map((pick) => {
-        const mark = pick.edge >= config.scanner.minEdge ? "✅" : "🟡";
+        const tipworthy = pick.edge >= config.scanner.minEdge && pick.fairOdds < config.scanner.maxFairOdds;
+        const mark = tipworthy ? "✅" : "🟡";
         return (
             `${mark} ${pick.team} @ ${pick.price.toFixed(2)} at ${bookName(pick.bookmaker)} (+${(pick.edge * 100).toFixed(1)}%)\n` +
             `   ${pick.fixture.homeTeam} v ${pick.fixture.awayTeam}, ${time(pick.fixture.kickoff, true)} · seen ${time(pick.seenAt, false)} · worth it at ${pick.minOdds.toFixed(2)}+`
@@ -103,6 +106,6 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
         "",
         ...lines,
         "",
-        `✅ value (${(config.scanner.minEdge * 100).toFixed(0)}%+), like the tips. 🟡 above fair but smaller: weaker, often noise. Odds move, so check the price before you bet.`,
+        `✅ value (${(config.scanner.minEdge * 100).toFixed(0)}%+), like the tips. 🟡 smaller edge, or an outsider (fair odds ${config.scanner.maxFairOdds}+): weaker, often noise. Odds move, so check the price before you bet.`,
     ].join("\n");
 }

@@ -54,15 +54,24 @@ export function netOdds(price: number, commission: number): number {
     return 1 + (price - 1) * (1 - commission);
 }
 
-/** Per selection, the bookmakers whose edge over the fair price reaches `minEdge`; the bet is at the best one. */
+/**
+ * Per selection, the bookmakers whose edge over the fair price reaches `minEdge`; the bet is at the best one.
+ * Selections whose fair odds reach `maxFairOdds` are left out.
+ */
 export function findValueBets(
     quotes: readonly PriceQuote[],
     fair: Record<Outcome, number>,
-    options: { sharpBookmaker: string; commission: Readonly<Record<string, number>>; minEdge: number },
+    options: {
+        sharpBookmaker: string;
+        commission: Readonly<Record<string, number>>;
+        minEdge: number;
+        maxFairOdds?: number;
+    },
 ): ValueBet[] {
     const bets: ValueBet[] = [];
     for (const selection of OUTCOMES) {
         const fairProbability = fair[selection];
+        if (options.maxFairOdds !== undefined && 1 / fairProbability >= options.maxFairOdds) continue;
         const offers: ValueOffer[] = [];
         for (const quote of quotes) {
             if (quote.selection !== selection || quote.bookmaker === options.sharpBookmaker) continue;

@@ -205,6 +205,18 @@ describe("pollOdds", () => {
         expect(bet?.lockedOdds).toBeCloseTo(2.71);
     });
 
+    it("sends no tip on an outsider, however big the edge", async () => {
+        const longshot: EventOdds = {
+            ...event(24 * 60),
+            // Pinnacle's fair odds here are about 1.39 / 5.0 / 9.0; Unibet's 10.0 on Arsenal is an 11% edge.
+            quotes: [...quotes("pinnacle", 1.36, 4.9, 8.6), ...quotes("unibet_se", 1.36, 4.9, 10.0)],
+        };
+        expect(await pollOdds(deps([longshot]), "soccer_epl", "scan")).toMatchObject({ scannerBets: 0 });
+        expect(messages).toEqual([]);
+        const [decision] = await repos.decisions.since(now);
+        expect(decision).toMatchObject({ outcome: "pass", reason: "no_edge" });
+    });
+
     it("records a pass and sends no tip for a match more than three days out", async () => {
         const far = event(72 * 60 + 1, quotes("unibet_se", 2.9, 3.4, 2.75));
         expect(await pollOdds(deps([far]), "soccer_epl", "scan")).toMatchObject({ scannerBets: 0 });
