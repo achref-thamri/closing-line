@@ -76,7 +76,11 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
                 price: value.offeredOdds,
                 edge: value.edge,
                 fairOdds: value.fairOdds,
-                minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge, config.scanner.minKellyFraction),
+                minOdds: minimumOdds(
+                    value.fairOdds,
+                    config.scanner.minEdge,
+                    config.scanner.minKellyFraction[value.selection],
+                ),
                 seenAt,
             });
         }

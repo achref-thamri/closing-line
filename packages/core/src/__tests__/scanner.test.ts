@@ -76,9 +76,11 @@ describe("findValueBets", () => {
         const even = { home: 0.49, draw: 0.13, away: 0.385 };
         const quotes = [quote("unibet_se", "home", 2.15), quote("unibet_se", "away", 2.73)];
         expect(findValueBets(quotes, even, options).map((bet) => bet.selection)).toEqual(["home", "away"]);
-        expect(findValueBets(quotes, even, { ...options, minKellyFraction: 0.03 }).map((bet) => bet.selection)).toEqual(
-            ["home"],
-        );
+        expect(
+            findValueBets(quotes, even, { ...options, minKellyFraction: { home: 0.03, draw: 0.03, away: 0.03 } }).map(
+                (bet) => bet.selection,
+            ),
+        ).toEqual(["home"]);
     });
 
     it("leaves out outsiders at the fair-odds cap or longer", () => {
