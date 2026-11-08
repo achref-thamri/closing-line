@@ -188,7 +188,11 @@ async function scannerBets(
             kickoff: event.kickoff,
             pick: teamOf(event, value.selection),
             fairOdds: value.fairOdds,
-            minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge, config.scanner.minKellyFraction),
+            minOdds: minimumOdds(
+                value.fairOdds,
+                config.scanner.minEdge,
+                config.scanner.minKellyFraction[value.selection],
+            ),
             offers: value.offers,
             paperStakeKr: stake,
             seenAt: deps.now(),

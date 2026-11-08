@@ -67,7 +67,7 @@ export function findValueBets(
         commission: Readonly<Record<string, number>>;
         minEdge: number;
         maxFairOdds?: number;
-        minKellyFraction?: number;
+        minKellyFraction?: Readonly<Record<Outcome, number>>;
     },
 ): ValueBet[] {
     const bets: ValueBet[] = [];
@@ -80,7 +80,7 @@ export function findValueBets(
             const net = netOdds(quote.price, options.commission[quote.bookmaker] ?? 0);
             const value = edge(net, fairProbability);
             const kelly = kellyFraction(net, fairProbability);
-            if (value >= options.minEdge && kelly >= (options.minKellyFraction ?? 0)) {
+            if (value >= options.minEdge && kelly >= (options.minKellyFraction?.[selection] ?? 0)) {
                 offers.push({ bookmaker: quote.bookmaker, offeredOdds: quote.price, netOdds: net, edge: value });
             }
         }

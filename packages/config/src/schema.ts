@@ -96,8 +96,11 @@ export const settingsSchema = z
                 // too rough to price an edge against (ADR 0008, 2026-11-08).
                 maxFairOdds: z.number().gt(1).default(5),
                 // An edge must be big enough for its odds: Kelly fraction of 2% or more. Smaller ones had no edge at
-                // Danish-licensed books, in past seasons and live (ADR 0008, 2026-11-09).
-                minKellyFraction: fraction.default(0.02),
+                // Danish-licensed books, in past seasons and live. Draws are the exception: at 1-2% they still beat
+                // the close (+1.9% CLV over 63 past tips), and at 2% almost none qualify (ADR 0008, 2026-11-09).
+                minKellyFraction: z
+                    .strictObject({ home: fraction, draw: fraction, away: fraction })
+                    .default({ home: 0.02, draw: 0.01, away: 0.02 }),
                 stake: stakeRulesSchema.prefault({}),
             })
             .prefault({}),

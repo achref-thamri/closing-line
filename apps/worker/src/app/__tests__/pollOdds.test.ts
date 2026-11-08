@@ -284,6 +284,12 @@ describe("pollOdds", () => {
         expect((await repos.decisions.since(now)).map((decision) => decision.reason)).toEqual(["no_edge"]);
     });
 
+    it("tips a draw on a smaller Kelly fraction than a home or away win", async () => {
+        // Fair draw about 3.56: 3.70 is a 3.9% edge with Kelly 1.5%, over the draw's 1% floor.
+        await pollOdds(deps([event(24 * 60, quotes("unibet_se", 2.9, 3.7, 2.45))]), "soccer_epl", "scan");
+        expect((await repos.bets.forPlayer(SCANNER)).map((bet) => bet.selection)).toEqual(["draw"]);
+    });
+
     it("raises a small Kelly stake to the minimum after the bankroll shrinks", async () => {
         const shrunk = parseConfig(
             { ODDS_API_KEY: "k", FOOTBALL_DATA_TOKEN: "t", TELEGRAM_BOT_TOKEN: "1:a", TELEGRAM_OWNER_CHAT_ID: "1" },
