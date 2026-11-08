@@ -16,16 +16,27 @@ export function normalizeTeam(name: string): string[] {
 }
 
 /**
+ * Clubs whose names in the two feeds share no word, keyed by the odds feed's name (normalized). The Odds API says
+ * "Rennes"; football-data.org says "Stade Rennais FC 1901", and Rennes v Lille went unsettled on 2026-11-08.
+ */
+const OTHER_NAMES: Readonly<Record<string, readonly string[]>> = {
+    rennes: ["Stade Rennais"],
+};
+
+/**
  * Whether two names mean the same club: equal once normalized, or every word of one appears in the other
  * ("Nottingham" and "Nottingham Forest FC"). Any of `aliases` (e.g. a full and a short name) may match.
  */
 export function sameTeam(name: string, aliases: readonly string[]): boolean {
-    const words = normalizeTeam(name);
-    return aliases.some((alias) => {
-        const other = normalizeTeam(alias);
-        if (words.length === 0 || other.length === 0) return false;
-        const [shorter, longer] = words.length <= other.length ? [words, other] : [other, words];
-        return shorter.every((word) => longer.includes(word));
+    const names = [name, ...(OTHER_NAMES[normalizeTeam(name).join(" ")] ?? [])];
+    return names.some((variant) => {
+        const words = normalizeTeam(variant);
+        return aliases.some((alias) => {
+            const other = normalizeTeam(alias);
+            if (words.length === 0 || other.length === 0) return false;
+            const [shorter, longer] = words.length <= other.length ? [words, other] : [other, words];
+            return shorter.every((word) => longer.includes(word));
+        });
     });
 }
 
