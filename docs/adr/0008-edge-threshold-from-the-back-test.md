@@ -63,3 +63,9 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   +416 kr against -866 kr. With William Hill and 1xBet in the mix the small edges were still positive, which is why
   the earlier back-tests didn't show this. Also tested and not adopted: Betfair's exchange as a tip book (+0.6%, 53%,
   17 tips in 2024/25) and as a second sharp check (no difference whether it agreed with Pinnacle).
+- Draws need only a 1% Kelly fraction (`scanner.minKellyFraction.draw`, 2026-11-09). At 2% almost no draw qualified:
+  none did in the first live week, since draw odds of 3.3-3.8 then need about a 5% edge. Over the four past seasons,
+  draws at a Kelly fraction of 1-2% averaged +1.9% CLV (±0.5, 63 tips, 65% beating the close), while home and away
+  tips in the same band averaged -1.8%. Below 1%, draws had no edge either (-0.2%). Live so far: 6 such draws, +0.5%.
+  Also tested and not adopted: the Eredivisie and Primeira Liga (7 tips each in four seasons, only 57% beating the
+  close, for about a third more credits).

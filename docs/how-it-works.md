@@ -42,7 +42,8 @@ The scanner bets when the edge is at least 2% (`minEdge`, chosen by back-testing
 [ADR 0008](adr/0008-edge-threshold-from-the-back-test.md)). Below that, price noise and stale quotes would swamp it.
 Longer odds need more: the edge must also give a Kelly fraction (section 4) of at least 2% (`minKellyFraction`). Here
 that's 2.1%, so it passes. At fair odds of 4.00 it asks for about 7%. Smaller edges at long odds didn't beat the
-closing price, in past seasons or live.
+closing price, in past seasons or live. Draws need only 1%: their fair price stays near 3.3 to 3.8 and is steadier, and
+small draw edges did beat the close. At a fair draw price of 3.50 that means 3.60 or better, about 2.6%.
 It skips outsiders whose fair odds are 5 or longer (`maxFairOdds`): in past seasons and in the first live week those
 tips lost to the closing price on average, so their edge was noise in Pinnacle's early price. It also needs a Pinnacle
 price no older than ten minutes. Otherwise it passes, and the pass is recorded with its

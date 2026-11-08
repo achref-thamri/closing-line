@@ -5,6 +5,7 @@ import {
     kellyStake,
     OUTCOMES,
     outcomeOf,
+    type Outcome,
     type PriceQuote,
     type StakeRules,
 } from "@closing-line/core";
@@ -15,7 +16,7 @@ export interface BacktestOptions {
     /** Leave out selections at these fair odds or longer, like the live scanner. */
     maxFairOdds?: number;
     /** Leave out offers whose full Kelly fraction is below this, like the live scanner. */
-    minKellyFraction?: number;
+    minKellyFraction?: Readonly<Record<Outcome, number>>;
     startingBankroll: number;
     stake: StakeRules;
 }
