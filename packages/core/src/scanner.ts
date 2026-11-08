@@ -1,5 +1,6 @@
 import { devigPower } from "./devig.ts";
 import { OUTCOMES, type Outcome } from "./settlement.ts";
+import { kellyFraction } from "./staking.ts";
 import { edge } from "./value.ts";
 
 export interface PriceQuote {
@@ -55,8 +56,8 @@ export function netOdds(price: number, commission: number): number {
 }
 
 /**
- * Per selection, the bookmakers whose edge over the fair price reaches `minEdge`; the bet is at the best one.
- * Selections whose fair odds reach `maxFairOdds` are left out.
+ * Per selection, the bookmakers whose edge reaches `minEdge` and whose Kelly fraction reaches `minKellyFraction`;
+ * the bet is at the best one. Selections whose fair odds reach `maxFairOdds` are left out.
  */
 export function findValueBets(
     quotes: readonly PriceQuote[],
@@ -66,6 +67,7 @@ export function findValueBets(
         commission: Readonly<Record<string, number>>;
         minEdge: number;
         maxFairOdds?: number;
+        minKellyFraction?: number;
     },
 ): ValueBet[] {
     const bets: ValueBet[] = [];
@@ -77,7 +79,8 @@ export function findValueBets(
             if (quote.selection !== selection || quote.bookmaker === options.sharpBookmaker) continue;
             const net = netOdds(quote.price, options.commission[quote.bookmaker] ?? 0);
             const value = edge(net, fairProbability);
-            if (value >= options.minEdge) {
+            const kelly = kellyFraction(net, fairProbability);
+            if (value >= options.minEdge && kelly >= (options.minKellyFraction ?? 0)) {
                 offers.push({ bookmaker: quote.bookmaker, offeredOdds: quote.price, netOdds: net, edge: value });
             }
         }

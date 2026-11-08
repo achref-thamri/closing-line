@@ -102,7 +102,7 @@ describe("pollOdds", () => {
             "🔎 Value bet: Arsenal @ 2.75 at Unibet\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 110 kr\n" +
                 "💡 Pinnacle, the sharpest bookmaker, prices this at 2.54 once its margin is removed. 2.75 pays 8.2% " +
                 "more than the bet is worth, so it wins money over many bets like it, not every time.\n" +
-                "Price seen 13:00. Worth it at 2.60 or better, so check your bookmaker's price first.",
+                "Price seen 13:00. Worth it at 2.63 or better, so check your bookmaker's price first.",
         ]);
     });
 
@@ -276,12 +276,27 @@ describe("pollOdds", () => {
         expect(await repos.bets.forPlayer(FAVOURITE)).toHaveLength(1);
     });
 
-    it("raises a small Kelly stake to the minimum, so the value bet is still placed and tipped", async () => {
-        // 2.62 is a 3.05% edge, enough to bet, but quarter-Kelly stakes only about 47 kr, under the 50 kr minimum.
+    it("skips an edge too small for its odds, which Kelly would not bet", async () => {
+        // 2.62 is a 3.05% edge, over the 2% threshold, but its full Kelly fraction is 1.9%, under the 2% minimum.
         await pollOdds(deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.62))]), "soccer_epl", "scan");
+        expect(await repos.bets.forPlayer(SCANNER)).toEqual([]);
+        expect(messages).toEqual([]);
+        expect((await repos.decisions.since(now)).map((decision) => decision.reason)).toEqual(["no_edge"]);
+    });
+
+    it("raises a small Kelly stake to the minimum after the bankroll shrinks", async () => {
+        const shrunk = parseConfig(
+            { ODDS_API_KEY: "k", FOOTBALL_DATA_TOKEN: "t", TELEGRAM_BOT_TOKEN: "1:a", TELEGRAM_OWNER_CHAT_ID: "1" },
+            { startingBankroll: 8_000 },
+        );
+        // 2.64 has a Kelly fraction of 2.4%: quarter-Kelly is 0.6% of 8,000 kr, 48 kr, raised to the 50 kr minimum.
+        await pollOdds(
+            { ...deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.64))]), config: shrunk },
+            "soccer_epl",
+            "scan",
+        );
         expect((await repos.bets.forPlayer(SCANNER)).map((bet) => bet.stakeOre)).toEqual([5_000]);
         expect(messages).toHaveLength(1);
-        expect((await repos.decisions.since(now)).map((decision) => decision.reason)).toEqual(["value"]);
     });
 
     it("passes when the bankroll cannot cover the minimum stake within its 2% cap", async () => {
@@ -291,7 +306,7 @@ describe("pollOdds", () => {
         );
         // 2% of 2,000 kr is 40 kr, under the 50 kr minimum.
         await pollOdds(
-            { ...deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.62))]), config: small },
+            { ...deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75))]), config: small },
             "soccer_epl",
             "scan",
         );

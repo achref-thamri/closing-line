@@ -14,6 +14,8 @@ export interface BacktestOptions {
     minEdge: number;
     /** Leave out selections at these fair odds or longer, like the live scanner. */
     maxFairOdds?: number;
+    /** Leave out offers whose full Kelly fraction is below this, like the live scanner. */
+    minKellyFraction?: number;
     startingBankroll: number;
     stake: StakeRules;
 }
@@ -59,6 +61,7 @@ export function backtest(matches: readonly PastMatch[], options: BacktestOptions
             commission: {},
             minEdge: options.minEdge,
             ...(options.maxFairOdds === undefined ? {} : { maxFairOdds: options.maxFairOdds }),
+            ...(options.minKellyFraction === undefined ? {} : { minKellyFraction: options.minKellyFraction }),
         });
         for (const value of values) {
             const stake = kellyStake(bankroll, value.netOdds, value.fairProbability, options.stake);
