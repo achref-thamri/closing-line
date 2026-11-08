@@ -10,5 +10,6 @@ dist
 playwright-report
 test-results
 
-# Written by `next dev`; not part of the project
+# Written by Next.js; not part of the project
 apps/web/AGENTS.md
+apps/web/next-env.d.ts
