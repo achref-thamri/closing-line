@@ -18,7 +18,8 @@ _The dashboard, a tip and a logged bet, all on demo data._
 ## The idea
 
 Pinnacle is the sharpest bookmaker, so its odds with its margin taken off are treated as the fair price. When
-another bookmaker pays at least 2% more than that, the scanner bets and sends a tip.
+another bookmaker pays at least 2% more than that, the scanner bets and sends a tip. It leaves outsiders (fair odds of
+5 or longer) alone, because Pinnacle's early prices on them are too rough to measure an edge against.
 
 Whether one bet wins is mostly luck, so bets are judged by closing line value (CLV): did you get a better price than
 the market's last one before kickoff? Over a few hundred bets, positive CLV is the best sign of real skill. A player
@@ -26,11 +27,11 @@ also has to beat a simple benchmark that backs the favourite in every match.
 
 [How it works](docs/how-it-works.md) follows one bet from the odds to the stake and the CLV, with real numbers.
 
-| Player        | Bets on                                                                    |
-| ------------- | -------------------------------------------------------------------------- |
-| Value scanner | Any price at least 2% above the fair price; pauses after a bad week        |
-| Favourite     | Pinnacle's favourite in every match, flat stake (the benchmark)            |
-| Bettors       | Their own real bets, logged on Telegram, from a tip or their own judgement |
+| Player        | Bets on                                                                                |
+| ------------- | -------------------------------------------------------------------------------------- |
+| Value scanner | Any price at least 2% above the fair price, fair odds under 5; pauses after a bad week |
+| Favourite     | Pinnacle's favourite in every match, flat stake (the benchmark)                        |
+| Bettors       | Their own real bets, logged on Telegram, from a tip or their own judgement             |
 
 ## What happens each day
 
