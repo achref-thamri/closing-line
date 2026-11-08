@@ -56,9 +56,9 @@ describe("bestPicks", () => {
         const lines = text.split("\n");
         expect(lines[0]).toBe("🎯 Best prices for the coming week:");
         expect(lines[2]).toMatch(/^✅ Watford @ 3.30 at Unibet \(\+\d+\.\d%\)$/);
-        expect(lines[3]).toBe("   Hull City v Watford, Sat 16:00 · seen 09:00 · worth it at 3.18+");
+        expect(lines[3]).toBe("   Hull City v Watford, Sat 16:00 · seen 09:00 · worth it at 3.26+");
         expect(lines[4]).toMatch(/^🟡 Leeds @ 1.86 at NordicBet \(\+[01]\.\d%\)$/);
-        expect(text).toContain("✅ value (2%+), like the tips.");
+        expect(text).toContain('✅ at or above "worth it at", like the tips.');
     });
 
     it("marks an outsider 🟡 even with a big edge, since the scanner does not tip it", async () => {

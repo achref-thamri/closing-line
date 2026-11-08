@@ -153,6 +153,7 @@ async function scannerBets(
         commission: config.exchangeCommission,
         minEdge: config.scanner.minEdge,
         maxFairOdds: config.scanner.maxFairOdds,
+        minKellyFraction: config.scanner.minKellyFraction,
     });
     let placed = 0;
     let sized = 0;
@@ -187,7 +188,7 @@ async function scannerBets(
             kickoff: event.kickoff,
             pick: teamOf(event, value.selection),
             fairOdds: value.fairOdds,
-            minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge),
+            minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge, config.scanner.minKellyFraction),
             offers: value.offers,
             paperStakeKr: stake,
             seenAt: deps.now(),

@@ -55,3 +55,11 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   beating the close. Pinnacle's early outsider prices move too much to price an edge against. The quarter-Kelly
   back-test hardly ever bet these (the stake rounds to zero), so its tables don't change; the live scanner raises
   such stakes to the minimum (#89), which is how outsiders got tipped.
+- Since 2026-11-09 a tip also needs a full Kelly fraction of at least 2% (`scanner.minKellyFraction`), so longer odds
+  need a bigger edge. Before, #89 raised any stake Kelly put under the 50 kr minimum up to 50 kr, so every 2% edge was
+  tipped. With Bet365 and bwin as stand-ins for the Danish-licensed books, over 2021/22 to 2024/25 (fair odds under
+  5): tips Kelly would bet averaged +5.1% CLV, 91% beating the close (35 tips); the ones only placed at the minimum
+  averaged -0.3%, 54% (94 tips). Live in the first week: +4.4% and 76% (29) against -0.8% and 58% (33), and
+  +416 kr against -866 kr. With William Hill and 1xBet in the mix the small edges were still positive, which is why
+  the earlier back-tests didn't show this. Also tested and not adopted: Betfair's exchange as a tip book (+0.6%, 53%,
+  17 tips in 2024/25) and as a second sharp check (no difference whether it agreed with Pinnacle).

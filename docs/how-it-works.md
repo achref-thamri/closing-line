@@ -40,6 +40,9 @@ edge = offered odds × fair probability − 1 = 3.10 × 33.7% − 1 = **+4.4%**
 
 The scanner bets when the edge is at least 2% (`minEdge`, chosen by back-testing past seasons:
 [ADR 0008](adr/0008-edge-threshold-from-the-back-test.md)). Below that, price noise and stale quotes would swamp it.
+Longer odds need more: the edge must also give a Kelly fraction (section 4) of at least 2% (`minKellyFraction`). Here
+that's 2.1%, so it passes. At fair odds of 4.00 it asks for about 7%. Smaller edges at long odds didn't beat the
+closing price, in past seasons or live.
 It skips outsiders whose fair odds are 5 or longer (`maxFairOdds`): in past seasons and in the first live week those
 tips lost to the closing price on average, so their edge was noise in Pinnacle's early price. It also needs a Pinnacle
 price no older than ten minutes. Otherwise it passes, and the pass is recorded with its
@@ -53,9 +56,8 @@ hundreds of bets like it, the returns beat the stakes.
 Kelly says how much of a bankroll to stake to grow it fastest without going broke: edge / (odds − 1), here
 4.4% / 2.10 = 2.1%. Full Kelly swings too hard when the fair probabilities are even slightly off, so the scanner
 stakes a quarter of it, never more than 2% of its bankroll, in steps of 10 kr with a 50 kr minimum
-(`kellyStake`). On 10,000 kr that is 50 kr here. When a quarter of Kelly comes to less than 50 kr, which happens
-with small edges at longer odds, the scanner stakes 50 kr anyway (`scannerStake`), so every value bet it finds is
-placed and tipped.
+(`kellyStake`). On 10,000 kr that is 50 kr here. If the bankroll shrinks and a quarter of Kelly comes to less than
+50 kr, the scanner stakes 50 kr anyway (`scannerStake`), so every bet that passes section 3 is placed and tipped.
 
 ## 5. Judge it by the closing line, not the result
 

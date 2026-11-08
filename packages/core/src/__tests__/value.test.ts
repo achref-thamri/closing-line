@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { kellyFraction } from "../staking.ts";
 import { closingLineValue, edge, minimumOdds, tipLifetime } from "../value.ts";
 
 describe("edge", () => {
@@ -18,6 +19,16 @@ describe("minimumOdds", () => {
 
     it("keeps an exact price as it is", () => {
         expect(minimumOdds(2, 0.05)).toBe(2.1);
+    });
+
+    it("asks for more edge at longer odds when Kelly sets a floor", () => {
+        // Kelly's 2% floor binds above the 2% edge at both prices, and much harder at 4.0 than at 2.0.
+        expect(minimumOdds(2, 0.02, 0.02)).toBe(2.05);
+        expect(minimumOdds(4, 0.02, 0.02)).toBe(4.27);
+        expect(kellyFraction(4.27, 1 / 4)).toBeGreaterThanOrEqual(0.02);
+        expect(kellyFraction(4.26, 1 / 4)).toBeLessThan(0.02);
+        // At short odds the edge rule is the larger one.
+        expect(minimumOdds(1.2, 0.02, 0.02)).toBe(minimumOdds(1.2, 0.02));
     });
 });
 

@@ -4,11 +4,14 @@ export function edge(offeredOdds: number, fairProbability: number): number {
 }
 
 /**
- * The lowest odds still worth backing at `minEdge` over the fair odds, rounded up to the next 0.01 so that any
- * price at or above it clears the edge.
+ * The lowest odds that pass both rules, rounded up to the next 0.01: `minEdge` over the fair odds, and a Kelly
+ * fraction of `minKellyFraction` (Kelly reaches k from odds (1 - k) / (p - k), so longer odds need more edge).
  */
-export function minimumOdds(fairOdds: number, minEdge: number): number {
-    return Math.ceil(fairOdds * (1 + minEdge) * 100 - 1e-9) / 100;
+export function minimumOdds(fairOdds: number, minEdge: number, minKellyFraction = 0): number {
+    const p = 1 / fairOdds;
+    const byEdge = fairOdds * (1 + minEdge);
+    const byKelly = (1 - minKellyFraction) / (p - minKellyFraction);
+    return Math.ceil(Math.max(byEdge, byKelly) * 100 - 1e-9) / 100;
 }
 
 /** Closing line value: how much better the locked odds were than the fair closing odds. */

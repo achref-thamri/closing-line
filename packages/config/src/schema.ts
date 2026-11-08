@@ -95,6 +95,9 @@ export const settingsSchema = z
                 // +2.8% below 5, and the first live week agreed (-7.2%, 3 of 9). Pinnacle's early outsider prices are
                 // too rough to price an edge against (ADR 0008, 2026-11-08).
                 maxFairOdds: z.number().gt(1).default(5),
+                // An edge must be big enough for its odds: Kelly fraction of 2% or more. Smaller ones had no edge at
+                // Danish-licensed books, in past seasons and live (ADR 0008, 2026-11-09).
+                minKellyFraction: fraction.default(0.02),
                 stake: stakeRulesSchema.prefault({}),
             })
             .prefault({}),

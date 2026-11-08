@@ -71,6 +71,16 @@ describe("findValueBets", () => {
         expect(findValueBets([quote("pinnacle", "away", 3.0)], fair, options)).toEqual([]);
     });
 
+    it("leaves out offers whose Kelly fraction is under the floor", () => {
+        // Both are about 5% edges; at 2.15 Kelly is 4.7%, at 2.73 only 2.9%. A 3% floor keeps the first.
+        const even = { home: 0.49, draw: 0.13, away: 0.385 };
+        const quotes = [quote("unibet_se", "home", 2.15), quote("unibet_se", "away", 2.73)];
+        expect(findValueBets(quotes, even, options).map((bet) => bet.selection)).toEqual(["home", "away"]);
+        expect(findValueBets(quotes, even, { ...options, minKellyFraction: 0.03 }).map((bet) => bet.selection)).toEqual(
+            ["home"],
+        );
+    });
+
     it("leaves out outsiders at the fair-odds cap or longer", () => {
         // Fair odds 1/0.2 = 5 for the draw, 1/0.5 = 2 for home; both have 10% edge at these prices.
         const outsider = { home: 0.5, draw: 0.2, away: 0.3 };

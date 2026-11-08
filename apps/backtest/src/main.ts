@@ -26,6 +26,7 @@ const options = {
     startingBankroll: settings.startingBankroll,
     stake: settings.scanner.stake,
     ...(maxOdds > 0 ? { maxFairOdds: maxOdds } : {}),
+    minKellyFraction: settings.scanner.minKellyFraction,
 };
 const pct = (value: number | undefined) => (value === undefined ? "–" : `${(value * 100).toFixed(1)}%`);
 

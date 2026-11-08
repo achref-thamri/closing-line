@@ -76,7 +76,7 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
                 price: value.offeredOdds,
                 edge: value.edge,
                 fairOdds: value.fairOdds,
-                minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge),
+                minOdds: minimumOdds(value.fairOdds, config.scanner.minEdge, config.scanner.minKellyFraction),
                 seenAt,
             });
         }
@@ -94,7 +94,7 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
         return "🎯 No prices above the fair price for the coming week right now. Value is rare; try again after the next price check (match-day mornings and before kickoffs).";
     }
     const lines = picks.slice(0, options.limit ?? 8).map((pick) => {
-        const tipworthy = pick.edge >= config.scanner.minEdge && pick.fairOdds < config.scanner.maxFairOdds;
+        const tipworthy = pick.price >= pick.minOdds && pick.fairOdds < config.scanner.maxFairOdds;
         const mark = tipworthy ? "✅" : "🟡";
         return (
             `${mark} ${pick.team} @ ${pick.price.toFixed(2)} at ${bookName(pick.bookmaker)} (+${(pick.edge * 100).toFixed(1)}%)\n` +
@@ -106,6 +106,6 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
         "",
         ...lines,
         "",
-        `✅ value (${(config.scanner.minEdge * 100).toFixed(0)}%+), like the tips. 🟡 smaller edge, or an outsider (fair odds ${config.scanner.maxFairOdds}+): weaker, often noise. Odds move, so check the price before you bet.`,
+        `✅ at or above "worth it at", like the tips. 🟡 below it, or an outsider (fair odds ${config.scanner.maxFairOdds}+): weaker, often noise. Odds move, so check the price before you bet.`,
     ].join("\n");
 }
