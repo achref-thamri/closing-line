@@ -100,6 +100,41 @@ describe("OddsApiClient.odds", () => {
         ]);
     });
 
+    it("skips a suspended market, priced at 1 or less, instead of failing the call", async () => {
+        const event = {
+            id: "b".repeat(32),
+            sport_key: "soccer_germany_bundesliga",
+            commence_time: "2026-11-08T18:30:00Z",
+            home_team: "Mainz",
+            away_team: "Freiburg",
+            bookmakers: [
+                {
+                    key: "pinnacle",
+                    last_update: "2026-11-08T17:00:00Z",
+                    markets: [{ key: "h2h", outcomes: [{ name: "Mainz", price: 2.6 }] }],
+                },
+                {
+                    key: "betfair_ex_eu",
+                    last_update: "2026-11-08T17:00:00Z",
+                    markets: [
+                        {
+                            key: "h2h",
+                            outcomes: [
+                                { name: "Mainz", price: 1 },
+                                { name: "Freiburg", price: 2.9 },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        const { data } = await client(fakeFetch(json(JSON.stringify([event])))).odds("soccer_germany_bundesliga", [
+            "pinnacle",
+            "betfair_ex_eu",
+        ]);
+        expect(data[0]?.quotes.map((q) => [q.bookmaker, q.price])).toEqual([["pinnacle", 2.6]]);
+    });
+
     it("refuses more than ten bookmakers, which would cost double", async () => {
         const books = Array.from({ length: 11 }, (_, i) => `book${i}`);
         await expect(client(fakeFetch()).odds("soccer_epl", books)).rejects.toThrow(RangeError);

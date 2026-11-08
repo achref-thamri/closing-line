@@ -35,7 +35,9 @@ const oddsSchema = z.array(
                     z.object({
                         key: z.string(),
                         last_update: z.iso.datetime().optional(),
-                        outcomes: z.array(z.object({ name: z.string(), price: z.number().gt(1) })),
+                        // Not .gt(1): a bookmaker sometimes sends 1.0 for a suspended market, and one bad price must not
+                        // throw away the whole league. odds() drops such markets instead.
+                        outcomes: z.array(z.object({ name: z.string(), price: z.number() })),
                     }),
                 ),
             }),
@@ -82,7 +84,8 @@ export class OddsApiClient implements OddsSource {
                 ...toEventInfo(event),
                 quotes: event.bookmakers.flatMap((bookmaker) =>
                     bookmaker.markets
-                        .filter((market) => market.key === "h2h")
+                        // A price of 1 or less means the market is suspended, so its other prices are stale too.
+                        .filter((market) => market.key === "h2h" && market.outcomes.every((o) => o.price > 1))
                         .flatMap((market) =>
                             market.outcomes.flatMap((outcome): Quote[] => {
                                 const selection = selectionOf(outcome.name, event);
