@@ -40,7 +40,9 @@ edge = offered odds × fair probability − 1 = 3.10 × 33.7% − 1 = **+4.4%**
 
 The scanner bets when the edge is at least 2% (`minEdge`, chosen by back-testing past seasons:
 [ADR 0008](adr/0008-edge-threshold-from-the-back-test.md)). Below that, price noise and stale quotes would swamp it.
-It also needs a Pinnacle price no older than ten minutes. Otherwise it passes, and the pass is recorded with its
+It skips outsiders whose fair odds are 5 or longer (`maxFairOdds`): in past seasons and in the first live week those
+tips lost to the closing price on average, so their edge was noise in Pinnacle's early price. It also needs a Pinnacle
+price no older than ten minutes. Otherwise it passes, and the pass is recorded with its
 reason ([ADR 0010](adr/0010-record-every-decision.md)).
 
 Value does not mean the bet will win. The away side still loses about two times in three. It means that over
