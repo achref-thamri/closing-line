@@ -136,6 +136,7 @@ const PASS_REASONS: Record<string, string> = {
     paused: "scanner paused",
     already_bet: "already bet",
     too_early: "too far from kickoff",
+    too_late: "too close to kickoff",
 };
 
 /**

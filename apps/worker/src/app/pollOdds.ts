@@ -110,6 +110,10 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
         if (minutes > config.scanner.maxHoursToKickoff * 60) {
             // Still recorded with the best price, so the report can show what the scanner left alone.
             reason = "too_early";
+        } else if (closing) {
+            // This poll also records the closing price, so a bet placed now would have its own edge as its CLV. A
+            // tip minutes before kickoff is too late to act on anyway.
+            reason = "too_late";
         } else if (scanner) {
             const bets = await scannerBets(deps, event, fair, scanner);
             report.scannerBets += bets.placed;

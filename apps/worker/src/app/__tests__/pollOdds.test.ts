@@ -228,6 +228,17 @@ describe("pollOdds", () => {
         expect(await pollOdds(deps([far]), "soccer_epl", "scan")).toMatchObject({ scannerBets: 1 });
     });
 
+    it("records a pass and sends no tip in the closing window, where the bet's CLV would be its own edge", async () => {
+        const soon = event(config.closingWindowMinutes, quotes("unibet_se", 2.9, 3.4, 2.75));
+        expect(await pollOdds(deps([soon]), "soccer_epl", "closing")).toMatchObject({
+            scannerBets: 0,
+            favouriteBets: 1,
+        });
+        expect(messages).toEqual([]);
+        const [decision] = await repos.decisions.since(now);
+        expect(decision).toMatchObject({ outcome: "pass", reason: "too_late", bestBookmaker: "unibet_se" });
+    });
+
     it("gives closing prices to match-result bets only", async () => {
         await repos.fixtures.upsert([event(30)]);
         await repos.bets.place({
