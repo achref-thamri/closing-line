@@ -10,7 +10,7 @@ APP_DIR="$HOME/closing-line"
 SERVICES=(worker web)
 
 # A restart costs at most a minute of ticks; job windows are wider, so no deploy window is needed.
-# The lock is shared with the trading bot, so the two never build at the same time.
+# The lock is shared with Next Open, so the two never build at the same time.
 exec 9>"$HOME/.deploy.lock"
 flock -n 9 || { echo "another deploy is running" >&2; exit 75; }
 
