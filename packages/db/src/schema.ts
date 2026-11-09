@@ -38,6 +38,7 @@ export const decisionReason = pgEnum("decision_reason", [
     "paused",
     "already_bet",
     "too_early",
+    "too_late",
 ]);
 /** What a Telegram chat is in the middle of: entering a bet, waiting to be let in, or giving a cash-out amount. */
 export const chatSessionKind = pgEnum("chat_session_kind", ["bet_draft", "join_request", "cashout"]);

@@ -46,7 +46,8 @@ flowchart LR
 - Each odds poll reads seven bookmakers in one call. The scanner bets on value and sends a tip with the lowest price
   still worth taking. If a later poll finds no bookmaker paying the fair price any more, everyone who got the tip
   hears that the price has gone.
-- Just before kickoff, every open match-result bet gets its CLV, and the benchmark places its bet.
+- Just before kickoff, every open match-result bet gets its CLV, and the benchmark places its bet. The scanner
+  doesn't bet in that poll: the price it would bet at is the closing price.
 - Finished matches settle within the hour.
 
 ## On Telegram

@@ -19,5 +19,8 @@ are stored as final (`closing_provisional = false`); the column stays for a bett
 
 - Value and CLV are measured against the same reference, Pinnacle, with no second set of team names to match.
 - CLV is known minutes before kickoff instead of days later, and costs no extra credits.
+- The scanner doesn't bet in that last poll (since 2026-11-09). A bet placed there was measured against the price
+  that found it, so its CLV was just its edge: 10 bets in the first week did that, lifting the scanner's CLV from
+  +1.3% to +1.6%. Their CLV was cleared (migration 0018); such matches are now `too_late` passes.
 - The last 2–15 minutes of market movement are missed. In big leagues prices move little then; this can be
   measured later against the exchange closing prices in the CSV, which stay useful as history for a model.
