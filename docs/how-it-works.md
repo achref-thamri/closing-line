@@ -64,7 +64,8 @@ stakes a quarter of it, never more than 2% of its bankroll, in steps of 10 kr wi
 
 Fifteen minutes before kickoff the scanner reads Pinnacle again. By then team news is in and the professional money
 has moved the price. Say Pinnacle now has 2.68 / 3.40 / 2.82: the away side has been backed. With the margin
-removed, its fair odds are now 2.88.
+removed, its fair odds are now 2.88. The scanner doesn't bet in this poll, since a bet taken at the closing price
+can't beat it.
 
 closing line value (CLV) = odds taken / fair closing odds − 1 = 3.10 / 2.88 − 1 = **+7.6%**
 
