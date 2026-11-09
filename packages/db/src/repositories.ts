@@ -260,8 +260,6 @@ export function createRepositories(db: Database) {
             forPlayer(playerId: string): Promise<Bet[]> {
                 return db.select().from(bets).where(eq(bets.playerId, playerId)).orderBy(bets.createdAt);
             },
-            /** Records closing odds and CLV; `provisional` marks values a better closing source may replace later. */
-            /** Marks a scanner tip whose price has gone, so it is announced once. */
             /** Marks a tip's price as gone; false when it was already marked, so two polls cannot both alert. */
             async markPriceGone(id: string, at: Date): Promise<boolean> {
                 const rows = await db
@@ -271,6 +269,7 @@ export function createRepositories(db: Database) {
                     .returning({ id: bets.id });
                 return rows.length > 0;
             },
+            /** Records closing odds and CLV; `provisional` marks values a better closing source may replace later. */
             async setClosing(
                 id: string,
                 closing: { fairOdds: number; clv: number; provisional: boolean },
@@ -375,8 +374,8 @@ export function createRepositories(db: Database) {
                     .where(and(eq(bets.id, id), eq(bets.status, "cashed_out")));
             },
             /**
-             * Settles an open bet once; false when it was already settled. A cash-out also records the offer, the
-             * price it implies and that price's move as CLV.
+             * Settles an open bet once; false when it was already settled. A cash-out also records the offer and the
+             * price it implies; its price move comes from `impliedCurrentOdds`, not `clv`.
              */
             async settle(id: string, settlement: Settlement): Promise<boolean> {
                 const rows = await db
