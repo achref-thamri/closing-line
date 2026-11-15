@@ -74,6 +74,12 @@ export function compose(options: {
     const tip = createTipSender(tipOptions);
     const priceGone = createPriceGoneSender(tipOptions);
     const pollDeps = { source: odds, guard, repos, config, now, notify, tip, priceGone };
+    // Scores settle bets, so they spend at closing priority: past the daily allowance, never into the reserve.
+    const scores = async (league: string) => {
+        const spent = await guard.spend(2, "closing", () => odds.scores(league));
+        if (!spent.ok) logger.warn({ league, reason: spent.reason }, "scores skipped");
+        return spent.ok ? spent.data : undefined;
+    };
 
     const handlers: JobHandlers = {
         sync: async () => ({
@@ -83,7 +89,7 @@ export function compose(options: {
         morning_poll: async (job) => pollOutcome(await pollOdds(pollDeps, leagueOf(job.league), "scan")),
         prekickoff_poll: async (job) => pollOutcome(await pollOdds(pollDeps, leagueOf(job.league), "closing")),
         settle: async () => {
-            const report = await settleBets({ results, repos, config, now, notify });
+            const report = await settleBets({ results, scores, repos, config, now, notify });
             if (report.unmatched.length > 0)
                 logger.warn({ unmatched: report.unmatched }, "fixtures without a result yet");
             return { status: "succeeded", message: `${report.fixtures} fixtures, ${report.settledBets} bets settled` };

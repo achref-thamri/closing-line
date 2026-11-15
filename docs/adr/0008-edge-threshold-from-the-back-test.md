@@ -69,3 +69,17 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   tips in the same band averaged -1.8%. Below 1%, draws had no edge either (-0.2%). Live so far: 6 such draws, +0.5%.
   Also tested and not adopted: the Eredivisie and Primeira Liga (7 tips each in four seasons, only 57% beating the
   close, for about a third more credits).
+- Serie B added on 2026-11-15, after the owner asked for more tips. The same back-test on 2023/24 and 2024/25 at 2%:
+
+    | League                         | Bets | Average CLV | Beat the closing price |
+    | ------------------------------ | ---- | ----------- | ---------------------- |
+    | Serie B                        | 46   | +2.9%       | 72%                    |
+    | Segunda División               | 37   | +1.1%       | 60%                    |
+    | 2. Bundesliga                  | 5    | +6.3%       | 80%                    |
+    | Ligue 2                        | 13   | -0.8%       | 54%                    |
+    | Championship (live, for scale) | 12   | +4.5%       | 83%                    |
+
+    Serie B gives the most bets with a clear edge. Segunda División's edge is too thin to be sure of, the 2. Bundesliga
+    gives too few bets to matter, and Ligue 2 has none. football-data.org's free plan doesn't cover Serie B, so it
+    settles from The Odds API's scores, once a day for 2 credits. Polls and scores together should cost roughly 90
+    credits a month, on top of about 290 for the other six leagues.

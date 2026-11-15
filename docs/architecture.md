@@ -43,6 +43,11 @@ The Odds API's free plan has 500 credits a month. Every paid call goes through a
 the days left, keeps a reserve, warns at 70% and 90%, and pauses when they run out
 ([ADR 0004](adr/0004-credit-guard.md)).
 
+Results come from football-data.org for free. Its free plan has no Serie B, so a league without a
+`footballDataCode` settles from The Odds API's scores instead: one call a day in the 22:00 UTC settle run, 2 credits,
+covering the last three days. When the guard refuses that call, the league's matches stay open until the next day
+rather than being voided.
+
 ## Data
 
 The database refuses data that shouldn't exist: automated players get one bet per selection (a unique index), only

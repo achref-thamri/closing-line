@@ -12,6 +12,7 @@ import {
     type Priced,
     type Quote,
 } from "../../ports/odds.ts";
+import type { MatchResultInfo } from "../../ports/results.ts";
 
 const BASE_URL = "https://api.the-odds-api.com/v4";
 /** Each call names at most ten bookmakers, which costs one credit per market. */
@@ -44,6 +45,16 @@ const oddsSchema = z.array(
         ),
     }),
 );
+
+const scoresSchema = z.array(
+    eventSchema.extend({
+        completed: z.boolean(),
+        scores: z.array(z.object({ name: z.string(), score: z.string() })).nullable(),
+    }),
+);
+
+/** Scores reach back this many days (the most the API allows); asking for completed games costs 2 credits. */
+const SCORES_DAYS_FROM = 3;
 
 export interface OddsApiOptions {
     apiKey: string;
@@ -103,6 +114,37 @@ export class OddsApiClient implements OddsSource {
                         ),
                 ),
             })),
+            balance,
+        };
+    }
+
+    /**
+     * Scores of the league's games from the last three days, for leagues without free results elsewhere. League
+     * matches have no extra time, so the final score is the regular-time score that 1X2 bets settle on.
+     */
+    async scores(league: string): Promise<Priced<MatchResultInfo[]>> {
+        const { data, balance } = await this.get(`/sports/${league}/scores`, scoresSchema, "scores", {
+            daysFrom: String(SCORES_DAYS_FROM),
+        });
+        return {
+            data: data.map((event): MatchResultInfo => {
+                const goals = (team: string) => {
+                    const score = event.scores?.find((s) => s.name === team)?.score;
+                    const value = score === undefined ? Number.NaN : Number(score);
+                    return Number.isInteger(value) ? value : null;
+                };
+                const homeGoals = goals(event.home_team);
+                const awayGoals = goals(event.away_team);
+                const finished = event.completed && homeGoals !== null && awayGoals !== null;
+                return {
+                    kickoff: new Date(event.commence_time),
+                    home: [event.home_team],
+                    away: [event.away_team],
+                    status: finished ? "finished" : "pending",
+                    homeGoals: finished ? homeGoals : null,
+                    awayGoals: finished ? awayGoals : null,
+                };
+            }),
             balance,
         };
     }

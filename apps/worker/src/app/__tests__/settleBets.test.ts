@@ -56,11 +56,17 @@ const finished = (home: string[], away: string[], homeGoals: number, awayGoals: 
     awayGoals,
 });
 
-function deps(results: MatchResultInfo[]): SettleBetsDeps & { fetchResults: ReturnType<typeof vi.fn> } {
+function deps(
+    results: MatchResultInfo[],
+    scores: MatchResultInfo[] | "refused" = [],
+): SettleBetsDeps & { fetchResults: ReturnType<typeof vi.fn>; fetchScores: ReturnType<typeof vi.fn> } {
     const fetchResults = vi.fn(() => Promise.resolve(results));
+    const fetchScores = vi.fn(() => Promise.resolve(scores === "refused" ? undefined : scores));
     return {
         fetchResults,
+        fetchScores,
         results: { results: fetchResults },
+        scores: fetchScores,
         repos,
         config,
         now: () => now,
@@ -82,6 +88,44 @@ async function bet(playerId: string, fixtureId: string, selection: string, locke
         bookmaker: "unibet_se",
     });
 }
+
+describe("settleBets for a league without football-data.org results", () => {
+    const serieB = { id: id("c"), league: "soccer_italy_serie_b", homeTeam: "Palermo", awayTeam: "Bari", kickoff };
+    const score = (homeGoals: number, awayGoals: number): MatchResultInfo => ({
+        ...finished(["Palermo"], ["Bari"], homeGoals, awayGoals),
+    });
+
+    beforeEach(async () => {
+        await repos.fixtures.upsert([serieB]);
+    });
+
+    it("settles from The Odds API's scores in the 22:00 UTC run", async () => {
+        now = new Date("2026-10-31T22:15:00Z");
+        await bet(SCANNER, id("c"), "away", 3.2);
+        const run = deps([], [score(0, 1)]);
+
+        expect(await settleBets(run)).toMatchObject({ settledBets: 1 });
+        expect(run.fetchScores).toHaveBeenCalledExactlyOnceWith("soccer_italy_serie_b");
+        expect(await repos.bets.forPlayer(SCANNER)).toMatchObject([{ status: "won", profitOre: 22_000 }]);
+    });
+
+    it("asks for scores only once a day, in the 22:00 UTC run", async () => {
+        const run = deps([]);
+        await settleBets(run);
+        expect(run.fetchScores).not.toHaveBeenCalled();
+        expect(await repos.fixtures.get(id("c"))).toMatchObject({ status: "scheduled" });
+    });
+
+    it("keeps an overdue match open when the credit guard refuses the call", async () => {
+        now = new Date("2026-11-03T22:15:00Z");
+        await bet(SCANNER, id("c"), "away", 3.2);
+
+        await settleBets(deps([], "refused"));
+
+        expect(await repos.fixtures.get(id("c"))).toMatchObject({ status: "scheduled" });
+        expect(await repos.bets.forPlayer(SCANNER)).toMatchObject([{ status: "open" }]);
+    });
+});
 
 describe("settleBets", () => {
     it("settles bets by the real score and reports them", async () => {

@@ -1,7 +1,7 @@
 import type { Config } from "@closing-line/config";
 import { matchFixture, settle1x2, toOutcome } from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
-import type { ResultsSource } from "../ports/results.ts";
+import type { MatchResultInfo, ResultsSource } from "../ports/results.ts";
 
 const HOUR_MS = 3_600_000;
 /** A match is over (with stoppage time and a margin) this long after kickoff. */
@@ -11,9 +11,16 @@ const VOID_AFTER_MS = 48 * HOUR_MS;
 /** Look back this far for fixtures still waiting for a result. */
 const LOOKBACK_MS = 7 * 24 * HOUR_MS;
 const KICKOFF_TOLERANCE_MS = 3 * HOUR_MS;
+/**
+ * Leagues without a football-data.org code settle from The Odds API's scores, which cost credits, so they are
+ * asked once a day, in the hourly run at 22:xx UTC, after the evening matches (the latest kick off by 20:45 UTC).
+ */
+const SCORES_HOUR_UTC = 22;
 
 export interface SettleBetsDeps {
     results: ResultsSource;
+    /** Recent scores of a league from The Odds API; undefined when the credit guard says no. */
+    scores: (league: string) => Promise<MatchResultInfo[] | undefined>;
     repos: Pick<Repositories, "fixtures" | "bets" | "players">;
     config: Pick<Config, "leagues">;
     now: () => Date;
@@ -45,14 +52,23 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
 
     for (const league of deps.config.leagues) {
         const fixtures = due.filter((fixture) => fixture.league === league.oddsApiKey);
-        if (fixtures.length === 0 || !league.footballDataCode) continue;
+        if (fixtures.length === 0) continue;
 
-        const kickoffs = fixtures.map((fixture) => fixture.kickoff.getTime());
-        const results = await deps.results.results(
-            league.footballDataCode,
-            new Date(Math.min(...kickoffs) - 24 * HOUR_MS),
-            new Date(Math.max(...kickoffs) + 24 * HOUR_MS),
-        );
+        let results: MatchResultInfo[];
+        if (league.footballDataCode) {
+            const kickoffs = fixtures.map((fixture) => fixture.kickoff.getTime());
+            results = await deps.results.results(
+                league.footballDataCode,
+                new Date(Math.min(...kickoffs) - 24 * HOUR_MS),
+                new Date(Math.max(...kickoffs) + 24 * HOUR_MS),
+            );
+        } else {
+            if (now.getUTCHours() !== SCORES_HOUR_UTC) continue;
+            const scores = await deps.scores(league.oddsApiKey);
+            // No credits: try again tomorrow rather than voiding bets for want of a result.
+            if (!scores) continue;
+            results = scores;
+        }
 
         for (const fixture of fixtures) {
             const result = matchFixture(fixture, results, KICKOFF_TOLERANCE_MS);
