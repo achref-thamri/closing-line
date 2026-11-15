@@ -83,3 +83,20 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
     gives too few bets to matter, and Ligue 2 has none. football-data.org's free plan doesn't cover Serie B, so it
     settles from The Odds API's scores, once a day for 2 credits. Polls and scores together should cost roughly 90
     credits a month, on top of about 290 for the other six leagues.
+
+- Belgian Pro League added the same day, after back-testing six more leagues on 2023/24 and 2024/25 at 2%:
+
+    | League               | Bets | Average CLV | Beat the closing price |
+    | -------------------- | ---- | ----------- | ---------------------- |
+    | Belgian Pro League   | 24   | +3.5%       | 75%                    |
+    | Greek Super League   | 16   | +1.8%       | 63%                    |
+    | Turkish Süper Lig    | 28   | +0.1%       | 57%                    |
+    | League Two           | 15   | +2.1%       | 60%                    |
+    | Scottish Premiership | 6    | +3.8%       | 67%                    |
+    | League One           | 5    | -5.8%       | 20%                    |
+
+    Belgium is the only one with a clear edge in both seasons (+3.8% and +3.3%). It's only about one tip a month, but
+    it costs nothing extra: Pinnacle and all six Danish-licensed books priced every match in a check on 2026-11-15, and
+    polls plus scores (no free football-data.org results here either) should take roughly 50 credits a month, about
+    430 in all. Greece and League Two are too thin to trust, Turkey has no edge, and Scotland and League One give too
+    few bets.
