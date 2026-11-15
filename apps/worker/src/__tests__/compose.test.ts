@@ -82,12 +82,13 @@ describe("compose", () => {
             "soccer_spain_la_liga",
             "soccer_italy_serie_a",
             "soccer_france_ligue_one",
+            "soccer_italy_serie_b",
         ]);
 
         expect(await runner.handlers.sync({ key: "sync", kind: "sync" })).toEqual({
             status: "succeeded",
-            // The recording answers for each of the six default leagues.
-            message: "18 fixtures",
+            // The recording answers for each of the seven default leagues.
+            message: "21 fixtures",
         });
         const poll = await runner.handlers.morning_poll({ key: "m", kind: "morning_poll", league: "soccer_epl" });
         expect(poll).toEqual({

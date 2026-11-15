@@ -409,8 +409,8 @@ describe("syncFixtures", () => {
             repos,
             config,
         });
-        // The fake source returns the same event for each of the six default leagues.
-        expect(count).toBe(6);
+        // The fake source returns the same event for each of the seven default leagues.
+        expect(count).toBe(7);
         expect(record).toHaveBeenCalledWith(balance);
         expect(await repos.fixtures.get(info.id)).toBeDefined();
     });

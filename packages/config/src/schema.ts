@@ -65,7 +65,8 @@ export const settingsSchema = z
             .array(leagueSchema)
             .min(1)
             // More leagues, more chances for value (owner, 2026-11-02; ADR 0008 picked them by back-test). All have
-            // Pinnacle on the free plan and free results from football-data.org; ~300 credits a month together.
+            // Pinnacle on the free plan. Serie B (added 2026-11-15) has no free football-data.org results, so it
+            // settles from The Odds API's scores, once a day for 2 credits.
             .default([
                 { oddsApiKey: "soccer_epl", footballDataCode: "PL", name: "Premier League" },
                 { oddsApiKey: "soccer_efl_champ", footballDataCode: "ELC", name: "Championship" },
@@ -73,6 +74,7 @@ export const settingsSchema = z
                 { oddsApiKey: "soccer_spain_la_liga", footballDataCode: "PD", name: "La Liga" },
                 { oddsApiKey: "soccer_italy_serie_a", footballDataCode: "SA", name: "Serie A" },
                 { oddsApiKey: "soccer_france_ligue_one", footballDataCode: "FL1", name: "Ligue 1" },
+                { oddsApiKey: "soccer_italy_serie_b", name: "Serie B" },
             ]),
         /** Up to 10 bookmakers cost one region's worth of credits per call. */
         bookmakers: z.array(z.string().min(1)).min(2).max(10).default(DEFAULT_BOOKMAKERS),
