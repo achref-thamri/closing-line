@@ -69,7 +69,7 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   tips in the same band averaged -1.8%. Below 1%, draws had no edge either (-0.2%). Live so far: 6 such draws, +0.5%.
   Also tested and not adopted: the Eredivisie and Primeira Liga (7 tips each in four seasons, only 57% beating the
   close, for about a third more credits).
-- Serie B added on 2026-11-15, after the owner asked for more tips. The same back-test on 2023/24 and 2024/25 at 2%:
+- Serie B added on 2026-11-15 to get more tips. The same back-test on 2023/24 and 2024/25 at 2%:
 
     | League                         | Bets | Average CLV | Beat the closing price |
     | ------------------------------ | ---- | ----------- | ---------------------- |
