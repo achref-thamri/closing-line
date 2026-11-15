@@ -5,7 +5,7 @@ Date: 2026-11-02. Status: accepted.
 ## Context
 
 The scanner backs a soft bookmaker's price when it beats Pinnacle's de-vigged price by at least `scanner.minEdge`.
-It started at 3%, a guess. The owner wanted more tips, and waiting months for live results to judge the
+It started at 3%, a guess. More tips were wanted, and waiting months for live results to judge the
 threshold would waste the free data that already exists.
 
 ## Decision
