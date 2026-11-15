@@ -1,0 +1,41 @@
+[
+    {
+        "id": "3b2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d",
+        "sport_key": "soccer_italy_serie_b",
+        "sport_title": "Serie B - Italy",
+        "commence_time": "2026-10-31T14:00:00Z",
+        "completed": true,
+        "home_team": "Palermo",
+        "away_team": "Bari",
+        "scores": [
+            { "name": "Palermo", "score": "2" },
+            { "name": "Bari", "score": "1" }
+        ],
+        "last_update": "2026-10-31T16:05:12Z"
+    },
+    {
+        "id": "9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b",
+        "sport_key": "soccer_italy_serie_b",
+        "sport_title": "Serie B - Italy",
+        "commence_time": "2026-10-31T19:30:00Z",
+        "completed": false,
+        "home_team": "Sampdoria",
+        "away_team": "Modena",
+        "scores": [
+            { "name": "Sampdoria", "score": "0" },
+            { "name": "Modena", "score": "0" }
+        ],
+        "last_update": "2026-10-31T20:01:40Z"
+    },
+    {
+        "id": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+        "sport_key": "soccer_italy_serie_b",
+        "sport_title": "Serie B - Italy",
+        "commence_time": "2026-11-01T14:00:00Z",
+        "completed": false,
+        "home_team": "Cesena",
+        "away_team": "Spezia",
+        "scores": null,
+        "last_update": null
+    }
+]

@@ -44,6 +44,7 @@ describe("parseConfig", () => {
             ["soccer_spain_la_liga", "PD"],
             ["soccer_italy_serie_a", "SA"],
             ["soccer_france_ligue_one", "FL1"],
+            ["soccer_italy_serie_b", undefined],
         ]);
         expect(config.bookmakers).toEqual([
             "pinnacle",

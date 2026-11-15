@@ -170,6 +170,45 @@ describe("OddsApiClient.events and balance", () => {
     });
 });
 
+describe("OddsApiClient.scores", () => {
+    it("asks for three days of scores and maps finished and unfinished games", async () => {
+        const fetch = fakeFetch(json(recording("scores.json"), 200, { ...credits, "x-requests-last": "2" }));
+        const { data, balance } = await client(fetch).scores("soccer_italy_serie_b");
+
+        const url = fetch.mock.calls[0]?.[0] as URL;
+        expect(url.pathname).toBe("/v4/sports/soccer_italy_serie_b/scores");
+        expect(url.searchParams.get("daysFrom")).toBe("3");
+        expect(balance.lastCost).toBe(2);
+        expect(data).toEqual([
+            {
+                kickoff: new Date("2026-10-31T14:00:00Z"),
+                home: ["Palermo"],
+                away: ["Bari"],
+                status: "finished",
+                homeGoals: 2,
+                awayGoals: 1,
+            },
+            // In play: a score but not completed.
+            {
+                kickoff: new Date("2026-10-31T19:30:00Z"),
+                home: ["Sampdoria"],
+                away: ["Modena"],
+                status: "pending",
+                homeGoals: null,
+                awayGoals: null,
+            },
+            {
+                kickoff: new Date("2026-11-01T14:00:00Z"),
+                home: ["Cesena"],
+                away: ["Spezia"],
+                status: "pending",
+                homeGoals: null,
+                awayGoals: null,
+            },
+        ]);
+    });
+});
+
 describe("OddsApiClient errors", () => {
     it("turns used-up credits into OutOfCreditsError", async () => {
         const body = JSON.stringify({ message: "Usage quota has been reached", error_code: "OUT_OF_USAGE_CREDITS" });
