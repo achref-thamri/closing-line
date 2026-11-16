@@ -10,7 +10,6 @@ export const COMMANDS = [
     { command: "log", description: "Log a bet you just placed" },
     { command: "open", description: "Settle your open bets" },
     { command: "undo", description: "Delete the last bet you logged" },
-    { command: "picks", description: "Best prices for the coming week" },
     { command: "tips", description: "Turn value tips on or off" },
     { command: "start", description: "Join or show the help" },
 ];
@@ -51,14 +50,13 @@ export function createTelegramBot(options: {
         }
     }
 
-    /** Routes commands, typed text and button taps to the flows. `picks` answers /picks from stored odds. */
+    /** Routes commands, typed text and button taps to the flows. */
     function attach(flows: {
         bettors: Pick<Bettors, "isAllowed" | "start" | "tips"> & ButtonHandler;
         bets: Pick<BetFlow, "bet" | "text" | "undo"> & ButtonHandler;
         settle: Pick<SettleFlow, "open" | "amount"> & ButtonHandler;
-        picks?: () => Promise<string>;
     }): void {
-        const { bettors, bets, settle, picks } = flows;
+        const { bettors, bets, settle } = flows;
         const buttons: ButtonHandler[] = [bettors, settle, bets];
 
         bot.command("start", async (ctx) => {
@@ -76,10 +74,6 @@ export function createTelegramBot(options: {
 
         bot.command("tips", async (ctx) => {
             await ctx.reply((await bettors.tips(ctx.chat.id, ctx.from?.first_name ?? "Someone", ctx.match)).text);
-        });
-
-        bot.command("picks", async (ctx) => {
-            if (picks && (await bettors.isAllowed(ctx.chat.id))) await ctx.reply(await picks());
         });
 
         bot.command("open", async (ctx) => {

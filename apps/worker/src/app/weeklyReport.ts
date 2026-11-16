@@ -31,17 +31,6 @@ const TAG_LABELS: Record<string, string> = Object.fromEntries(
     Object.values(TAGS).map(({ tag, label }) => [tag, label]),
 );
 
-/** General lessons, one a week in turn, until the results themselves teach something. */
-export const LESSONS = [
-    "Value is not the same as winning. A bet at 3.00 that is really worth 2.80 still loses about two times in three; judge tips over a hundred bets, not one weekend.",
-    "When the odds drop after you bet, the market agrees with you. Beating the closing price over many bets is the best sign of skill, long before the profit shows.",
-    "Keep stakes small: a few percent of your betting money per bet. Ten losses in a row happen even with good bets.",
-    "A bookmaker's odds add up to more than 100%; the extra is their margin. Comparing books before you bet is the cheapest edge there is.",
-    "Small samples lie. Twenty bets can show +40% or −40% by luck alone; wait for hundreds before trusting a result.",
-    "Cashing out usually costs money: the cash-out price carries an extra margin. Cash out when your reason for the bet has changed, not because you are nervous.",
-    "Over 0.5 and over 1.5 shots on the same player is one opinion, not two. Size laddered bets together, as one position.",
-];
-
 export interface WeeklyReportDeps {
     repos: Pick<Repositories, "players" | "bets" | "apiUsage" | "decisions">;
     config: Pick<Config, "timezone" | "leagues" | "scanner">;
@@ -90,7 +79,8 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         ),
     );
 
-    lines.push("", "📚 Lesson of the week", lessons[0] ?? LESSONS[weekNumber(now) % LESSONS.length] ?? "");
+    // Only a lesson a bettor's own numbers support; there are no stock lessons.
+    if (lessons[0]) lines.push("", "📚 Lesson of the week", lessons[0]);
 
     const usage = await deps.repos.apiUsage.latest("odds-api");
     if (usage) lines.push("", `Odds API: ${usage.used} credits used this month, ${usage.remaining} left.`);
@@ -369,11 +359,6 @@ function groupText(groups: Map<string, PlayerStats>, label: (key: string) => str
 
 function average(values: number[]): number {
     return values.reduce((total, value) => total + value, 0) / values.length;
-}
-
-/** Whole weeks since the epoch, to rotate the general lessons. */
-function weekNumber(date: Date): number {
-    return Math.floor(date.getTime() / WEEK_MS);
 }
 
 function money(ore: number): string {

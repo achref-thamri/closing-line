@@ -3,14 +3,7 @@ import { createRepositories, openDatabase, type DatabaseHandle, type Repositorie
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import type { Bet, DecisionWithResult } from "@closing-line/db";
-import {
-    allTimeSection,
-    bettorBreakdown,
-    decisionsSection,
-    LESSONS,
-    tipsSection,
-    weeklyReport,
-} from "../weeklyReport.ts";
+import { allTimeSection, bettorBreakdown, decisionsSection, tipsSection, weeklyReport } from "../weeklyReport.ts";
 
 const config = parseConfig({
     ODDS_API_KEY: "k",
@@ -82,9 +75,6 @@ describe("weeklyReport", () => {
                 "",
                 "📐 All time",
                 "Calibration: 0 of 50 settled matches so far.",
-                "",
-                "📚 Lesson of the week",
-                LESSONS[Math.floor(now.getTime() / (7 * 86_400_000)) % LESSONS.length],
                 "",
                 "Odds API: 40 credits used this month, 460 left.",
                 "Too early to judge: 2 of 300 settled bets so far.",

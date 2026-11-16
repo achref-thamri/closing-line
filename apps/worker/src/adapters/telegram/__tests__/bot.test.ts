@@ -32,7 +32,6 @@ function setup(
         bettors?: Partial<Bettors>;
         bets?: Partial<BetFlow>;
         settle?: Partial<SettleFlow>;
-        picks?: () => Promise<string>;
     } = {},
 ) {
     const bot = createTelegramBot({ botToken: "1:secret", logger: silentLogger, botInfo });
@@ -45,7 +44,6 @@ function setup(
         bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as Bettors,
         bets: { owns: owns(["w", "t", "x", "tb"]), ...flows.bets } as BetFlow,
         settle: { owns: owns(["st", "hd"]), amount: () => Promise.resolve(undefined), ...flows.settle } as SettleFlow,
-        ...(flows.picks ? { picks: flows.picks } : {}),
     });
     return bot;
 }
@@ -162,23 +160,15 @@ describe("bet bot", () => {
         const bot = setup({ bets: { bet } });
         await bot.handleUpdate(command("/bet"));
         expect(bet).toHaveBeenCalledWith(200);
-        expect(COMMANDS.map((each) => each.command)).toEqual(["log", "open", "undo", "picks", "tips", "start"]);
+        expect(COMMANDS.map((each) => each.command)).toEqual(["log", "open", "undo", "tips", "start"]);
     });
 
-    it("answers /undo, and /picks for bettors only", async () => {
+    it("answers /undo", async () => {
         const undo = vi.fn().mockResolvedValue({ text: "Nothing to undo." });
-        const isAllowed = vi.fn((chatId: number) => Promise.resolve(chatId === 200));
-        const picks = vi.fn().mockResolvedValue("🔎 Best prices");
-        const bot = setup({ bets: { undo }, bettors: { isAllowed }, picks });
+        const bot = setup({ bets: { undo } });
         await bot.handleUpdate(command("/undo"));
-        await bot.handleUpdate(command("/picks", 2));
-        await bot.handleUpdate({
-            ...command("/picks", 3),
-            message: { ...command("/picks").message, chat: { ...chat, id: 9 } },
-        });
         expect(undo).toHaveBeenCalledWith(200);
-        expect(picks).toHaveBeenCalledTimes(1);
-        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["Nothing to undo.", "🔎 Best prices"]);
+        expect(sent("sendMessage").map((payload) => payload.text)).toEqual(["Nothing to undo."]);
     });
 
     it("answers a tap on a message without a chat and does nothing else", async () => {

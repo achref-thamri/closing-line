@@ -52,15 +52,14 @@ flowchart LR
 
 ## On Telegram
 
-| Command  | What it does                                                      |
-| -------- | ----------------------------------------------------------------- |
-| `/log`   | Log a bet, one question at a time, with buttons for known answers |
-| `/open`  | Settle an open bet, cash-outs included                            |
-| `/undo`  | Delete your last bet while it is open                             |
-| `/picks` | The best prices above fair for the coming week                    |
+| Command | What it does                                                      |
+| ------- | ----------------------------------------------------------------- |
+| `/log`  | Log a bet, one question at a time, with buttons for known answers |
+| `/open` | Settle an open bet, cash-outs included                            |
+| `/undo` | Delete your last bet while it is open                             |
 
-Telegram also gets tips with an "I bet this" button per bookmaker, a morning reminder of open bets, and a Monday
-report with everyone's results and a lesson of the week.
+Tips arrive on their own after the morning poll on match days, with an "I bet this" button per bookmaker that logs
+the bet. Telegram also gets a morning reminder of open logged bets and a Monday report with everyone's results.
 
 ## Running it
 

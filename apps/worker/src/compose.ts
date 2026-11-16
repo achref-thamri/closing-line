@@ -6,7 +6,6 @@ import { createTelegramBot, type TelegramBot } from "./adapters/telegram/bot.ts"
 import { BetFlow } from "./app/betFlow.ts";
 import { Bettors } from "./app/bettors.ts";
 import { CreditGuard } from "./app/creditGuard.ts";
-import { bestPicks } from "./app/picks.ts";
 import { pollOdds, type PollReport } from "./app/pollOdds.ts";
 import { remindOpenBets } from "./app/reminders.ts";
 import { SettleFlow } from "./app/settleFlow.ts";
@@ -16,11 +15,8 @@ import { createPriceGoneSender, createTipSender, tipRecipients } from "./app/tip
 import { weeklyReport } from "./app/weeklyReport.ts";
 import type { Reply } from "./app/chat.ts";
 import type { Logger } from "./lib/logger.ts";
-import { singleFlight } from "./lib/singleFlight.ts";
 import { createTextSender, type Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
-
-const PICKS_REFRESH_MS = 12 * 3_600_000;
 
 /** Everything the worker runs, wired once; `main.ts` only starts and stops it. */
 export interface Worker {
@@ -29,7 +25,7 @@ export interface Worker {
     notify: Notify;
     /** The scheduler's jobs, for `tick`. */
     runner: RunnerDeps;
-    /** The bet flow, settle flow and /picks, attached and ready to start. */
+    /** The bet flow and settle flow, attached and ready to start. */
     bot: TelegramBot;
 }
 
@@ -107,26 +103,12 @@ export function compose(options: {
         },
     };
 
-    // /picks: refresh a league's odds when the stored ones are over 12 hours old, within the credit guard. Bettors
-    // asking at the same time share one refresh, so the credits are spent once. These polls run outside the
-    // scheduler, so job_runs has no row for them; the log line is their record.
-    const refresh = singleFlight(async () => {
-        for (const league of config.leagues) {
-            const last = await repos.odds.lastTakenAt(league.oddsApiKey);
-            if (last && now().getTime() - last.getTime() < PICKS_REFRESH_MS) continue;
-            const report = await pollOdds(pollDeps, league.oddsApiKey, "scan");
-            logger.info({ league: league.oddsApiKey, ...pollOutcome(report) }, "picks refresh polled");
-        }
-    });
-    const picks = () => bestPicks({ repos, config, now, refresh });
-
     // Bettors log, settle and look up bets in Telegram.
     const bettors = new Bettors({ repos, config, messenger: bot.messenger, now });
     bot.attach({
         bettors,
         bets: new BetFlow({ repos, bettors, config, messenger: bot.messenger, logger, now }),
         settle: new SettleFlow({ repos, messenger: bot.messenger, ownerChatId, logger, now }),
-        picks,
     });
 
     return {
