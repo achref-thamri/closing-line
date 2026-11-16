@@ -44,3 +44,27 @@ export function tipLifetime(tip: { odds: number; sentAt: Date }, later: readonly
     const kept = (seen: LaterPrice | undefined) => (seen ? seen.price >= tip.odds : undefined);
     return { nextPoll: kept(after[0]), atClosing: kept(after.findLast((seen) => seen.kind === "closing")) };
 }
+
+/**
+ * What someone who bets a tip at the next poll after it, not at once, would have got from the same bookmaker: the
+ * price there if it was still worth it (at least `minOdds`), else a miss. Polls are hours apart, so this is the
+ * pessimistic end next to the tip's own odds. A fill at the pre-kickoff poll is labelled `closing`: that poll also
+ * records the closing price, so its CLV would only be the edge at that moment, not a price that beat the close.
+ * Undefined until a later poll.
+ */
+export type FollowerFill = { at: "next_poll" | "closing"; price: number } | { at: "missed" };
+
+export function followerFill(
+    tip: { sentAt: Date; minOdds: number },
+    later: readonly LaterPrice[],
+): FollowerFill | undefined {
+    const next = later
+        .filter((seen) => seen.takenAt > tip.sentAt)
+        .reduce<LaterPrice | undefined>(
+            (first, seen) => (!first || seen.takenAt < first.takenAt ? seen : first),
+            undefined,
+        );
+    if (!next) return undefined;
+    if (next.price < tip.minOdds) return { at: "missed" };
+    return { at: next.kind === "closing" ? "closing" : "next_poll", price: next.price };
+}

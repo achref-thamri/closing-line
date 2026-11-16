@@ -2,6 +2,9 @@ import type { Config } from "@closing-line/config";
 import {
     calibration,
     cashoutGainOre,
+    closingLineValue,
+    followerFill,
+    minimumOdds,
     forecastScores,
     OUTCOMES,
     outcomeOf,
@@ -41,7 +44,7 @@ export const LESSONS = [
 
 export interface WeeklyReportDeps {
     repos: Pick<Repositories, "players" | "bets" | "apiUsage" | "decisions">;
-    config: Pick<Config, "timezone" | "leagues">;
+    config: Pick<Config, "timezone" | "leagues" | "scanner">;
     now: () => Date;
 }
 
@@ -76,7 +79,7 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         }
     }
 
-    lines.push(...tipsSection(await deps.repos.bets.withLaterPrices(SCANNER, weekStart)));
+    lines.push(...tipsSection(await deps.repos.bets.withLaterPrices(SCANNER, weekStart), deps.config.scanner));
     lines.push(...decisionsSection(await deps.repos.decisions.since(weekStart)));
     const leagueNames = new Map(deps.config.leagues.map((league) => [league.oddsApiKey, league.name]));
     lines.push(
@@ -101,7 +104,10 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
  * The week's tips (the scanner's bets): how many there were, how often the price was still on offer at the next
  * poll and just before kickoff, and what that means for how fast to act on one.
  */
-export function tipsSection(tips: readonly { bet: Bet; later: LaterPrice[] }[]): string[] {
+export function tipsSection(
+    tips: readonly { bet: Bet; later: LaterPrice[] }[],
+    scanner: Pick<Config["scanner"], "minEdge" | "minKellyFraction">,
+): string[] {
     if (tips.length === 0) return [];
     const lifetimes = tips.map(({ bet, later }) => tipLifetime({ odds: bet.lockedOdds, sentAt: bet.createdAt }, later));
     const share = (answers: (boolean | undefined)[]) => {
@@ -118,12 +124,52 @@ export function tipsSection(tips: readonly { bet: Bet; later: LaterPrice[] }[]):
         const average = clvs.reduce((sum, clv) => sum + clv, 0) / clvs.length;
         lines.push(`Average CLV: ${percent(average)} over ${clvs.length} with a closing price`);
     }
+    lines.push(...followerLines(tips, scanner));
     // Advice once there is enough to go on; a handful of tips says little either way.
     if (closing.seen >= LESSON_MIN_BETS) {
         lines.push(
             closing.kept / closing.seen < 0.5
                 ? "Most tip prices are gone by kickoff: bet soon after a tip arrives."
                 : "Most tip prices last until kickoff: there is time to compare books before betting.",
+        );
+    }
+    return lines;
+}
+
+/**
+ * The tips as someone would have got them betting at the next poll, not at once: how many were still worth it
+ * there, how many only at the pre-kickoff poll (counted, not scored), how many were gone, and the CLV of the ones
+ * still worth it at both prices. The real figure for a follower lies between the two.
+ */
+function followerLines(
+    tips: readonly { bet: Bet; later: LaterPrice[] }[],
+    scanner: Pick<Config["scanner"], "minEdge" | "minKellyFraction">,
+): string[] {
+    const counts = { next_poll: 0, closing: 0, missed: 0 };
+    const scored: { follower: number; tip: number }[] = [];
+    for (const { bet, later } of tips) {
+        const selection = OUTCOMES.find((outcome) => outcome === bet.selection);
+        if (!selection || bet.sharpFairOddsAtBet === null) continue;
+        const minOdds = minimumOdds(bet.sharpFairOddsAtBet, scanner.minEdge, scanner.minKellyFraction[selection]);
+        const fill = followerFill({ sentAt: bet.createdAt, minOdds }, later);
+        if (!fill) continue;
+        counts[fill.at]++;
+        if (fill.at === "next_poll" && bet.closingFairOdds !== null && bet.clv !== null) {
+            scored.push({ follower: closingLineValue(fill.price, bet.closingFairOdds), tip: bet.clv });
+        }
+    }
+    const parts = [
+        counts.next_poll > 0 ? `${counts.next_poll} still worth it` : "",
+        counts.closing > 0 ? `${counts.closing} only just before kickoff` : "",
+        counts.missed > 0 ? `${counts.missed} gone` : "",
+    ].filter(Boolean);
+    if (parts.length === 0) return [];
+    const lines = [`Bet at the next poll instead: ${parts.join(", ")}`];
+    if (scored.length > 0) {
+        const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+        lines.push(
+            `CLV on those: ${percent(mean(scored.map((s) => s.follower)))} at the next poll's price, ` +
+                `${percent(mean(scored.map((s) => s.tip)))} at the tip's`,
         );
     }
     return lines;
