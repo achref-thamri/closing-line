@@ -9,6 +9,12 @@ const HOUR_MS = 3_600_000;
 const FINISHED_AFTER_MS = 2.25 * HOUR_MS;
 /** Called-off matches and matches without a result are void after this long. */
 const VOID_AFTER_MS = 48 * HOUR_MS;
+/**
+ * A match still missing from the results feed this long after kickoff is a name or date mismatch, not a late
+ * result (a late one is listed as pending): the owner is told once, in time to pin the name before it is voided.
+ */
+const ALERT_UNMATCHED_AFTER_MS = 6 * HOUR_MS;
+const ALERTED_KEY = "unmatched_alerted";
 /** Look back this far for fixtures still waiting for a result. */
 const LOOKBACK_MS = 7 * 24 * HOUR_MS;
 const KICKOFF_TOLERANCE_MS = 3 * HOUR_MS;
@@ -23,7 +29,7 @@ export interface SettleBetsDeps {
     results: ResultsSource;
     /** Recent scores of a league from The Odds API; undefined when the credit guard says no. */
     scores: (league: string) => Promise<MatchResultInfo[] | undefined>;
-    repos: Pick<Repositories, "fixtures" | "bets" | "players">;
+    repos: Pick<Repositories, "fixtures" | "bets" | "players" | "state">;
     config: Pick<Config, "leagues">;
     now: () => Date;
     notify: (message: string) => Promise<void>;
@@ -53,6 +59,8 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     const lines: string[] = [];
     const failures: string[] = [];
     const names = new Map((await deps.repos.players.list()).map((player) => [player.id, player.name]));
+    const alerted = new Set((await deps.repos.state.get<string[]>(ALERTED_KEY)) ?? []);
+    const alerts: string[] = [];
 
     for (const league of deps.config.leagues) {
         const fixtures = due.filter((fixture) => fixture.league === league.oddsApiKey);
@@ -79,7 +87,14 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
             } else if (overdue && (result?.status === "called_off" || !result)) {
                 await deps.repos.fixtures.setResult(fixture.id, { status: "void" });
             } else {
-                if (!result) report.unmatched.push(`${fixture.homeTeam} v ${fixture.awayTeam}`);
+                if (!result) {
+                    report.unmatched.push(`${fixture.homeTeam} v ${fixture.awayTeam}`);
+                    const late = now.getTime() - fixture.kickoff.getTime() >= ALERT_UNMATCHED_AFTER_MS;
+                    if (late && !alerted.has(fixture.id)) {
+                        alerted.add(fixture.id);
+                        alerts.push(`${fixture.homeTeam} v ${fixture.awayTeam} (${league.name})`);
+                    }
+                }
                 continue;
             }
             report.fixtures++;
@@ -90,6 +105,18 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     }
 
     if (lines.length > 0) await deps.notify(`📒 Settled ${lines.length} paper bet(s):\n${lines.join("\n")}`);
+    if (alerts.length > 0) {
+        await deps.notify(
+            `⚠️ No result found for ${alerts.join(", ")}. The results feed probably names a team differently. ` +
+                "Pin the name in PINNED_NAMES (packages/core/src/teams.ts) within 48 hours of kickoff, or its bets are voided.",
+        );
+        // Only fixtures still waiting are kept, so the list stays small.
+        const waiting = new Set(due.map((fixture) => fixture.id));
+        await deps.repos.state.set(
+            ALERTED_KEY,
+            [...alerted].filter((fixtureId) => waiting.has(fixtureId)),
+        );
+    }
     if (failures.length > 0) throw new Error(failures.join("; "));
     return report;
 }

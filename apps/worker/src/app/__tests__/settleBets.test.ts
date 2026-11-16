@@ -212,7 +212,7 @@ describe("settleBets", () => {
         );
     });
 
-    it("waits for matches that are not over or not reported yet", async () => {
+    it("waits for matches that are not over or not reported yet, and flags one missing from the feed", async () => {
         await bet(SCANNER, id("a"), "home", 2.1);
         const pending = { ...finished(["Brentford FC"], ["Nottingham Forest FC"], 0, 0), status: "pending" as const };
         expect(await settleBets(deps([pending]))).toEqual({
@@ -221,7 +221,15 @@ describe("settleBets", () => {
             unmatched: ["Manchester City v Brighton and Hove Albion"],
         });
         expect(await repos.bets.open()).toHaveLength(1);
-        expect(messages).toEqual([]);
+        // Six hours after kickoff a match missing from the feed is a name mismatch: said once, not every hour.
+        expect(messages).toEqual([
+            "⚠️ No result found for Manchester City v Brighton and Hove Albion (Premier League). The results feed " +
+                "probably names a team differently. Pin the name in PINNED_NAMES (packages/core/src/teams.ts) within " +
+                "48 hours of kickoff, or its bets are voided.",
+        ]);
+        now = new Date(now.getTime() + 3_600_000);
+        await settleBets(deps([pending]));
+        expect(messages).toHaveLength(1);
 
         now = new Date(kickoff.getTime() + 60 * 60_000);
         expect(await settleBets(deps([]))).toEqual({ fixtures: 0, settledBets: 0, unmatched: [] });
@@ -258,6 +266,14 @@ describe("settleBets", () => {
         await settleBets(deps(results));
         now = new Date(now.getTime() + 2 * 3_600_000);
         expect((await settleBets(deps(results))).fixtures).toBe(0);
-        expect(messages).toHaveLength(1);
+        expect(messages.filter((message) => message.startsWith("📒"))).toHaveLength(1);
+    });
+});
+
+describe("settleBets alerts", () => {
+    it("doesn't flag a missing match before six hours after kickoff", async () => {
+        now = new Date(kickoff.getTime() + 5 * 3_600_000);
+        await settleBets(deps([finished(["Brentford FC"], ["Nottingham Forest FC"], 1, 1)]));
+        expect(messages).toEqual([]);
     });
 });
