@@ -16,17 +16,14 @@ describe("decideCredits", () => {
         });
     });
 
-    it("lets closing snapshots go past the daily allowance but not into the reserve", () => {
-        expect(decideCredits({ ...fresh, remaining: 400 }, 1, "closing", RESERVE).allowed).toBe(true);
-        expect(decideCredits({ ...fresh, remaining: 50 }, 1, "closing", RESERVE)).toEqual({
+    it("keeps the reserve from polls but lets closing prices and scores use it, down to zero", () => {
+        expect(decideCredits({ ...fresh, remaining: 50, remainingAtDayStart: 50 }, 1, "scan", RESERVE)).toEqual({
             allowed: false,
             reason: "would dip into the 50-credit reserve",
         });
-    });
-
-    it("lets a bettor's bet use the reserve, down to zero", () => {
-        expect(decideCredits({ ...fresh, remaining: 1 }, 1, "bet", RESERVE).allowed).toBe(true);
-        expect(decideCredits({ ...fresh, remaining: 0 }, 1, "bet", RESERVE)).toEqual({
+        expect(decideCredits({ ...fresh, remaining: 400 }, 1, "closing", RESERVE).allowed).toBe(true);
+        expect(decideCredits({ ...fresh, remaining: 1 }, 1, "closing", RESERVE).allowed).toBe(true);
+        expect(decideCredits({ ...fresh, remaining: 1 }, 2, "closing", RESERVE)).toEqual({
             allowed: false,
             reason: "no credits left this month",
         });
@@ -38,7 +35,7 @@ describe("decideCredits", () => {
         expect(dailyAllowance({ remaining: 450, remainingAtDayStart: 450, daysLeft: 0 }, RESERVE)).toBe(400);
     });
 
-    it("never lets automated calls end below the reserve or past the allowance", () => {
+    it("never lets polls end below the reserve or past the allowance, nor any call below zero", () => {
         fc.assert(
             fc.property(
                 fc.integer({ min: 0, max: 20_000 }),
@@ -49,8 +46,8 @@ describe("decideCredits", () => {
                 (remaining, spent, daysLeft, cost, priority) => {
                     const state = { remaining, remainingAtDayStart: remaining + spent, daysLeft };
                     if (!decideCredits(state, cost, priority, RESERVE).allowed) return true;
-                    const withinAllowance = priority === "closing" || spent + cost <= dailyAllowance(state, RESERVE);
-                    return remaining - cost >= RESERVE && withinAllowance;
+                    if (priority === "closing") return remaining - cost >= 0;
+                    return remaining - cost >= RESERVE && spent + cost <= dailyAllowance(state, RESERVE);
                 },
             ),
         );

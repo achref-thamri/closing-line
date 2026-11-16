@@ -94,17 +94,17 @@ describe("CreditGuard", () => {
         expect((await guard().spend(1, "scan", call(balance(15, 485)))).ok).toBe(false);
     });
 
-    it("keeps the reserve for people", async () => {
+    it("keeps the reserve for closing prices and scores", async () => {
         await seed(450, 50, now);
         const paid = call(balance(451, 49));
-        expect((await guard().spend(1, "closing", paid)).ok).toBe(false);
-        expect(await guard().spend(1, "bet", paid)).toEqual({ ok: true, data: "odds" });
+        expect((await guard().spend(1, "scan", paid)).ok).toBe(false);
+        expect(await guard().spend(1, "closing", paid)).toEqual({ ok: true, data: "odds" });
     });
 
     it("warns once as usage passes each level", async () => {
         await seed(349, 151, now);
-        await guard().spend(1, "bet", call(balance(350, 150)));
-        await guard().spend(1, "bet", call(balance(351, 149)));
+        await guard().spend(1, "closing", call(balance(350, 150)));
+        await guard().spend(1, "closing", call(balance(351, 149)));
         expect(warnings).toEqual([
             "⚠️ Odds API credits: 70% used (350 of 500). Routine checks slow down to make the rest last the month.",
         ]);
@@ -112,7 +112,7 @@ describe("CreditGuard", () => {
 
     it("warns about levels already passed when it first sees the balance", async () => {
         freeBalance.mockResolvedValueOnce(balance(460, 40, 0));
-        await guard().spend(1, "bet", call(balance(461, 39)));
+        await guard().spend(1, "closing", call(balance(461, 39)));
         expect(warnings).toHaveLength(2);
     });
 
@@ -121,18 +121,18 @@ describe("CreditGuard", () => {
         const exhausted = vi.fn(() =>
             Promise.reject(new OutOfCreditsError("Odds API: the monthly credits are used up")),
         );
-        expect(await guard().spend(1, "bet", exhausted)).toEqual({
+        expect(await guard().spend(1, "closing", exhausted)).toEqual({
             ok: false,
             reason: "Odds API: the monthly credits are used up",
         });
         expect(await repos.apiUsage.latest("odds-api")).toMatchObject({ used: 500, remaining: 0 });
         expect(warnings.at(-1)).toBe("🛑 Odds API credits are used up. Odds checks pause until the 1st of next month.");
-        expect((await guard().spend(1, "bet", call(balance(500, 0)))).ok).toBe(false);
+        expect((await guard().spend(1, "closing", call(balance(500, 0)))).ok).toBe(false);
     });
 
     it("passes other errors on", async () => {
         await seed(100, 400, now);
         const failing = vi.fn(() => Promise.reject(new Error("network down")));
-        await expect(guard().spend(1, "bet", failing)).rejects.toThrow("network down");
+        await expect(guard().spend(1, "closing", failing)).rejects.toThrow("network down");
     });
 });

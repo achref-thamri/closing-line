@@ -40,7 +40,8 @@ Every minute the worker asks a pure function which jobs are due, from the clock 
 database before it runs, so a job runs at most once and never late, even across restarts.
 
 The Odds API's free plan has 500 credits a month. Every paid call goes through a credit guard that spreads them over
-the days left, keeps a reserve, warns at 70% and 90%, and pauses when they run out
+the days left, keeps a reserve that only closing prices and scores may use, warns at 70% and 90%, and pauses when
+they run out
 ([ADR 0004](adr/0004-credit-guard.md)).
 
 Results come from football-data.org for free. Its free plan has no Serie B or Belgian Pro League, so a league without a
