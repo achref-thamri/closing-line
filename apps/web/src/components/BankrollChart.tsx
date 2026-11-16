@@ -23,14 +23,14 @@ const fullLabel = (t: number) =>
 const percentLabel = (growth: number) => `${(growth * 100).toFixed(1)}%`;
 
 /**
- * Bankroll growth over time, one line per player, stepping at each settled bet. Growth rather than kroner, because
- * players start with different bankrolls.
+ * A percentage over time, one line per player, stepping at each settled bet: bankroll growth (rather than kroner,
+ * because players start with different bankrolls), or the running average CLV.
  */
-export function BankrollChart({ series }: { series: ChartSeries[] }) {
+export function BankrollChart({ series, testId = "bankroll-chart" }: { series: ChartSeries[]; testId?: string }) {
     const times = series.flatMap((line) => line.points.map((point) => point.t));
     const axis = timeAxis(Math.min(...times), Math.max(...times), TIME_ZONE);
     return (
-        <div className="h-72 w-full" data-testid="bankroll-chart">
+        <div className="h-72 w-full" data-testid={testId}>
             <ResponsiveContainer>
                 <LineChart margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.3} />

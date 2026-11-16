@@ -1,6 +1,8 @@
 import {
     bankrollSeries,
+    goLiveCheck,
     meetsScannerRules,
+    type GoLiveCheck,
     statsFromTotals,
     totalsOf,
     type BankrollPoint,
@@ -68,6 +70,10 @@ export interface Dashboard {
     player: string | undefined;
     bets: BetWithFixture[];
     credits: { used: number; remaining: number } | undefined;
+    /** The scanner against the go-live rule, counting only bets today's rules would place. */
+    goLive: GoLiveCheck | undefined;
+    /** Running average CLV per automated player, one point per settled bet with a closing price. */
+    clvSeries: { playerId: string; points: { t: number; growth: number }[] }[];
 }
 
 /** Reads `?page=` leniently: anything that is not a whole number falls back to the first page, too high to the last. */
@@ -98,10 +104,18 @@ function database(): Promise<DatabaseHandle> {
 export async function loadDashboard(requestedPage?: string, requestedPlayer?: string): Promise<Dashboard> {
     const repos = createRepositories((await database()).db);
     const totals = await repos.bets.totals();
+    const settledByPlayer = new Map<string, Awaited<ReturnType<typeof repos.bets.settledWithFixture>>>();
     const players = await Promise.all(
         (await repos.players.list()).map(async (player) => {
             const stats = statsFromTotals(totals.get(player.id) ?? totalsOf([]));
             const ledger = await repos.bets.settledLedger(player.id);
+            if (player.kind !== "bettor") {
+                const settled = await repos.bets.settledWithFixture(player.id);
+                settledByPlayer.set(
+                    player.id,
+                    player.kind === "scanner" ? settled.filter((bet) => underTodaysRules(bet)) : settled,
+                );
+            }
             return {
                 player,
                 stats,
@@ -109,12 +123,23 @@ export async function loadDashboard(requestedPage?: string, requestedPlayer?: st
                 growth: stats.profitOre / player.startingBankrollOre,
                 series: bankrollSeries(player.startingBankrollOre, player.createdAt, ledger),
                 ...(player.kind === "scanner" && {
-                    currentRules: currentRulesClv(await repos.bets.settledWithFixture(player.id)),
+                    currentRules: currentRulesClv(settledByPlayer.get(player.id) ?? []),
                 }),
             };
         }),
     );
     players.sort(byClv);
+    const scanner = players.find((summary) => summary.player.kind === "scanner");
+    const benchmark = players.find((summary) => summary.player.kind === "benchmark");
+    const goLive =
+        scanner &&
+        goLiveCheck({
+            bets: settledByPlayer.get(scanner.player.id) ?? [],
+            benchmarkRoi: benchmark?.stats.roi,
+            startingBankrollOre: scanner.player.startingBankrollOre,
+            now: new Date(),
+        });
+    const clvSeries = [...settledByPlayer].map(([playerId, bets]) => ({ playerId, points: runningClv(bets) }));
     const player = players.find((summary) => summary.player.id === requestedPlayer)?.player.id;
     const betCounts = { total: 0, open: 0, settled: 0 };
     for (const {
@@ -137,16 +162,35 @@ export async function loadDashboard(requestedPage?: string, requestedPlayer?: st
         player,
         bets: await repos.bets.listing(BETS_PER_PAGE, player, (page - 1) * BETS_PER_PAGE),
         credits: usage && { used: usage.used, remaining: usage.remaining },
+        goLive,
+        clvSeries,
     };
 }
 
-/** CLV over the settled bets today's scanner rules would still place. */
-export function currentRulesClv(
-    bets: readonly (Parameters<typeof meetsScannerRules>[0] & { kickoff: Date; clv: number | null })[],
-): { averageClv: number | undefined; clvCount: number } {
-    const clvs = bets.flatMap((bet) =>
-        bet.clv !== null && meetsScannerRules(bet, bet.kickoff, SCANNER_RULES) ? [bet.clv] : [],
-    );
+function underTodaysRules(bet: Parameters<typeof meetsScannerRules>[0] & { kickoff: Date }): boolean {
+    return meetsScannerRules(bet, bet.kickoff, SCANNER_RULES);
+}
+
+/** The average CLV so far after each settled bet that has one, in settling order. */
+export function runningClv(
+    bets: readonly { clv: number | null; settledAt: Date | null }[],
+): { t: number; growth: number }[] {
+    let sum = 0;
+    let count = 0;
+    return bets.flatMap((bet) => {
+        if (bet.clv === null || !bet.settledAt) return [];
+        sum += bet.clv;
+        count++;
+        return [{ t: bet.settledAt.getTime(), growth: sum / count }];
+    });
+}
+
+/** CLV over the scanner's settled bets under today's rules (already filtered). */
+export function currentRulesClv(bets: readonly { clv: number | null }[]): {
+    averageClv: number | undefined;
+    clvCount: number;
+} {
+    const clvs = bets.flatMap((bet) => (bet.clv === null ? [] : [bet.clv]));
     return {
         averageClv: clvs.length > 0 ? clvs.reduce((sum, clv) => sum + clv, 0) / clvs.length : undefined,
         clvCount: clvs.length,

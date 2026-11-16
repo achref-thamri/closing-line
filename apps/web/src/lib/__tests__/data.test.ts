@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byClv, isRanked, MIN_CLV_BETS_TO_RANK, pageOf } from "../data.ts";
+import { byClv, isRanked, MIN_CLV_BETS_TO_RANK, pageOf, runningClv } from "../data.ts";
 
 describe("byClv", () => {
     const player = (id: string, averageClv: number | undefined, clvCount: number, growth = 0) => ({
@@ -44,5 +44,21 @@ describe("pageOf", () => {
         expect(pageOf("0", 120)).toEqual({ page: 1, pages: 3 });
         expect(pageOf("1.5", 120)).toEqual({ page: 1, pages: 3 });
         expect(pageOf("9", 120)).toEqual({ page: 3, pages: 3 });
+    });
+});
+
+describe("runningClv", () => {
+    it("averages CLV so far after each settled bet that has one", () => {
+        const at = (day: number) => new Date(Date.UTC(2026, 10, day));
+        expect(
+            runningClv([
+                { clv: 0.04, settledAt: at(1) },
+                { clv: null, settledAt: at(2) },
+                { clv: -0.02, settledAt: at(3) },
+            ]),
+        ).toEqual([
+            { t: at(1).getTime(), growth: 0.04 },
+            { t: at(3).getTime(), growth: 0.01 },
+        ]);
     });
 });
