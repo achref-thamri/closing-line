@@ -112,13 +112,15 @@ export function favourite(quotes: readonly PriceQuote[], sharpBookmaker: string)
 /** The scanner settings that decide whether a value bet is placed at all. */
 export interface ScannerRules {
     maxHoursToKickoff: number;
+    /** The pre-kickoff poll's window: the scanner doesn't bet in it, as that poll also sets the closing price. */
+    closingWindowMinutes: number;
     maxFairOdds: number;
     minKellyFraction: Readonly<Record<Outcome, number>>;
 }
 
 /**
- * Whether today's scanner would still have placed a bet: close enough to kickoff, not on an outsider, and with a big
- * enough Kelly fraction. Bets from before a rule existed fail it, so their results can be shown apart. A bet without
+ * Whether today's scanner would still have placed a bet: close enough to kickoff but before the closing window, not
+ * on an outsider, and with a big enough Kelly fraction. Bets from before a rule existed fail it, so their results can be shown apart. A bet without
  * a fair price or a 1X2 selection can't be judged and passes.
  */
 export function meetsScannerRules(
@@ -131,6 +133,7 @@ export function meetsScannerRules(
     const hoursOut = (kickoff.getTime() - bet.createdAt.getTime()) / 3_600_000;
     return (
         hoursOut <= rules.maxHoursToKickoff &&
+        hoursOut * 60 > rules.closingWindowMinutes &&
         bet.sharpFairOddsAtBet < rules.maxFairOdds &&
         kellyFraction(bet.lockedOdds, 1 / bet.sharpFairOddsAtBet) >= rules.minKellyFraction[selection]
     );

@@ -52,7 +52,7 @@ export function placedUnderOldRules(bet: BetWithFixture, player: Pick<Player, "k
 }
 
 const OLD_RULES_TITLE =
-    "Placed before a rule that would stop this bet today: too far before kickoff, an outsider, or too small a Kelly fraction";
+    "Placed before a rule that would stop this bet today: too far before kickoff, in the closing window, an outsider, or too small a Kelly fraction";
 
 function OldRules() {
     return (
