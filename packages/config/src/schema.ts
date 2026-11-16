@@ -123,7 +123,7 @@ export const settingsSchema = z
         weeklyLossPause: fraction.default(0.15),
         credits: z
             .strictObject({
-                /** Credits kept back for manual tests; the bot stops polling at this level. */
+                /** Routine polls stop at this level; the rest is kept for closing prices and scores. */
                 reserve: z.int().min(0).default(50),
                 /** Usage shares that trigger a Telegram warning. */
                 warnAt: z.array(fraction).default([0.7, 0.9]),

@@ -189,7 +189,7 @@ describe("compose", () => {
             await runner.handlers.prekickoff_poll({ key: "p", kind: "prekickoff_poll", league: "soccer_epl" }),
         ).toEqual({
             status: "skipped",
-            message: "would dip into the 50-credit reserve",
+            message: "no credits left this month",
         });
     });
 });

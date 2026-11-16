@@ -1,10 +1,9 @@
 /**
- * Why a paid API call is made, highest priority last:
- * - `scan`: routine polls, the first to be dropped;
- * - `closing`: closing prices for matches with open bets;
- * - `bet`: a bettor placing a bet, which may use the reserve too.
+ * Why a paid API call is made:
+ * - `scan`: routine polls, which keep to a daily allowance and stop at the reserve;
+ * - `closing`: closing prices and scores, which settle bets and measure CLV, so they may use the reserve.
  */
-export type CreditPriority = "scan" | "closing" | "bet";
+export type CreditPriority = "scan" | "closing";
 
 export interface CreditState {
     remaining: number;
@@ -16,7 +15,10 @@ export interface CreditState {
 
 export type CreditDecision = { allowed: true } | { allowed: false; reason: string };
 
-/** Decides whether a call costing `cost` credits may go ahead, keeping `reserve` credits for people. */
+/**
+ * Decides whether a call costing `cost` credits may go ahead. Routine polls leave `reserve` credits untouched, so a
+ * month that runs short still has closing prices and results for the bets already placed.
+ */
 export function decideCredits(
     state: CreditState,
     cost: number,
@@ -24,11 +26,10 @@ export function decideCredits(
     reserve: number,
 ): CreditDecision {
     const after = state.remaining - cost;
-    if (priority === "bet") {
+    if (priority === "closing") {
         return after >= 0 ? { allowed: true } : { allowed: false, reason: "no credits left this month" };
     }
     if (after < reserve) return { allowed: false, reason: `would dip into the ${reserve}-credit reserve` };
-    if (priority === "closing") return { allowed: true };
 
     const allowance = dailyAllowance(state, reserve);
     const spentToday = Math.max(0, state.remainingAtDayStart - state.remaining);

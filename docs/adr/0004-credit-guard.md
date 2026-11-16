@@ -15,8 +15,12 @@ Every paid call goes through `CreditGuard.spend(cost, priority, call)`. The rule
 
 - `scan` (routine polls) may spend only today's share: what was left at midnight, minus a reserve, divided by the
   days left in the month;
-- `closing` (pre-kickoff polls) may go past that share but never into the reserve;
-- `bet` (a person placing a bet) may use the reserve.
+- `closing` (pre-kickoff polls and the daily scores call for leagues without free results) may go past that share
+  and use the reserve, down to zero.
+
+Until 2026-11-16 the reserve was kept for a `bet` priority, people asking for prices in Telegram, and `closing` stopped
+at it. Nothing asks for prices any more (`/picks` was removed), so the reserve now protects what matters most when a
+month runs short: the closing prices that measure CLV and the scores that settle bets already placed.
 
 The guard records the balance that every response reports in its headers, warns at 70% and 90% usage, and treats
 `OUT_OF_USAGE_CREDITS` as a pause until the reset.
