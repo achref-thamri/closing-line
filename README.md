@@ -69,7 +69,7 @@ Needs Node 24 and pnpm. No Docker or database needed locally.
 ```sh
 corepack enable
 pnpm install
-pnpm check                             # format, lint, typecheck, tests
+pnpm check                             # format, lint, typecheck, unused code, tests
 pnpm --filter @closing-line/web dev    # dashboard on demo data, http://localhost:3300
 ```
 
