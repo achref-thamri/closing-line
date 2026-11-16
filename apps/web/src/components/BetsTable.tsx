@@ -1,4 +1,4 @@
-import { bookName, meetsScannerRules, pickText } from "@closing-line/core";
+import { bookName, brokenScannerRule, pickText, type BrokenScannerRule } from "@closing-line/core";
 import type { BetWithFixture, Player } from "@closing-line/db";
 import { odds, percent, shortDate, signedKroner, kroner } from "../lib/format.ts";
 import { groupBets } from "../lib/groups.ts";
@@ -42,25 +42,39 @@ export function reason(bet: BetWithFixture, player: Pick<Player, "kind"> | undef
     return bet.tag ? REASONS[bet.tag] : "";
 }
 
-/** A scanner bet from before a rule that would now stop it (too far out, an outsider, too small a Kelly fraction). */
-export function placedUnderOldRules(bet: BetWithFixture, player: Pick<Player, "kind"> | undefined): boolean {
-    return (
-        player?.kind === "scanner" &&
-        bet.fixture !== null &&
-        !meetsScannerRules(bet, bet.fixture.kickoff, SCANNER_RULES)
-    );
+/** The rule today's scanner would stop a bet on, for scanner bets placed before that rule existed. */
+export function oldRule(bet: BetWithFixture, player: Pick<Player, "kind"> | undefined): BrokenScannerRule | undefined {
+    if (player?.kind !== "scanner" || bet.fixture === null) return undefined;
+    return brokenScannerRule(bet, bet.fixture.kickoff, SCANNER_RULES);
 }
 
-const OLD_RULES_TITLE =
-    "Placed before a rule that would stop this bet today: too far before kickoff, in the closing window, an outsider, or too small a Kelly fraction";
+const OLD_RULE_LABEL: Record<BrokenScannerRule, { tag: string; title: string }> = {
+    too_early: {
+        tag: `over ${SCANNER_RULES.maxHoursToKickoff} h out`,
+        title: `Placed more than ${SCANNER_RULES.maxHoursToKickoff} hours before kickoff; the scanner no longer bets that early`,
+    },
+    too_late: {
+        tag: "closing poll",
+        title: "Placed in the pre-kickoff poll, which also sets the closing price; the scanner no longer bets there",
+    },
+    outsider: {
+        tag: "outsider",
+        title: `Fair odds of ${SCANNER_RULES.maxFairOdds} or more; the scanner no longer bets outsiders`,
+    },
+    small_kelly: {
+        tag: "edge too small",
+        title: "The edge was too small for the odds (Kelly fraction under today's minimum)",
+    },
+};
 
-function OldRules() {
+function OldRule({ rule }: { rule: BrokenScannerRule }) {
+    const { tag, title } = OLD_RULE_LABEL[rule];
     return (
         <span
-            title={OLD_RULES_TITLE}
-            className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            title={title}
+            className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-xs whitespace-nowrap text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
         >
-            old rules
+            old rule: {tag}
         </span>
     );
 }
@@ -119,6 +133,7 @@ export function BetsTable({
                             </tr>
                             {group.bets.map((bet) => {
                                 const player = players.get(bet.playerId);
+                                const broken = oldRule(bet, player);
                                 return (
                                     <tr key={bet.id} data-testid="bet-row">
                                         <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
@@ -145,7 +160,7 @@ export function BetsTable({
                                         </td>
                                         <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
                                             {reason(bet, player)}
-                                            {placedUnderOldRules(bet, player) && <OldRules />}
+                                            {broken && <OldRule rule={broken} />}
                                         </td>
                                         <td className="px-3 py-2 text-right tabular-nums">{odds(bet.lockedOdds)}</td>
                                         <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
@@ -184,6 +199,7 @@ function BetList({ groups, players }: { groups: ReturnType<typeof groupBets>; pl
                     <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-900 dark:border-zinc-800">
                         {group.bets.map((bet) => {
                             const player = players.get(bet.playerId);
+                            const broken = oldRule(bet, player);
                             return (
                                 <li key={bet.id} className="px-3 py-2 text-sm" data-testid="bet-item">
                                     <div className="flex items-baseline justify-between gap-3">
@@ -211,7 +227,7 @@ function BetList({ groups, players }: { groups: ReturnType<typeof groupBets>; pl
                                         </span>
                                         {bet.clv !== null && <span>CLV {percent(bet.clv)}</span>}
                                         {reason(bet, player) && <span>{reason(bet, player)}</span>}
-                                        {placedUnderOldRules(bet, player) && <OldRules />}
+                                        {broken && <OldRule rule={broken} />}
                                     </div>
                                 </li>
                             );

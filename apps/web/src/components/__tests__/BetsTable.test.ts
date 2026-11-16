@@ -1,6 +1,6 @@
 import type { BetWithFixture } from "@closing-line/db";
 import { describe, expect, it } from "vitest";
-import { placedUnderOldRules, reason } from "../BetsTable.tsx";
+import { oldRule, reason } from "../BetsTable.tsx";
 
 const bet = (overrides: Partial<BetWithFixture>) =>
     ({ selfReported: false, tag: null, edgeAtBet: null, ...overrides }) as BetWithFixture;
@@ -21,24 +21,19 @@ describe("reason", () => {
     });
 });
 
-describe("placedUnderOldRules", () => {
+describe("oldRule", () => {
     const kickoff = new Date("2026-11-21T15:00:00Z");
     const fixture = { homeTeam: "Nice", awayTeam: "Paris Saint Germain", kickoff, league: "soccer_france_ligue_one" };
     const scannerBet = (createdAt: Date, lockedOdds: number, sharpFairOddsAtBet: number) =>
         bet({ selection: "home", createdAt, lockedOdds, sharpFairOddsAtBet, fixture });
 
     it("marks scanner bets today's rules wouldn't place, like an outsider 17 days out", () => {
-        expect(placedUnderOldRules(scannerBet(new Date("2026-11-04T16:18:00Z"), 7.5, 6.44), { kind: "scanner" })).toBe(
-            true,
-        );
-        expect(placedUnderOldRules(scannerBet(new Date("2026-11-21T05:00:00Z"), 2.17, 2.07), { kind: "scanner" })).toBe(
-            false,
-        );
+        expect(oldRule(scannerBet(new Date("2026-11-04T16:18:00Z"), 7.5, 6.44), { kind: "scanner" })).toBe("too_early");
+        expect(oldRule(scannerBet(new Date("2026-11-20T16:18:00Z"), 7.5, 6.44), { kind: "scanner" })).toBe("outsider");
+        expect(oldRule(scannerBet(new Date("2026-11-21T05:00:00Z"), 2.17, 2.07), { kind: "scanner" })).toBeUndefined();
     });
 
     it("leaves other players' bets alone", () => {
-        expect(placedUnderOldRules(scannerBet(new Date("2026-11-04T16:18:00Z"), 7.5, 6.44), { kind: "bettor" })).toBe(
-            false,
-        );
+        expect(oldRule(scannerBet(new Date("2026-11-04T16:18:00Z"), 7.5, 6.44), { kind: "bettor" })).toBeUndefined();
     });
 });
