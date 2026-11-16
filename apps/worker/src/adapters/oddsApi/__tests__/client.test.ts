@@ -34,7 +34,7 @@ describe("OddsApiClient.odds", () => {
         const fetch = fakeFetch(json(recording("odds-h2h.json")));
         const { data, balance } = await client(fetch).odds("soccer_epl", ["pinnacle", "unibet_se"]);
 
-        expect(balance).toEqual({ used: 1, remaining: 499, lastCost: 1, takenAt: now });
+        expect(balance).toEqual({ used: 1, remaining: 499, lastCost: 1, takenAt: now, endpoint: "odds" });
         expect(data).toHaveLength(2);
         const [match] = data;
         expect(match).toMatchObject({
@@ -156,12 +156,18 @@ describe("OddsApiClient.events and balance", () => {
             awayTeam: "Arsenal",
             kickoff: new Date("2026-11-01T16:30:00Z"),
         });
-        expect(balance.lastCost).toBe(0);
+        expect(balance).toMatchObject({ lastCost: 0, endpoint: "events" });
     });
 
     it("reads the balance from a free call", async () => {
         const fetch = fakeFetch(json("[]"));
-        expect(await client(fetch).balance()).toEqual({ used: 1, remaining: 499, lastCost: 1, takenAt: now });
+        expect(await client(fetch).balance()).toEqual({
+            used: 1,
+            remaining: 499,
+            lastCost: 1,
+            takenAt: now,
+            endpoint: "sports",
+        });
         expect((fetch.mock.calls[0]?.[0] as URL).pathname).toBe("/v4/sports");
     });
 
@@ -178,7 +184,7 @@ describe("OddsApiClient.scores", () => {
         const url = fetch.mock.calls[0]?.[0] as URL;
         expect(url.pathname).toBe("/v4/sports/soccer_italy_serie_b/scores");
         expect(url.searchParams.get("daysFrom")).toBe("3");
-        expect(balance.lastCost).toBe(2);
+        expect(balance).toMatchObject({ lastCost: 2, endpoint: "scores" });
         expect(data).toEqual([
             {
                 kickoff: new Date("2026-10-31T14:00:00Z"),

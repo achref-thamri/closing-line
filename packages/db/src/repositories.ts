@@ -26,6 +26,7 @@ export type NewBet = Omit<
     "id" | "status" | "closingFairOdds" | "clv" | "profitOre" | "settledAt"
 >;
 export type ApiUsage = typeof apiUsage.$inferSelect;
+export type NewApiUsage = Omit<typeof apiUsage.$inferInsert, "id">;
 /** `fixture` is null for bets on events we do not track, which carry `eventName` instead. */
 export type BetWithFixture = Bet & { fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "kickoff" | "league"> | null };
 export type JobRun = typeof jobRuns.$inferSelect;
@@ -475,7 +476,7 @@ export function createRepositories(db: Database) {
         },
 
         apiUsage: {
-            async record(row: Omit<ApiUsage, "id">): Promise<void> {
+            async record(row: NewApiUsage): Promise<void> {
                 await db.insert(apiUsage).values(row);
             },
             /** The last reading taken before `before`, e.g. the balance when the day began. */

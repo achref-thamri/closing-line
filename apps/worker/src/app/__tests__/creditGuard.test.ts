@@ -60,6 +60,11 @@ describe("CreditGuard", () => {
         expect(await repos.apiUsage.latest("odds-api")).toMatchObject({ used: 101, remaining: 399 });
     });
 
+    it("stores which endpoint spent the credits", async () => {
+        await guard().spend(2, "closing", call({ ...balance(102, 398, 2), endpoint: "scores" }));
+        expect(await repos.apiUsage.latest("odds-api")).toMatchObject({ lastCost: 2, endpoint: "scores" });
+    });
+
     it("refreshes a balance from before the monthly reset", async () => {
         await seed(480, 20, new Date("2026-10-31T20:00:00Z"));
         const paid = call(balance(101, 399));
