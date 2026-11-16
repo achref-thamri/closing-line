@@ -100,3 +100,20 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
     polls plus scores (no free football-data.org results here either) should take roughly 50 credits a month, about
     430 in all. Greece and League Two are too thin to trust, Turkey has no edge, and Scotland and League One give too
     few bets.
+
+- Over/under 2.5 goals tested on 2026-11-16 and not added. Same rules as the scanner (2% edge over Pinnacle's
+  de-vigged early price, 2% Kelly fraction, fair odds under 5), Bet365 as the only soft book, 2021/22 to 2024/25 in
+  all eight leagues (about 12,000 matches). The bar, set before the run: at least +4% CLV, 70% beating the close and
+  about 10 bets a season, since adding totals roughly doubles the cost of every poll and would need a paid plan.
+
+    At first it looked strong: 23 bets, +8.3% CLV, 87% beating the close, but a -23% return. Nearly all were unders in
+    high-scoring matches (Bayern, Dortmund) where football-data's Pinnacle 2.5 price sits at about 1.33/3.3 and the
+    closing price is the same number, while Bet365 and the market average have the under near 4.0. Pinnacle was
+    pricing a higher main line, so its 2.5 figure is stale and both the edge and the CLV are made up. Leaving out the
+    256 matches where Pinnacle's early and closing totals are identical leaves 7 bets in four seasons at -1.9% CLV
+    (9 at -1.6% with a 1% edge). Bet365 prices totals about as tightly as Pinnacle, so there is nothing to tip.
+
+    The same run on 1X2 with Bet365 alone gave 93 bets, +1.4% CLV, 66% beating the close, almost all draws. The 1X2
+    columns don't have the stale-price problem: 3 of 12,110 matches have identical early and closing Pinnacle prices,
+    and none of them was bet. Any future check of another market in these files should drop matches whose Pinnacle
+    price never moves.
