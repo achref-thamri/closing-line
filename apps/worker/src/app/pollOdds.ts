@@ -8,6 +8,7 @@ import {
     findValueBets,
     minimumOdds,
     scannerStake,
+    sideName,
     toOutcome,
     type CreditPriority,
     type Outcome,
@@ -190,7 +191,7 @@ async function scannerBets(
             homeTeam: event.homeTeam,
             awayTeam: event.awayTeam,
             kickoff: event.kickoff,
-            pick: teamOf(event, value.selection),
+            pick: sideName(event, value.selection),
             fairOdds: value.fairOdds,
             minOdds: minimumOdds(
                 value.fairOdds,
@@ -232,7 +233,7 @@ async function checkPriceGone(
         homeTeam: event.homeTeam,
         awayTeam: event.awayTeam,
         kickoff: event.kickoff,
-        pick: teamOf(event, selection),
+        pick: sideName(event, selection),
         tippedOdds: bet.lockedOdds,
         tippedAt: bet.createdAt,
         fairOdds: 1 / fair[selection],
@@ -299,10 +300,4 @@ function snapshotsOf(event: EventOdds, takenAt: Date, kind: "poll" | "closing"):
         takenAt,
         kind,
     }));
-}
-
-function teamOf(event: EventOdds, selection: Outcome): string {
-    if (selection === "home") return event.homeTeam;
-    if (selection === "away") return event.awayTeam;
-    return "Draw";
 }

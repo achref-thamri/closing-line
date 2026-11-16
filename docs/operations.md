@@ -102,6 +102,9 @@ aside, removes files deleted from the repo since the last deploy, rebuilds, and 
 reports healthy within three minutes. The workflows run with a read-only token and actions pinned to commit SHAs,
 which Dependabot keeps current.
 
+Stopping the worker waits for the job it is running, up to two minutes (`stop_grace_period`), because a job killed
+halfway is never run again. A deploy during a poll can take that much longer.
+
 Deploys rebuild the worker and dashboard but never pull Postgres. Take a minor release with
 `docker compose pull postgres && docker compose up -d postgres`, and a major one only by dump and restore.
 

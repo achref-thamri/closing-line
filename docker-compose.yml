@@ -33,6 +33,9 @@ services:
         environment:
             DATABASE_URL: postgres://closing_line:${POSTGRES_PASSWORD}@postgres:5432/closing_line
             HEARTBEAT_PATH: /data/heartbeat
+        # On shutdown the worker finishes the running tick. One Odds API call with retries can take ~45 s and a tick
+        # can hold a few, so Docker's default 10 s would kill a job halfway, and a started job is never run again.
+        stop_grace_period: 2m
         volumes:
             - worker-data:/data
         depends_on:
@@ -49,7 +52,7 @@ services:
         restart: unless-stopped
         environment:
             DATABASE_URL: postgres://closing_line:${POSTGRES_PASSWORD}@postgres:5432/closing_line
-        # Only on the server's loopback: open it through an SSH tunnel (see the README).
+        # Only on the server's loopback: open it through an SSH tunnel (see docs/operations.md).
         ports:
             - "127.0.0.1:3000:3000"
         depends_on:

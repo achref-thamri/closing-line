@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookName, pickText, teamsOf } from "../picks.ts";
+import { bookName, pickText, sideName, teamsOf } from "../picks.ts";
 
 describe("teamsOf", () => {
     it("splits a match into its two sides", () => {
@@ -53,5 +53,16 @@ describe("teamsOf with odd whitespace", () => {
         const started = performance.now();
         expect(teamsOf(`a${" ".repeat(50_000)}b`)).toEqual([]);
         expect(performance.now() - started).toBeLessThan(100);
+    });
+});
+
+describe("sideName", () => {
+    it("names the team a match-result selection backs", () => {
+        const match = { homeTeam: "Bayern Munich", awayTeam: "Arsenal" };
+        expect([sideName(match, "home"), sideName(match, "draw"), sideName(match, "away")]).toEqual([
+            "Bayern Munich",
+            "Draw",
+            "Arsenal",
+        ]);
     });
 });

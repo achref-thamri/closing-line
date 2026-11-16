@@ -171,6 +171,36 @@ describe("settleBets", () => {
         ]);
     });
 
+    it("settles the other leagues and still reports them when one league's results fail", async () => {
+        await repos.fixtures.upsert([
+            {
+                id: id("c"),
+                league: "soccer_germany_bundesliga",
+                homeTeam: "Bayern Munich",
+                awayTeam: "Union Berlin",
+                kickoff,
+            },
+        ]);
+        await bet(SCANNER, id("a"), "home", 2.1);
+        await bet(SCANNER, id("c"), "home", 1.5);
+        const run = deps([]);
+        run.results = {
+            results: (code: string) =>
+                code === "PL"
+                    ? Promise.reject(new Error("football-data.org: server error 503"))
+                    : Promise.resolve([finished(["Bayern Munich"], ["Union Berlin"], 3, 0)]),
+        };
+
+        await expect(settleBets(run)).rejects.toThrow("Premier League: football-data.org: server error 503");
+        expect((await repos.bets.forPlayer(SCANNER)).map((each) => [each.fixtureId, each.status])).toEqual([
+            [id("a"), "open"],
+            [id("c"), "won"],
+        ]);
+        expect(messages).toEqual([
+            "📒 Settled 1 paper bet(s):\nValue scanner: won +50 kr on Bayern Munich v Union Berlin",
+        ]);
+    });
+
     it("asks for results around the kickoffs, once per league", async () => {
         const run = deps([]);
         await settleBets(run);
