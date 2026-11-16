@@ -134,6 +134,13 @@
             "when": 1794249811684,
             "tag": "0018_no_bets_at_closing",
             "breakpoints": true
+        },
+        {
+            "idx": 19,
+            "version": "7",
+            "when": 1794853039044,
+            "tag": "0019_api_usage_endpoint",
+            "breakpoints": true
         }
     ]
 }

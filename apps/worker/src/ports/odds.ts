@@ -25,12 +25,16 @@ export interface EventOdds extends EventInfo {
 }
 
 /** Credit balance reported with every response. */
+export type OddsEndpoint = "odds" | "scores" | "events" | "sports";
+
 export interface CreditBalance {
     used: number;
     remaining: number;
     /** Cost of the call that reported this balance. */
     lastCost: number;
     takenAt: Date;
+    /** The call that reported it; recorded so credit spend can be split by endpoint. */
+    endpoint?: OddsEndpoint;
 }
 
 export interface Priced<T> {

@@ -8,6 +8,7 @@ import {
     type CreditBalance,
     type EventInfo,
     type EventOdds,
+    type OddsEndpoint,
     type OddsSource,
     type Priced,
     type Quote,
@@ -157,7 +158,7 @@ export class OddsApiClient implements OddsSource {
     private async get<S extends z.ZodType>(
         path: string,
         schema: S,
-        label: string,
+        endpoint: OddsEndpoint,
         params: Record<string, string>,
     ): Promise<Priced<z.output<S>>> {
         const url = new URL(BASE_URL + path);
@@ -170,12 +171,12 @@ export class OddsApiClient implements OddsSource {
                     getJson({
                         url,
                         schema,
-                        label: `Odds API ${label}`,
+                        label: `Odds API ${endpoint}`,
                         ...(this.options.fetch && { fetch: this.options.fetch }),
                     }),
                 this.options.retry,
             );
-            return { data, balance: balanceFrom(headers, this.now()) };
+            return { data, balance: balanceFrom(headers, this.now(), endpoint) };
         } catch (error) {
             if (error instanceof HttpError && error.body.includes("OUT_OF_USAGE_CREDITS")) {
                 throw new OutOfCreditsError("Odds API: the monthly credits are used up", { cause: error });
@@ -204,7 +205,7 @@ function selectionOf(name: string, event: { home_team: string; away_team: string
 }
 
 /** Missing headers read as zero, which stops paid calls: safer than guessing a balance. */
-function balanceFrom(headers: Headers, takenAt: Date): CreditBalance {
+function balanceFrom(headers: Headers, takenAt: Date, endpoint: OddsEndpoint): CreditBalance {
     const read = (name: string) => {
         const value = Number(headers.get(name));
         return headers.has(name) && Number.isFinite(value) ? value : 0;
@@ -214,5 +215,6 @@ function balanceFrom(headers: Headers, takenAt: Date): CreditBalance {
         remaining: read("x-requests-remaining"),
         lastCost: read("x-requests-last"),
         takenAt,
+        endpoint,
     };
 }

@@ -211,6 +211,8 @@ export const apiUsage = pgTable(
         used: integer().notNull(),
         remaining: integer().notNull(),
         lastCost: integer("last_cost").notNull(),
+        /** Which Odds API call spent the credits (odds, scores, events, sports); null before 2026-11-16. */
+        endpoint: text(),
     },
     (table) => [index("api_usage_provider_taken_idx").on(table.provider, table.takenAt)],
 );
