@@ -6,6 +6,10 @@ test("shows the leaderboard, the bankroll chart and the latest bets", async ({ p
     await expect(page.getByRole("heading", { name: "Closing Line" })).toBeVisible();
     await expect(page.getByText("Demo data")).toBeVisible();
 
+    await expect(page.getByRole("region", { name: "Go-live check" })).toContainText("Ready for real money?");
+    await expect(page.getByTestId("go-live-item")).toHaveCount(5);
+    await expect(page.getByTestId("clv-chart").locator("svg").first()).toBeVisible();
+
     const cards = page.getByTestId("player-card");
     await expect(cards).toHaveCount(3);
     await expect(cards.first()).toContainText("#1");

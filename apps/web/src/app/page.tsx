@@ -1,4 +1,5 @@
 import { BankrollChart } from "../components/BankrollChart.tsx";
+import { GoLivePanel } from "../components/GoLivePanel.tsx";
 import { BetsTable } from "../components/BetsTable.tsx";
 import { Pagination } from "../components/Pagination.tsx";
 import { PlayerFilter } from "../components/PlayerFilter.tsx";
@@ -28,6 +29,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         })),
     }));
 
+    const clvSeries = dashboard.clvSeries.flatMap(({ playerId, points }) => {
+        const owner = players.get(playerId);
+        return owner ? [{ id: playerId, name: owner.name, colour: playerColour(owner), points }] : [];
+    });
+
     return (
         <main className="mx-auto max-w-[88rem] space-y-8 px-4 py-8">
             <header className="flex flex-wrap items-end justify-between gap-4">
@@ -52,6 +58,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                 </div>
             </header>
 
+            {dashboard.goLive && <GoLivePanel check={dashboard.goLive} />}
+
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Leaderboard">
                 {dashboard.players.map((summary, index) => (
                     <PlayerCard
@@ -71,6 +79,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                     <p className="text-sm text-zinc-500">The chart starts with the first settled bet.</p>
                 )}
             </section>
+
+            {clvSeries.some((line) => line.points.length > 0) && (
+                <section className="space-y-3">
+                    <h2 className="font-semibold">Average CLV over time</h2>
+                    <p className="text-sm text-zinc-500">
+                        Shows skill long before profit does. The scanner&apos;s line counts only bets today&apos;s rules
+                        would place.
+                    </p>
+                    <BankrollChart series={clvSeries} testId="clv-chart" />
+                </section>
+            )}
 
             <section className="space-y-3" id="bets">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">

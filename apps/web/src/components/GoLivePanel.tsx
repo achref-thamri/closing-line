@@ -1,0 +1,73 @@
+import { GO_LIVE, type GoLiveCheck, type GoLiveItem } from "@closing-line/core";
+import { percent } from "../lib/format.ts";
+
+/** What each go-live rule needs, and where the scanner stands on it. */
+function describe(item: GoLiveItem, check: GoLiveCheck, now: Date): { rule: string; status: string } {
+    switch (item.key) {
+        case "bets":
+            return { rule: `${GO_LIVE.bets} settled bets`, status: `${check.settled} so far` };
+        case "months": {
+            const days = check.firstBetAt ? Math.floor((now.getTime() - check.firstBetAt.getTime()) / 86_400_000) : 0;
+            return { rule: `${GO_LIVE.months} months of bets`, status: `${days} days so far` };
+        }
+        case "clv": {
+            const clv = check.clv;
+            const range =
+                clv?.low === undefined || clv.high === undefined
+                    ? ""
+                    : ` (95% range ${percent(clv.low)} to ${percent(clv.high)})`;
+            return {
+                rule: "Positive average CLV",
+                status: clv ? `${percent(clv.mean)} over ${clv.count}${range}` : "no closing prices yet",
+            };
+        }
+        case "benchmark":
+            return {
+                rule: "ROI above the favourite benchmark",
+                status: `${percent(check.roi)} against ${percent(check.benchmarkRoi)}`,
+            };
+        case "drawdown":
+            return {
+                rule: `Drawdown under ${GO_LIVE.maxDrawdown * 100}% of the start`,
+                status: `worst so far ${percent(check.maxDrawdown).replace("+", "")}`,
+            };
+    }
+}
+
+/**
+ * The scanner against the go-live rule, from bets today's rules would place. The last rule, no unexplained bugs in
+ * the last 30 days, is checked by hand.
+ */
+export function GoLivePanel({ check, now = new Date() }: { check: GoLiveCheck; now?: Date }) {
+    return (
+        <section
+            className="rounded-xl border border-zinc-200 p-5 dark:border-zinc-800"
+            aria-label="Go-live check"
+            data-testid="go-live"
+        >
+            <header className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="font-semibold">Ready for real money?</h2>
+                <span
+                    className={`text-sm font-medium ${check.ready ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500"}`}
+                >
+                    {check.ready ? "Yes, if there were no unexplained bugs in the last 30 days" : "Not yet"}
+                </span>
+            </header>
+            <p className="mt-1 text-xs text-zinc-500">
+                The value scanner, counting only bets today&apos;s rules would place.
+            </p>
+            <ul className="mt-3 space-y-1.5 text-sm">
+                {check.items.map((item) => {
+                    const { rule, status } = describe(item, check, now);
+                    return (
+                        <li key={item.key} className="flex flex-wrap gap-x-2" data-testid="go-live-item">
+                            <span aria-label={item.passed ? "met" : "not met"}>{item.passed ? "✅" : "⬜"}</span>
+                            <span className="font-medium">{rule}</span>
+                            <span className="text-zinc-500 tabular-nums">{status}</span>
+                        </li>
+                    );
+                })}
+            </ul>
+        </section>
+    );
+}

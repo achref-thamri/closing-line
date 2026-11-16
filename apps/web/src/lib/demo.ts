@@ -122,6 +122,8 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
                         : {}),
                     sharpFairOddsAtBet: fairOdds,
                     edgeAtBet: demoBet.edge,
+                    // Placed on the morning of the match, like the live scanner.
+                    createdAt: new Date(Math.min(kickoff.getTime() - 6 * 3_600_000, now.getTime())),
                 });
                 if (!placed || !finished) continue;
                 const closingFairOdds = fairOdds * (1 - demoBet.edge * 0.6 + (next() - 0.5) * 0.04);
