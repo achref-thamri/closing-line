@@ -98,8 +98,8 @@ ssh -N -L 3300:localhost:3000 <server>   # then http://localhost:3300
 
 Merges to `main` deploy after CI passes ([deploy.yml](../.github/workflows/deploy.yml)). GitHub Actions streams the
 tree over SSH with a key that can only run [server-deploy.sh](../scripts/server-deploy.sh). That script unpacks
-aside, removes files deleted from the repo since the last deploy, rebuilds, and fails the deploy unless the worker
-reports healthy within three minutes. The workflows run with a read-only token and actions pinned to commit SHAs,
+aside, removes files deleted from the repo since the last deploy, rebuilds, recreates the backup container when
+`backup.sh` changed, and fails the deploy unless the worker reports healthy within three minutes. The workflows run with a read-only token and actions pinned to commit SHAs,
 which Dependabot keeps current.
 
 Stopping the worker waits for the job it is running, up to two minutes (`stop_grace_period`), because a job killed

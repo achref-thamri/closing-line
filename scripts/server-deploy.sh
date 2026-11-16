@@ -22,6 +22,10 @@ tar -xf - -C "$incoming"
 [[ -f $incoming/docker-compose.yml && -f $incoming/package.json ]] || { echo "input is not the repo" >&2; exit 65; }
 (cd "$incoming" && find . \( -type f -o -type l \) -print | LC_ALL=C sort) >"$shipped"
 mkdir -p "$APP_DIR"
+# The backup container runs backup.sh as one long loop, and Compose doesn't recreate it for a change to a mounted
+# file, so note a change here and recreate it below. Only then: recreating it during the 03:00 dump would cut it short.
+backup_changed=false
+cmp -s "$incoming/docker/backup.sh" "$APP_DIR/docker/backup.sh" || backup_changed=true
 cp -a "$incoming/." "$APP_DIR/"
 
 # Files the previous deploy shipped that this one does not were deleted from the repo; remove them so they stop
@@ -34,6 +38,10 @@ cp "$shipped" "$manifest"
 
 cd "$APP_DIR"
 docker compose up -d --build --remove-orphans
+if $backup_changed; then
+    docker compose up -d --no-deps --force-recreate backup
+    echo "backup.sh changed: backup container recreated"
+fi
 
 for _ in $(seq 1 36); do
     unhealthy=()
