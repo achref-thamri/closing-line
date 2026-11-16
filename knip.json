@@ -1,0 +1,8 @@
+{
+    "$schema": "https://unpkg.com/knip@6/schema.json",
+    "ignoreExportsUsedInFile": true,
+    "ignore": [".remember/**"],
+    "workspaces": {
+        "apps/worker": { "entry": ["src/main.ts", "scripts/*.ts"] }
+    }
+}

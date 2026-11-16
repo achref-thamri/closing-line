@@ -8,7 +8,7 @@ so no Docker is needed.
 ```sh
 corepack enable                  # once, gives you the pnpm version in package.json
 pnpm install
-pnpm check                       # format, lint, typecheck, tests
+pnpm check                       # format, lint, typecheck, unused code, tests
 cp .env.example .env             # add the keys below
 node --env-file=.env apps/worker/src/main.ts
 ```
