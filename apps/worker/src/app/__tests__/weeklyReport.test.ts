@@ -221,7 +221,15 @@ describe("bettorBreakdown", () => {
 
 describe("tipsSection", () => {
     const sentAt = new Date("2026-11-07T08:00:00Z");
-    const tip = (clv: number | null) => ({ lockedOdds: 2.5, createdAt: sentAt, clv }) as Bet;
+    const tip = (clv: number | null) =>
+        ({
+            lockedOdds: 2.5,
+            createdAt: sentAt,
+            clv,
+            selection: "home",
+            sharpFairOddsAtBet: 2.4,
+            closingFairOdds: clv === null ? null : 2.45,
+        }) as Bet;
     const seen = (hours: number, price: number, kind = "poll") => ({
         price,
         takenAt: new Date(sentAt.getTime() + hours * 3_600_000),
@@ -232,20 +240,41 @@ describe("tipsSection", () => {
         const lasted = { bet: tip(0.03), later: [seen(3, 2.5), seen(9, 2.55, "closing")] };
         const gone = { bet: tip(0.05), later: [seen(3, 2.4), seen(9, 2.3, "closing")] };
         const unseen = { bet: tip(null), later: [] };
-        expect(tipsSection([lasted, gone, unseen])).toEqual([
+        expect(tipsSection([lasted, gone, unseen], config.scanner)).toEqual([
             "",
             "🔎 Tips this week: 3",
             "Price still there at the next poll: 1 of 2",
             "Price still there just before kickoff: 1 of 2",
             "Average CLV: +4.0% over 2 with a closing price",
+            // Worth it at 2.48 (2.4 fair, 2% Kelly): 2.5 at the next poll is, 2.4 isn't.
+            "Bet at the next poll instead: 1 still worth it, 1 gone",
+            "CLV on those: +2.0% at the next poll's price, +3.0% at the tip's",
         ]);
-        expect(tipsSection(Array.from({ length: 5 }, () => gone)).at(-1)).toBe(
-            "Most tip prices are gone by kickoff: bet soon after a tip arrives.",
-        );
-        expect(tipsSection(Array.from({ length: 5 }, () => lasted)).at(-1)).toMatch(
-            /^Most tip prices last until kickoff/,
-        );
-        expect(tipsSection([])).toEqual([]);
+    });
+
+    it("counts a tip next seen just before kickoff without scoring it", () => {
+        const late = { bet: tip(0.03), later: [{ price: 2.5, takenAt: new Date(), kind: "closing" }] };
+        expect(tipsSection([late], config.scanner).slice(-1)).toEqual([
+            "Bet at the next poll instead: 1 only just before kickoff",
+        ]);
+    });
+
+    it("gives the lesson once there are enough tips", () => {
+        const lasted = { bet: tip(0.03), later: [seen(3, 2.5), seen(9, 2.55, "closing")] };
+        const gone = { bet: tip(0.05), later: [seen(3, 2.4), seen(9, 2.3, "closing")] };
+        expect(
+            tipsSection(
+                Array.from({ length: 5 }, () => gone),
+                config.scanner,
+            ).at(-1),
+        ).toBe("Most tip prices are gone by kickoff: bet soon after a tip arrives.");
+        expect(
+            tipsSection(
+                Array.from({ length: 5 }, () => lasted),
+                config.scanner,
+            ).at(-1),
+        ).toMatch(/^Most tip prices last until kickoff/);
+        expect(tipsSection([], config.scanner)).toEqual([]);
     });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { kellyFraction } from "../staking.ts";
-import { closingLineValue, edge, minimumOdds, tipLifetime } from "../value.ts";
+import { closingLineValue, edge, followerFill, minimumOdds, tipLifetime } from "../value.ts";
 
 describe("edge", () => {
     it("is the expected profit per unit staked", () => {
@@ -59,5 +59,36 @@ describe("tipLifetime", () => {
             { price: 2.5, takenAt: at(8.9), kind: "closing" },
         ];
         expect(tipLifetime({ odds: 2.5, sentAt }, twoClosing)).toEqual({ nextPoll: false, atClosing: true });
+    });
+});
+
+describe("followerFill", () => {
+    const sentAt = new Date("2026-11-07T08:00:00Z");
+    const at = (hours: number) => new Date(sentAt.getTime() + hours * 3_600_000);
+    const tip = { sentAt, minOdds: 2.4 };
+
+    it("fills at the next poll when the price is still worth it there, even below the tip's odds", () => {
+        const later = [
+            { price: 2.6, takenAt: at(9), kind: "closing" },
+            { price: 2.42, takenAt: at(3), kind: "poll" },
+            { price: 2.6, takenAt: at(-1), kind: "poll" },
+        ];
+        expect(followerFill(tip, later)).toEqual({ at: "next_poll", price: 2.42 });
+    });
+
+    it("misses when the next poll's price is under the worth-it price, whatever happens later", () => {
+        const later = [
+            { price: 2.39, takenAt: at(3), kind: "poll" },
+            { price: 2.6, takenAt: at(9), kind: "closing" },
+        ];
+        expect(followerFill(tip, later)).toEqual({ at: "missed" });
+    });
+
+    it("labels a fill at the pre-kickoff poll, and knows nothing before a later poll", () => {
+        expect(followerFill(tip, [{ price: 2.5, takenAt: at(9), kind: "closing" }])).toEqual({
+            at: "closing",
+            price: 2.5,
+        });
+        expect(followerFill(tip, [])).toBeUndefined();
     });
 });
