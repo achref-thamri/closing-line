@@ -11,6 +11,7 @@
         "e2e": "playwright test"
     },
     "dependencies": {
+        "@closing-line/config": "workspace:*",
         "@closing-line/core": "workspace:*",
         "@closing-line/db": "workspace:*",
         "next": "16.4.6",

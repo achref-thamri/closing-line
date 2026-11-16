@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { fairProbabilities, favourite, findValueBets, netOdds, type PriceQuote } from "../scanner.ts";
+import {
+    fairProbabilities,
+    favourite,
+    findValueBets,
+    meetsScannerRules,
+    netOdds,
+    type PriceQuote,
+} from "../scanner.ts";
 
 const now = new Date("2026-11-01T12:00:00Z");
 const fresh = new Date("2026-11-01T11:58:00Z");
@@ -111,5 +118,31 @@ describe("favourite", () => {
 
     it("needs the full market", () => {
         expect(favourite(pinnacle.slice(1), "pinnacle")).toBeUndefined();
+    });
+});
+
+describe("meetsScannerRules", () => {
+    const rules = { maxHoursToKickoff: 72, maxFairOdds: 5, minKellyFraction: { home: 0.02, draw: 0.01, away: 0.02 } };
+    const kickoff = new Date("2026-11-21T15:00:00Z");
+    const hoursBefore = (hours: number) => new Date(kickoff.getTime() - hours * 3_600_000);
+    const bet = { createdAt: hoursBefore(10), selection: "home", lockedOdds: 2.17, sharpFairOddsAtBet: 2.07 };
+
+    it("passes a bet today's scanner would still place", () => {
+        expect(meetsScannerRules(bet, kickoff, rules)).toBe(true);
+    });
+
+    it("fails a bet placed too far out, on an outsider, or with too small a Kelly fraction", () => {
+        expect(meetsScannerRules({ ...bet, createdAt: hoursBefore(17 * 24) }, kickoff, rules)).toBe(false);
+        expect(meetsScannerRules({ ...bet, lockedOdds: 7.5, sharpFairOddsAtBet: 6.44 }, kickoff, rules)).toBe(false);
+        // 2.47 against 2.42 fair is a 2.1% edge but a Kelly fraction of only 1.4%.
+        expect(meetsScannerRules({ ...bet, lockedOdds: 2.47, sharpFairOddsAtBet: 2.42 }, kickoff, rules)).toBe(false);
+        expect(
+            meetsScannerRules({ ...bet, selection: "draw", lockedOdds: 3.65, sharpFairOddsAtBet: 3.5 }, kickoff, rules),
+        ).toBe(true);
+    });
+
+    it("can't judge a bet without a fair price or a 1X2 selection, so leaves it in", () => {
+        expect(meetsScannerRules({ ...bet, sharpFairOddsAtBet: null }, kickoff, rules)).toBe(true);
+        expect(meetsScannerRules({ ...bet, selection: "over" }, kickoff, rules)).toBe(true);
     });
 });

@@ -1,9 +1,10 @@
 import { kroner, percent, signedKroner } from "../lib/format.ts";
-import type { PlayerSummary } from "../lib/data.ts";
+import { MIN_CLV_BETS_TO_RANK, type PlayerSummary } from "../lib/data.ts";
 import { KIND_LABEL, playerColour } from "./players.ts";
 
-export function PlayerCard({ summary, rank }: { summary: PlayerSummary; rank: number }) {
-    const { player, stats, bankrollOre } = summary;
+/** `rank` is undefined for a player without enough closing prices to rank. */
+export function PlayerCard({ summary, rank }: { summary: PlayerSummary; rank: number | undefined }) {
+    const { player, stats, bankrollOre, currentRules } = summary;
     return (
         <article
             data-testid="player-card"
@@ -12,7 +13,7 @@ export function PlayerCard({ summary, rank }: { summary: PlayerSummary; rank: nu
         >
             <header className="flex items-baseline justify-between gap-3">
                 <h2 className="font-semibold">
-                    <span className="mr-2 text-zinc-400">#{rank}</span>
+                    {rank !== undefined && <span className="mr-2 text-zinc-400">#{rank}</span>}
                     {player.name}
                 </h2>
                 <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
@@ -28,6 +29,16 @@ export function PlayerCard({ summary, rank }: { summary: PlayerSummary; rank: nu
                 <Stat label="Avg CLV" value={percent(stats.averageClv)} />
                 <Stat label="Settled" value={`${stats.settled} (${stats.won} won)`} />
             </dl>
+            {currentRules && currentRules.clvCount < stats.clvCount && (
+                <p className="mt-3 text-xs text-zinc-500" data-testid="current-rules">
+                    Under today&apos;s rules: CLV {percent(currentRules.averageClv)} over {currentRules.clvCount} bets
+                </p>
+            )}
+            {rank === undefined && (
+                <p className="mt-3 text-xs text-zinc-500">
+                    Not ranked: ranking needs {MIN_CLV_BETS_TO_RANK} bets with a closing price, {stats.clvCount} so far.
+                </p>
+            )}
             {stats.open > 0 && <p className="mt-3 text-xs text-zinc-500">{stats.open} open</p>}
         </article>
     );

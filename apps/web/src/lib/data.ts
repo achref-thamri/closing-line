@@ -1,4 +1,11 @@
-import { bankrollSeries, statsFromTotals, totalsOf, type BankrollPoint, type PlayerStats } from "@closing-line/core";
+import {
+    bankrollSeries,
+    meetsScannerRules,
+    statsFromTotals,
+    totalsOf,
+    type BankrollPoint,
+    type PlayerStats,
+} from "@closing-line/core";
 import {
     createRepositories,
     openDatabase,
@@ -7,6 +14,7 @@ import {
     type Player,
 } from "@closing-line/db";
 import { seedDemo } from "./demo.ts";
+import { SCANNER_RULES } from "./rules.ts";
 
 export interface PlayerSummary {
     player: Player;
@@ -15,11 +23,28 @@ export interface PlayerSummary {
     /** Profit as a share of the starting bankroll, so players who start with different bankrolls compare fairly. */
     growth: number;
     series: BankrollPoint[];
+    /** The scanner only: average CLV of its bets that today's rules would still place, and how many there are. */
+    currentRules?: { averageClv: number | undefined; clvCount: number };
 }
 
-/** Best growth first; players level on growth keep their order. */
-export function byGrowth(a: Pick<PlayerSummary, "growth">, b: Pick<PlayerSummary, "growth">): number {
-    return b.growth - a.growth;
+/** Bets with a closing price a player needs before the leaderboard ranks them: fewer says more about luck than skill. */
+export const MIN_CLV_BETS_TO_RANK = 30;
+
+type Rankable = Pick<PlayerSummary, "growth"> & { stats: Pick<PlayerStats, "averageClv" | "clvCount"> };
+
+export function isRanked(summary: Rankable): boolean {
+    return summary.stats.averageClv !== undefined && summary.stats.clvCount >= MIN_CLV_BETS_TO_RANK;
+}
+
+/**
+ * Best average CLV first among players with enough closing prices; the rest after them, closest to ranking first,
+ * then by growth. CLV, not profit, is what the project judges players on.
+ */
+export function byClv(a: Rankable, b: Rankable): number {
+    const ranked = Number(isRanked(b)) - Number(isRanked(a));
+    if (ranked !== 0) return ranked;
+    if (isRanked(a)) return (b.stats.averageClv ?? 0) - (a.stats.averageClv ?? 0);
+    return b.stats.clvCount - a.stats.clvCount || b.growth - a.growth;
 }
 
 /** Bets per page in the dashboard's table. */
@@ -83,11 +108,13 @@ export async function loadDashboard(requestedPage?: string, requestedPlayer?: st
                 bankrollOre: player.startingBankrollOre + stats.profitOre,
                 growth: stats.profitOre / player.startingBankrollOre,
                 series: bankrollSeries(player.startingBankrollOre, player.createdAt, ledger),
+                ...(player.kind === "scanner" && {
+                    currentRules: currentRulesClv(await repos.bets.settledWithFixture(player.id)),
+                }),
             };
         }),
     );
-    // Bettors start with 60,000 kr and the automated players with 10,000 kr, so kroner would rank bettors first.
-    players.sort(byGrowth);
+    players.sort(byClv);
     const player = players.find((summary) => summary.player.id === requestedPlayer)?.player.id;
     const betCounts = { total: 0, open: 0, settled: 0 };
     for (const {
@@ -110,5 +137,18 @@ export async function loadDashboard(requestedPage?: string, requestedPlayer?: st
         player,
         bets: await repos.bets.listing(BETS_PER_PAGE, player, (page - 1) * BETS_PER_PAGE),
         credits: usage && { used: usage.used, remaining: usage.remaining },
+    };
+}
+
+/** CLV over the settled bets today's scanner rules would still place. */
+export function currentRulesClv(
+    bets: readonly (Parameters<typeof meetsScannerRules>[0] & { kickoff: Date; clv: number | null })[],
+): { averageClv: number | undefined; clvCount: number } {
+    const clvs = bets.flatMap((bet) =>
+        bet.clv !== null && meetsScannerRules(bet, bet.kickoff, SCANNER_RULES) ? [bet.clv] : [],
+    );
+    return {
+        averageClv: clvs.length > 0 ? clvs.reduce((sum, clv) => sum + clv, 0) / clvs.length : undefined,
+        clvCount: clvs.length,
     };
 }

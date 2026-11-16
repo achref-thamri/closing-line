@@ -4,7 +4,7 @@ import { Pagination } from "../components/Pagination.tsx";
 import { PlayerFilter } from "../components/PlayerFilter.tsx";
 import { PlayerCard } from "../components/PlayerCard.tsx";
 import { playerColour } from "../components/players.ts";
-import { BETS_PER_PAGE, loadDashboard } from "../lib/data.ts";
+import { BETS_PER_PAGE, isRanked, loadDashboard } from "../lib/data.ts";
 
 // Always read fresh data: the worker settles bets during the day.
 export const dynamic = "force-dynamic";
@@ -54,7 +54,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Leaderboard">
                 {dashboard.players.map((summary, index) => (
-                    <PlayerCard key={summary.player.id} summary={summary} rank={index + 1} />
+                    <PlayerCard
+                        key={summary.player.id}
+                        summary={summary}
+                        // Ranked players come first, so their place in the list is their rank.
+                        rank={isRanked(summary) ? index + 1 : undefined}
+                    />
                 ))}
             </section>
 

@@ -7,11 +7,13 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/config/package.json packages/config/
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile --ignore-scripts --filter "@closing-line/web..."
 COPY tsconfig.base.json ./
+COPY packages/config ./packages/config
 COPY packages/core ./packages/core
 COPY packages/db ./packages/db
 COPY apps/web ./apps/web

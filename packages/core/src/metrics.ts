@@ -19,6 +19,8 @@ export interface PlayerStats {
     roi: number | undefined;
     /** Average closing line value over bets that have one; undefined before the first one. */
     averageClv: number | undefined;
+    /** Bets with a closing line value, the sample behind `averageClv`. */
+    clvCount: number;
 }
 
 /** Sums over a player's bets, as the database computes them in one query (`bets.totals`). */
@@ -48,6 +50,7 @@ export function statsFromTotals(totals: PlayerTotals): PlayerStats {
         profitOre: totals.profitOre,
         roi: totals.stakedOre > 0 ? totals.profitOre / totals.stakedOre : undefined,
         averageClv: totals.clvCount > 0 ? totals.clvSum / totals.clvCount : undefined,
+        clvCount: totals.clvCount,
     };
 }
 

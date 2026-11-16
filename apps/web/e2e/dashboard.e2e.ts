@@ -58,3 +58,13 @@ test("has no horizontal scroll on the page itself", async ({ page }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("lists bets as blocks on a phone, match first", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "the table is for wider screens");
+    await page.goto("/");
+    await expect(page.getByTestId("bets-table")).toBeHidden();
+    const items = page.getByTestId("bet-item");
+    await expect(items).toHaveCount(50);
+    await expect(items.first()).toBeVisible();
+    await expect(items.first()).toContainText(" v ");
+});

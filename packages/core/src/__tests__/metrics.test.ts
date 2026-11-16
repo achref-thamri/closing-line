@@ -39,6 +39,7 @@ describe("playerStats", () => {
             profitOre: -5_000,
             roi: -5_000 / 30_000,
             averageClv: 0.02,
+            clvCount: 3,
         });
     });
 
