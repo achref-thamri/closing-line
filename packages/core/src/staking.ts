@@ -22,14 +22,28 @@ export function kellyStake(bankroll: number, decimalOdds: number, fairProbabilit
         kellyFraction(decimalOdds, fairProbability) * rules.kellyMultiplier,
         rules.maxBankrollFraction,
     );
-    const stake = Math.min(Math.floor((bankroll * fraction) / rules.step) * rules.step, rules.maxStake);
+    // The tolerance stops float error (0.035 / 1.75 is 0.0199…) from rounding a whole step away.
+    const stake = Math.min(Math.floor((bankroll * fraction) / rules.step + 1e-9) * rules.step, rules.maxStake);
     return stake >= rules.minStake ? stake : 0;
 }
 
+/** Share of the edge seen that a scanner bet keeps by kickoff on average, and the most it keeps (ADR 0008). */
+const KEPT_EDGE_SHARE = 0.7;
+const MAX_KEPT_EDGE = 0.035;
+
 /**
- * The live scanner's stake. Kelly under the caps, except that a stake Kelly rounds below the minimum is raised to
- * it: every value bet is then placed, and so tipped. Zero only without an edge, or when the minimum would break the
- * bankroll cap. The back-test keeps plain `kellyStake`, so ADR 0008's figures still hold.
+ * The edge a bet is likely to keep by kickoff. Prices drift back towards Pinnacle's before the close: over four
+ * back-tested seasons, 2-5% edges kept about 70% and bigger ones closed at about 3% whatever they started at.
+ */
+export function keptEdge(seenEdge: number): number {
+    return Math.max(0, Math.min(seenEdge * KEPT_EDGE_SHARE, MAX_KEPT_EDGE));
+}
+
+/**
+ * The live scanner's stake: Kelly under the caps on the edge the bet is likely to keep (`keptEdge`), not the edge
+ * seen, so big, noisy edges aren't overbet. A stake Kelly rounds below the minimum is raised to it: every value
+ * bet is then placed, and so tipped. Zero only without an edge, or when the minimum would break the bankroll cap.
+ * The back-test keeps plain `kellyStake`, so ADR 0008's figures still hold.
  */
 export function scannerStake(
     bankroll: number,
@@ -37,7 +51,9 @@ export function scannerStake(
     fairProbability: number,
     rules: StakeRules,
 ): number {
-    const stake = kellyStake(bankroll, decimalOdds, fairProbability, rules);
-    if (stake > 0 || kellyFraction(decimalOdds, fairProbability) === 0) return stake;
+    if (kellyFraction(decimalOdds, fairProbability) === 0) return 0;
+    const keptProbability = (1 + keptEdge(edge(decimalOdds, fairProbability))) / decimalOdds;
+    const stake = kellyStake(bankroll, decimalOdds, keptProbability, rules);
+    if (stake > 0) return stake;
     return rules.minStake <= bankroll * rules.maxBankrollFraction ? rules.minStake : 0;
 }

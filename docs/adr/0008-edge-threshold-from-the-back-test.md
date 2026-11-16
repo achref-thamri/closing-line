@@ -117,3 +117,10 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
     columns don't have the stale-price problem: 3 of 12,110 matches have identical early and closing Pinnacle prices,
     and none of them was bet. Any future check of another market in these files should drop matches whose Pinnacle
     price never moves.
+
+- Since 2026-11-16 the live scanner stakes Kelly on the edge a bet is likely to keep, not the edge seen
+  (`keptEdge`: 70% of it, at most 3.5%). Same rules as above, Bet365 and bwin against Pinnacle, 2021/22 to 2024/25 in
+  all eight leagues, leaving out matches with a frozen Pinnacle price: 155 bets kept 58% of their edge on average,
+  CLV +2.3% (±0.9). By the edge seen: 2-3% kept 69% (+1.7% CLV, 68 bets), 3-5% kept 70% (+2.7%, 59), 5-8% kept 41%
+  (+2.6%, 19), over 8% kept 31% (+3.3%, 9). Every band closed positive, so there is no cap on big edges; they are
+  just staked as if smaller. Which bets pass is unchanged. The back-test keeps plain `kellyStake`.

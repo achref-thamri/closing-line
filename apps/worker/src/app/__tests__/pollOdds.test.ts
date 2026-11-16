@@ -96,10 +96,10 @@ describe("pollOdds", () => {
         const [bet] = await repos.bets.forPlayer(SCANNER);
         expect(bet).toMatchObject({ selection: "away", bookmaker: "unibet_se", lockedOdds: 2.75, status: "open" });
         expect(bet?.edgeAtBet).toBeGreaterThan(0.03);
-        // Edge 8.2%, full Kelly 4.7%, quarter 1.17% of 10,000 kr, rounded down to 110 kr.
-        expect(bet?.stakeOre).toBe(11_000);
+        // Edge 8.2% seen, 3.5% likely kept: full Kelly 2.0%, quarter 0.5% of 10,000 kr is 50 kr.
+        expect(bet?.stakeOre).toBe(5_000);
         expect(messages).toEqual([
-            "🔎 Value bet: Arsenal @ 2.75 at Unibet\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 110 kr\n" +
+            "🔎 Value bet: Arsenal @ 2.75 at Unibet\nLiverpool v Arsenal, Mon 13:00\nFair 2.54, edge 8.2%, paper stake 50 kr\n" +
                 "💡 Pinnacle, the sharpest bookmaker, prices this at 2.54 once its margin is removed. 2.75 pays 8.2% " +
                 "more than the bet is worth, so it wins money over many bets like it, not every time.\n" +
                 "Price seen 13:00. Worth it at 2.63 or better, so check your bookmaker's price first.",
@@ -167,7 +167,7 @@ describe("pollOdds", () => {
         };
         await pollOdds(poll, "soccer_epl", "scan");
         expect(messages).toEqual([]);
-        expect(tips).toMatchObject([{ pick: "Arsenal", paperStakeKr: 110, seenAt: now }]);
+        expect(tips).toMatchObject([{ pick: "Arsenal", paperStakeKr: 50, seenAt: now }]);
         expect(tips[0]?.offers.map((offer) => offer.bookmaker)).toEqual(["unibet_se", "nordicbet"]);
     });
 
@@ -188,8 +188,8 @@ describe("pollOdds", () => {
         };
         const totals = vi.spyOn(repos.bets, "totals");
         expect(await pollOdds(poll, "soccer_epl", "scan")).toMatchObject({ scannerBets: 2 });
-        // Full Kelly is 4.6%: 46 kr of 1,000, then 44 kr of the 954 left.
-        expect((await repos.bets.forPlayer(SCANNER)).map((bet) => bet.stakeOre)).toEqual([4_600, 4_400]);
+        // Full Kelly on the 3.5% likely kept is 2.0%: 20 kr of 1,000, then 19 kr of the 980 left.
+        expect((await repos.bets.forPlayer(SCANNER)).map((bet) => bet.stakeOre)).toEqual([2_000, 1_900]);
         // One read for the weekly loss pause, one for the bankroll.
         expect(totals).toHaveBeenCalledTimes(2);
         totals.mockRestore();
