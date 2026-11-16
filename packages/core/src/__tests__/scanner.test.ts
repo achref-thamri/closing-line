@@ -122,7 +122,12 @@ describe("favourite", () => {
 });
 
 describe("meetsScannerRules", () => {
-    const rules = { maxHoursToKickoff: 72, maxFairOdds: 5, minKellyFraction: { home: 0.02, draw: 0.01, away: 0.02 } };
+    const rules = {
+        maxHoursToKickoff: 72,
+        closingWindowMinutes: 45,
+        maxFairOdds: 5,
+        minKellyFraction: { home: 0.02, draw: 0.01, away: 0.02 },
+    };
     const kickoff = new Date("2026-11-21T15:00:00Z");
     const hoursBefore = (hours: number) => new Date(kickoff.getTime() - hours * 3_600_000);
     const bet = { createdAt: hoursBefore(10), selection: "home", lockedOdds: 2.17, sharpFairOddsAtBet: 2.07 };
@@ -131,8 +136,10 @@ describe("meetsScannerRules", () => {
         expect(meetsScannerRules(bet, kickoff, rules)).toBe(true);
     });
 
-    it("fails a bet placed too far out, on an outsider, or with too small a Kelly fraction", () => {
+    it("fails a bet placed too far out or in the closing window, on an outsider, or with too small a Kelly fraction", () => {
         expect(meetsScannerRules({ ...bet, createdAt: hoursBefore(17 * 24) }, kickoff, rules)).toBe(false);
+        // Placed by the pre-kickoff poll, which also sets the closing price.
+        expect(meetsScannerRules({ ...bet, createdAt: hoursBefore(0.25) }, kickoff, rules)).toBe(false);
         expect(meetsScannerRules({ ...bet, lockedOdds: 7.5, sharpFairOddsAtBet: 6.44 }, kickoff, rules)).toBe(false);
         // 2.47 against 2.42 fair is a 2.1% edge but a Kelly fraction of only 1.4%.
         expect(meetsScannerRules({ ...bet, lockedOdds: 2.47, sharpFairOddsAtBet: 2.42 }, kickoff, rules)).toBe(false);
