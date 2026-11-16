@@ -129,7 +129,7 @@ describe("pollOdds", () => {
         await pollOdds(deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75))]), "soccer_epl", "scan");
         now = new Date(now.getTime() + 3_600_000);
         const later = event(23 * 60, quotes("unibet_se", 2.9, 3.4, 2.45));
-        // A /picks refresh and a scheduled poll, both reading the tip before either marks it.
+        // Two overlapping polls, both reading the tip before either marks it.
         await Promise.all([
             pollOdds(deps([later]), "soccer_epl", "scan"),
             pollOdds(deps([later]), "soccer_epl", "scan"),

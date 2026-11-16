@@ -125,50 +125,6 @@ describe("compose", () => {
         expect(chats.sort()).toEqual([1, 2]);
     });
 
-    it("shares one /picks refresh between bettors asking at once, and skips leagues polled in the last 12 hours", async () => {
-        // The first odds request waits until both /picks have arrived, so the two really overlap.
-        let release: () => void = () => undefined;
-        const gate = new Promise<void>((resolve) => (release = resolve));
-        const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
-            await gate;
-            return new Response(recording("odds-h2h.json"), {
-                headers: { "content-type": "application/json", ...credits },
-            });
-        });
-        let clock = new Date("2026-11-01T09:00:00Z");
-        const { worker, chats } = composeOffline(() => clock);
-        const picks = (updateId: number) =>
-            worker.bot.handleUpdate({
-                update_id: updateId,
-                message: {
-                    message_id: updateId,
-                    date: 0,
-                    chat: { id: 1, type: "private", first_name: "Owner" },
-                    from: { id: 1, is_bot: false, first_name: "Owner" },
-                    text: "/picks",
-                    entities: [{ type: "bot_command", offset: 0, length: 6 }],
-                },
-            });
-        const oddsCalls = (league = "") =>
-            fetch.mock.calls.filter(([input]) => (input as URL | string).toString().includes(`${league}/odds`)).length;
-
-        const first = picks(1);
-        await vi.waitFor(() => {
-            expect(fetch).toHaveBeenCalled();
-        });
-        const second = picks(2);
-        release();
-        await Promise.all([first, second]);
-        expect(oddsCalls()).toBe(config.leagues.length);
-        expect(chats).toEqual([1, 1]);
-
-        // The recording only has Premier League matches, so only that league has fresh odds an hour later.
-        clock = new Date(clock.getTime() + 3_600_000);
-        await picks(3);
-        expect(oddsCalls("soccer_epl")).toBe(1);
-        expect(oddsCalls()).toBe(2 * config.leagues.length - 1);
-    });
-
     it("runs the reminder job", async () => {
         vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
         const { runner } = composeOffline().worker;
