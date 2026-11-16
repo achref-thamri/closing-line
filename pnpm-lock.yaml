@@ -224,6 +224,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@closing-line/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@closing-line/core':
         specifier: workspace:*
         version: link:../../packages/core

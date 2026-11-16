@@ -1,8 +1,8 @@
 export { crossedUsageLevels, daysLeftInMonth, decideCredits } from "./credits.ts";
 export type { CreditDecision, CreditPriority, CreditState } from "./credits.ts";
 export { devigPower } from "./devig.ts";
-export { bestOffer, fairProbabilities, favourite, findValueBets, netOdds } from "./scanner.ts";
-export type { PriceQuote, ValueBet, ValueOffer } from "./scanner.ts";
+export { bestOffer, fairProbabilities, favourite, findValueBets, meetsScannerRules, netOdds } from "./scanner.ts";
+export type { PriceQuote, ScannerRules, ValueBet, ValueOffer } from "./scanner.ts";
 export { availableFromTotals, bankrollSeries, playerStats, statsFromTotals, totalsOf } from "./metrics.ts";
 export type { BankrollPoint, MetricsBet, PlayerStats, PlayerTotals } from "./metrics.ts";
 export { dueJobs } from "./schedule.ts";

@@ -1,16 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { byGrowth, pageOf } from "../data.ts";
+import { byClv, isRanked, MIN_CLV_BETS_TO_RANK, pageOf } from "../data.ts";
 
-describe("byGrowth", () => {
-    it("ranks by growth, not kroner: 1,000 kr on 10,000 beats 3,000 kr on 60,000", () => {
-        const scanner = { id: "scanner", growth: 100_000 / 1_000_000 };
-        const bettor = { id: "friend", growth: 300_000 / 6_000_000 };
-        const favourite = { id: "favourite", growth: -0.02 };
-        expect([bettor, favourite, scanner].sort(byGrowth).map((player) => player.id)).toEqual([
+describe("byClv", () => {
+    const player = (id: string, averageClv: number | undefined, clvCount: number, growth = 0) => ({
+        id,
+        growth,
+        stats: { averageClv, clvCount },
+    });
+
+    it("ranks players with enough closing prices by CLV, whatever their profit", () => {
+        const scanner = player("scanner", 0.013, 52, -0.05);
+        const favourite = player("favourite", -0.017, 70, 0.01);
+        const lucky = player("friend", undefined, 0, 0.19);
+        const fewClv = player("owner", 0.048, 1, 0.02);
+        expect([lucky, favourite, fewClv, scanner].sort(byClv).map((p) => p.id)).toEqual([
             "scanner",
-            "friend",
             "favourite",
+            "owner",
+            "friend",
         ]);
+        expect(isRanked(scanner)).toBe(true);
+        expect(isRanked(fewClv)).toBe(false);
+    });
+
+    it("orders unranked players by how close they are to ranking, then by growth", () => {
+        const a = player("a", 0.1, 10, 0);
+        const b = player("b", 0.1, 10, 0.5);
+        const c = player("c", -0.1, 20, 0);
+        expect([a, b, c].sort(byClv).map((p) => p.id)).toEqual(["c", "b", "a"]);
+        expect(MIN_CLV_BETS_TO_RANK).toBe(30);
     });
 });
 
