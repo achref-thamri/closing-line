@@ -52,13 +52,16 @@ reason ([ADR 0010](adr/0010-record-every-decision.md)).
 Value does not mean the bet will win. The away side still loses about two times in three. It means that over
 hundreds of bets like it, the returns beat the stakes.
 
-## 4. Stake by the Kelly criterion, then a quarter of it
+## 4. Stake by the Kelly criterion, on the edge likely to last, then a quarter of it
 
-Kelly says how much of a bankroll to stake to grow it fastest without going broke: edge / (odds − 1), here
-4.4% / 2.10 = 2.1%. Full Kelly swings too hard when the fair probabilities are even slightly off, so the scanner
-stakes a quarter of it, never more than 2% of its bankroll, in steps of 10 kr with a 50 kr minimum
-(`kellyStake`). On 10,000 kr that is 50 kr here. If the bankroll shrinks and a quarter of Kelly comes to less than
-50 kr, the scanner stakes 50 kr anyway (`scannerStake`), so every bet that passes section 3 is placed and tipped.
+Kelly says how much of a bankroll to stake to grow it fastest without going broke: edge / (odds − 1). An edge seen in
+the morning rarely survives to kickoff whole: prices drift back towards Pinnacle's, and over four back-tested seasons
+bets kept about 70% of edges up to 5%, while bigger ones closed at about 3% whatever they started at. So the scanner
+stakes on the edge it's likely to keep: 70% of the edge seen, at most 3.5% (`keptEdge`). Here that's 4.4% × 70% =
+3.1%, so Kelly is 3.1% / 2.10 = 1.5%. Full Kelly swings too hard when the fair probabilities are even slightly off,
+so the scanner stakes a quarter of it, never more than 2% of its bankroll, in steps of 10 kr with a 50 kr minimum.
+On 10,000 kr a quarter is 37 kr here, under the minimum, so the scanner stakes 50 kr (`scannerStake`): every bet that
+passes section 3 is placed and tipped. The pass rules in section 3 still use the edge seen.
 
 ## 5. Judge it by the closing line, not the result
 
