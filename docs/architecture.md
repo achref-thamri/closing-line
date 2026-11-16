@@ -48,6 +48,11 @@ Results come from football-data.org for free. Its free plan has no Serie B or Be
 covering the last three days. When the guard refuses that call, the league's matches stay open until the next day
 rather than being voided.
 
+The two feeds don't always name a club the same way, so results are matched to fixtures by name and kickoff, with
+exact names pinned in `PINNED_NAMES` (`packages/core/src/teams.ts`) where they differ too much. A match still missing
+from the feed six hours after kickoff gets one Telegram alert naming it: pin the name within 48 hours of kickoff, or
+its bets are voided. Promoted clubs are the usual cause, so check the list each August.
+
 ## Data
 
 The database refuses data that shouldn't exist: automated players get one bet per selection (a unique index), only
