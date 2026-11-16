@@ -1,3 +1,5 @@
+import type { Outcome } from "./settlement.ts";
+
 /** Display names for bookmaker keys: The Odds API's (tips) and the Danish sites bettors pick in Telegram. */
 const BOOK_NAMES: Readonly<Record<string, string>> = {
     pinnacle: "Pinnacle",
@@ -45,6 +47,13 @@ export function teamsOf(eventName: string): [string, string] | [] {
     const parts = name.split(spaced.test(name) ? spaced : / ?[–-] ?/).map((part) => part.trim());
     const [home, away] = parts;
     return parts.length === 2 && home && away ? [home, away] : [];
+}
+
+/** The team a match-result selection backs, or "Draw". */
+export function sideName(match: { homeTeam: string; awayTeam: string }, selection: Outcome): string {
+    if (selection === "home") return match.homeTeam;
+    if (selection === "away") return match.awayTeam;
+    return "Draw";
 }
 
 const MARKET_LABELS: Readonly<Record<string, string>> = {

@@ -1,6 +1,7 @@
 import type { Config } from "@closing-line/config";
 import { matchFixture, settle1x2, toOutcome } from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
+import { messageOf } from "../lib/errors.ts";
 import type { MatchResultInfo, ResultsSource } from "../ports/results.ts";
 
 const HOUR_MS = 3_600_000;
@@ -13,7 +14,8 @@ const LOOKBACK_MS = 7 * 24 * HOUR_MS;
 const KICKOFF_TOLERANCE_MS = 3 * HOUR_MS;
 /**
  * Leagues without a football-data.org code settle from The Odds API's scores, which cost credits, so they are
- * asked once a day, in the hourly run at 22:xx UTC, after the evening matches (the latest kick off by 20:45 UTC).
+ * asked once a day, in the hourly run at 22:xx UTC. That run (from 22:15) covers kickoffs up to about 20:00 UTC,
+ * because a match only counts as over 2h15 after kickoff; a later kickoff settles in the next day's run.
  */
 const SCORES_HOUR_UTC = 22;
 
@@ -37,7 +39,8 @@ export interface SettleReport {
 /**
  * Settles every open bet on fixtures that should be over: finished matches by their regular-time score, and
  * matches called off (or never reported) for 48 hours as void. A settled fixture is never settled again. Only
- * match-result (`h2h`) bets settle from the score.
+ * match-result (`h2h`) bets settle from the score. A league whose results can't be fetched doesn't stop the
+ * others: what did settle is still reported, then the run fails naming each league that didn't.
  */
 export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     const now = deps.now();
@@ -48,27 +51,21 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     );
     const report: SettleReport = { fixtures: 0, settledBets: 0, unmatched: [] };
     const lines: string[] = [];
+    const failures: string[] = [];
     const names = new Map((await deps.repos.players.list()).map((player) => [player.id, player.name]));
 
     for (const league of deps.config.leagues) {
         const fixtures = due.filter((fixture) => fixture.league === league.oddsApiKey);
         if (fixtures.length === 0) continue;
 
-        let results: MatchResultInfo[];
-        if (league.footballDataCode) {
-            const kickoffs = fixtures.map((fixture) => fixture.kickoff.getTime());
-            results = await deps.results.results(
-                league.footballDataCode,
-                new Date(Math.min(...kickoffs) - 24 * HOUR_MS),
-                new Date(Math.max(...kickoffs) + 24 * HOUR_MS),
-            );
-        } else {
-            if (now.getUTCHours() !== SCORES_HOUR_UTC) continue;
-            const scores = await deps.scores(league.oddsApiKey);
-            // No credits: try again tomorrow rather than voiding bets for want of a result.
-            if (!scores) continue;
-            results = scores;
+        let results: MatchResultInfo[] | undefined;
+        try {
+            results = await resultsFor(deps, league, fixtures, now);
+        } catch (error) {
+            failures.push(`${league.name}: ${messageOf(error)}`);
+            continue;
         }
+        if (!results) continue;
 
         for (const fixture of fixtures) {
             const result = matchFixture(fixture, results, KICKOFF_TOLERANCE_MS);
@@ -93,7 +90,28 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     }
 
     if (lines.length > 0) await deps.notify(`📒 Settled ${lines.length} paper bet(s):\n${lines.join("\n")}`);
+    if (failures.length > 0) throw new Error(failures.join("; "));
     return report;
+}
+
+/** The league's results around the fixtures' kickoffs, or undefined when it isn't asked this run. */
+async function resultsFor(
+    deps: SettleBetsDeps,
+    league: Config["leagues"][number],
+    fixtures: readonly Fixture[],
+    now: Date,
+): Promise<MatchResultInfo[] | undefined> {
+    if (league.footballDataCode) {
+        const kickoffs = fixtures.map((fixture) => fixture.kickoff.getTime());
+        return deps.results.results(
+            league.footballDataCode,
+            new Date(Math.min(...kickoffs) - 24 * HOUR_MS),
+            new Date(Math.max(...kickoffs) + 24 * HOUR_MS),
+        );
+    }
+    if (now.getUTCHours() !== SCORES_HOUR_UTC) return undefined;
+    // Undefined means no credits: try again tomorrow rather than voiding bets for want of a result.
+    return deps.scores(league.oddsApiKey);
 }
 
 async function settleFixtureBets(

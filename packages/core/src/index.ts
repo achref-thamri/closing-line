@@ -17,6 +17,6 @@ export { closingLineValue, edge, minimumOdds, tipLifetime } from "./value.ts";
 export type { LaterPrice, TipLifetime } from "./value.ts";
 export { cashoutGainOre, heldProfitOre, impliedOddsFromCashout, priceMove, statsBy } from "./slips.ts";
 export type { SlipStatus } from "./slips.ts";
-export { bookName, pickText, teamsOf } from "./picks.ts";
+export { bookName, pickText, sideName, teamsOf } from "./picks.ts";
 export { calibration, forecastScores } from "./calibration.ts";
 export type { CalibrationBand, Forecast, MatchForecast } from "./calibration.ts";

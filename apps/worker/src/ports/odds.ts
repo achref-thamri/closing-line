@@ -1,4 +1,5 @@
 import type { Outcome } from "@closing-line/core";
+import type { MatchResultInfo } from "./results.ts";
 
 export interface EventInfo {
     /** The Odds API event id, also the fixture id. */
@@ -37,10 +38,12 @@ export interface Priced<T> {
     balance: CreditBalance;
 }
 
-/** Fixtures and bookmaker prices. Only `odds` costs credits; the other calls are free. */
+/** Fixtures, bookmaker prices and scores. `odds` and `scores` cost credits; the other calls are free. */
 export interface OddsSource {
     events(league: string): Promise<Priced<EventInfo[]>>;
     odds(league: string, bookmakers: readonly string[]): Promise<Priced<EventOdds[]>>;
+    /** Recent results, for leagues without free results elsewhere. */
+    scores(league: string): Promise<Priced<MatchResultInfo[]>>;
     balance(): Promise<CreditBalance>;
 }
 

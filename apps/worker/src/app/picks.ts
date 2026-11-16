@@ -5,6 +5,7 @@ import {
     findValueBets,
     isOutcome,
     minimumOdds,
+    sideName,
     type PriceQuote,
 } from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
@@ -67,11 +68,9 @@ export async function bestPicks(deps: PicksDeps, options: { hours?: number; limi
             minEdge: 0.000_1,
         });
         for (const value of values) {
-            const team =
-                value.selection === "home" ? fixture.homeTeam : value.selection === "away" ? fixture.awayTeam : "Draw";
             picks.push({
                 fixture,
-                team,
+                team: sideName(fixture, value.selection),
                 bookmaker: value.bookmaker,
                 price: value.offeredOdds,
                 edge: value.edge,
