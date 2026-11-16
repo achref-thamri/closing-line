@@ -5,6 +5,8 @@ import { KIND_LABEL, playerColour } from "./players.ts";
 /** `rank` is undefined for a player without enough closing prices to rank. */
 export function PlayerCard({ summary, rank }: { summary: PlayerSummary; rank: number | undefined }) {
     const { player, stats, bankrollOre, currentRules } = summary;
+    // The scanner is judged on the bets its current rules would place (ADR 0012); its bankroll is still all bets.
+    const shown = currentRules ?? stats;
     return (
         <article
             data-testid="player-card"
@@ -24,14 +26,16 @@ export function PlayerCard({ summary, rank }: { summary: PlayerSummary; rank: nu
             <p className="text-sm text-zinc-500 tabular-nums">
                 {signedKroner(stats.profitOre)} profit ({percent(summary.growth)} since the start)
             </p>
-            <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
-                <Stat label="ROI" value={percent(stats.roi)} />
-                <Stat label="Avg CLV" value={percent(stats.averageClv)} />
-                <Stat label="Settled" value={`${stats.settled} (${stats.won} won)`} />
+            {currentRules && <p className="mt-4 text-xs text-zinc-500">Bets today&apos;s rules would place</p>}
+            <dl className={`${currentRules ? "mt-1" : "mt-4"} grid grid-cols-3 gap-2 text-sm`}>
+                <Stat label="ROI" value={percent(shown.roi)} />
+                <Stat label="Avg CLV" value={percent(shown.averageClv)} />
+                <Stat label="Settled" value={`${shown.settled} (${shown.won} won)`} />
             </dl>
-            {currentRules && currentRules.clvCount < stats.clvCount && (
-                <p className="mt-3 text-xs text-zinc-500" data-testid="current-rules">
-                    Under today&apos;s rules: CLV {percent(currentRules.averageClv)} over {currentRules.clvCount} bets
+            {currentRules && (
+                <p className="mt-3 text-xs text-zinc-500" data-testid="all-bets">
+                    All bets, older rules included: ROI {percent(stats.roi)}, CLV {percent(stats.averageClv)},{" "}
+                    {stats.settled} settled
                 </p>
             )}
             {rank === undefined && (

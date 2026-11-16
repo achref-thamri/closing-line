@@ -35,10 +35,16 @@ function describe(item: GoLiveItem, check: GoLiveCheck, now: Date): { rule: stri
 }
 
 /**
+ * Rules whose tick means little on a small sample. The CLV rule shows its own 95% range, so it needs no warning.
+ */
+const EARLY_ITEMS = new Set<GoLiveItem["key"]>(["benchmark", "drawdown"]);
+
+/**
  * The scanner against the go-live rule, from bets today's rules would place. The last rule, no unexplained bugs in
  * the last 30 days, is checked by hand.
  */
 export function GoLivePanel({ check, now = new Date() }: { check: GoLiveCheck; now?: Date }) {
+    const early = check.settled < GO_LIVE.bets;
     return (
         <section
             className="rounded-xl border border-zinc-200 p-5 dark:border-zinc-800"
@@ -60,10 +66,21 @@ export function GoLivePanel({ check, now = new Date() }: { check: GoLiveCheck; n
                 {check.items.map((item) => {
                     const { rule, status } = describe(item, check, now);
                     return (
-                        <li key={item.key} className="flex flex-wrap gap-x-2" data-testid="go-live-item">
-                            <span aria-label={item.passed ? "met" : "not met"}>{item.passed ? "✅" : "⬜"}</span>
-                            <span className="font-medium">{rule}</span>
-                            <span className="text-zinc-500 tabular-nums">{status}</span>
+                        <li key={item.key} className="flex gap-2" data-testid="go-live-item">
+                            <span className="shrink-0" aria-label={item.passed ? "met" : "not met"}>
+                                {item.passed ? "✅" : "⬜"}
+                            </span>
+                            <span>
+                                <span className="mr-2 font-medium">{rule}</span>
+                                <span className="text-zinc-500 tabular-nums">
+                                    {status}
+                                    {item.passed && early && EARLY_ITEMS.has(item.key) && (
+                                        <span className="ml-1 text-amber-700 dark:text-amber-400">
+                                            · early, {check.settled} of {GO_LIVE.bets} bets
+                                        </span>
+                                    )}
+                                </span>
+                            </span>
                         </li>
                     );
                 })}

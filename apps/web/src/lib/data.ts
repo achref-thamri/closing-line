@@ -2,10 +2,11 @@ import {
     bankrollSeries,
     goLiveCheck,
     meetsScannerRules,
-    type GoLiveCheck,
+    playerStats,
     statsFromTotals,
     totalsOf,
     type BankrollPoint,
+    type GoLiveCheck,
     type PlayerStats,
 } from "@closing-line/core";
 import {
@@ -25,8 +26,8 @@ export interface PlayerSummary {
     /** Profit as a share of the starting bankroll, so players who start with different bankrolls compare fairly. */
     growth: number;
     series: BankrollPoint[];
-    /** The scanner only: average CLV of its bets that today's rules would still place, and how many there are. */
-    currentRules?: { averageClv: number | undefined; clvCount: number };
+    /** The scanner only: its results over the settled bets today's rules would still place. */
+    currentRules?: PlayerStats;
 }
 
 /** Bets with a closing price a player needs before the leaderboard ranks them: fewer says more about luck than skill. */
@@ -123,7 +124,7 @@ export async function loadDashboard(requestedPage?: string, requestedPlayer?: st
                 growth: stats.profitOre / player.startingBankrollOre,
                 series: bankrollSeries(player.startingBankrollOre, player.createdAt, ledger),
                 ...(player.kind === "scanner" && {
-                    currentRules: currentRulesClv(settledByPlayer.get(player.id) ?? []),
+                    currentRules: playerStats(settledByPlayer.get(player.id) ?? []),
                 }),
             };
         }),
@@ -183,16 +184,4 @@ export function runningClv(
         count++;
         return [{ t: bet.settledAt.getTime(), growth: sum / count }];
     });
-}
-
-/** CLV over the scanner's settled bets under today's rules (already filtered). */
-export function currentRulesClv(bets: readonly { clv: number | null }[]): {
-    averageClv: number | undefined;
-    clvCount: number;
-} {
-    const clvs = bets.flatMap((bet) => (bet.clv === null ? [] : [bet.clv]));
-    return {
-        averageClv: clvs.length > 0 ? clvs.reduce((sum, clv) => sum + clv, 0) / clvs.length : undefined,
-        clvCount: clvs.length,
-    };
 }

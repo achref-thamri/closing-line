@@ -118,23 +118,36 @@ export interface ScannerRules {
     minKellyFraction: Readonly<Record<Outcome, number>>;
 }
 
+/** The rule a bet breaks under today's scanner settings. */
+export type BrokenScannerRule = "too_early" | "too_late" | "outsider" | "small_kelly";
+
 /**
- * Whether today's scanner would still have placed a bet: close enough to kickoff but before the closing window, not
- * on an outsider, and with a big enough Kelly fraction. Bets from before a rule existed fail it, so their results can be shown apart. A bet without
- * a fair price or a 1X2 selection can't be judged and passes.
+ * Which of today's scanner rules a bet breaks, the first one checked: placed more than `maxHoursToKickoff` out or in
+ * the closing window, on an outsider, or with too small a Kelly fraction. Undefined when today's scanner would still
+ * place it, or when it can't be judged (no fair price, not a 1X2 selection).
  */
-export function meetsScannerRules(
+export function brokenScannerRule(
     bet: { createdAt: Date; selection: string; lockedOdds: number; sharpFairOddsAtBet: number | null },
     kickoff: Date,
     rules: ScannerRules,
-): boolean {
+): BrokenScannerRule | undefined {
     const selection = OUTCOMES.find((outcome) => outcome === bet.selection);
-    if (!selection || bet.sharpFairOddsAtBet === null) return true;
-    const hoursOut = (kickoff.getTime() - bet.createdAt.getTime()) / 3_600_000;
-    return (
-        hoursOut <= rules.maxHoursToKickoff &&
-        hoursOut * 60 > rules.closingWindowMinutes &&
-        bet.sharpFairOddsAtBet < rules.maxFairOdds &&
-        kellyFraction(bet.lockedOdds, 1 / bet.sharpFairOddsAtBet) >= rules.minKellyFraction[selection]
-    );
+    if (!selection || bet.sharpFairOddsAtBet === null) return undefined;
+    const minutesOut = (kickoff.getTime() - bet.createdAt.getTime()) / 60_000;
+    if (minutesOut > rules.maxHoursToKickoff * 60) return "too_early";
+    if (minutesOut <= rules.closingWindowMinutes) return "too_late";
+    if (bet.sharpFairOddsAtBet >= rules.maxFairOdds) return "outsider";
+    if (kellyFraction(bet.lockedOdds, 1 / bet.sharpFairOddsAtBet) < rules.minKellyFraction[selection]) {
+        return "small_kelly";
+    }
+    return undefined;
+}
+
+/** Whether today's scanner would still have placed a bet; see `brokenScannerRule`. */
+export function meetsScannerRules(
+    bet: Parameters<typeof brokenScannerRule>[0],
+    kickoff: Date,
+    rules: ScannerRules,
+): boolean {
+    return brokenScannerRule(bet, kickoff, rules) === undefined;
 }

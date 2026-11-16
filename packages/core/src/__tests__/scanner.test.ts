@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    brokenScannerRule,
     fairProbabilities,
     favourite,
     findValueBets,
@@ -151,5 +152,29 @@ describe("meetsScannerRules", () => {
     it("can't judge a bet without a fair price or a 1X2 selection, so leaves it in", () => {
         expect(meetsScannerRules({ ...bet, sharpFairOddsAtBet: null }, kickoff, rules)).toBe(true);
         expect(meetsScannerRules({ ...bet, selection: "over" }, kickoff, rules)).toBe(true);
+    });
+});
+
+describe("brokenScannerRule", () => {
+    const rules = {
+        maxHoursToKickoff: 72,
+        closingWindowMinutes: 45,
+        maxFairOdds: 5,
+        minKellyFraction: { home: 0.02, draw: 0.01, away: 0.02 },
+    };
+    const kickoff = new Date("2026-11-21T15:00:00Z");
+    const at = (hours: number) => new Date(kickoff.getTime() - hours * 3_600_000);
+    const bet = { createdAt: at(10), selection: "home", lockedOdds: 2.17, sharpFairOddsAtBet: 2.07 };
+
+    it("names the rule a bet breaks", () => {
+        expect(brokenScannerRule(bet, kickoff, rules)).toBeUndefined();
+        expect(brokenScannerRule({ ...bet, createdAt: at(400) }, kickoff, rules)).toBe("too_early");
+        expect(brokenScannerRule({ ...bet, createdAt: at(0.25) }, kickoff, rules)).toBe("too_late");
+        expect(brokenScannerRule({ ...bet, lockedOdds: 7.5, sharpFairOddsAtBet: 6.44 }, kickoff, rules)).toBe(
+            "outsider",
+        );
+        expect(brokenScannerRule({ ...bet, lockedOdds: 2.47, sharpFairOddsAtBet: 2.42 }, kickoff, rules)).toBe(
+            "small_kelly",
+        );
     });
 });
