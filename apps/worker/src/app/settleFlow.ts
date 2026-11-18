@@ -1,6 +1,6 @@
 import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout } from "@closing-line/core";
 import type { Bet, Repositories, Settlement } from "@closing-line/db";
-import { z } from "zod";
+import * as zod from "zod";
 import type { Logger } from "../lib/logger.ts";
 import { hasAction, type ButtonHandler, type Keyboard, type Messenger, type Reply } from "./chat.ts";
 import { describeBet, kroner, parseKroner, signedKroner } from "./format.ts";
@@ -8,7 +8,7 @@ import { describeBet, kroner, parseKroner, signedKroner } from "./format.ts";
 type Outcome = "won" | "lost" | "void";
 type SlipSettlement = Omit<Settlement, "settledAt">;
 const OUTCOME_KEYS: Record<string, Outcome> = { w: "won", l: "lost", v: "void" };
-const storedCashout = z.object({ betId: z.string() });
+const storedCashout = zod.object({ betId: zod.string() });
 
 export interface SettleFlowDeps {
     repos: Pick<Repositories, "players" | "bets" | "chats">;

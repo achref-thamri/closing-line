@@ -1,5 +1,5 @@
 import type { Outcome } from "@closing-line/core";
-import { z } from "zod";
+import * as zod from "zod";
 import { HttpError } from "../../lib/errors.ts";
 import { getJson, type Fetch } from "../../lib/http.ts";
 import { retry, type RetryOptions } from "../../lib/retry.ts";
@@ -19,27 +19,27 @@ const BASE_URL = "https://api.the-odds-api.com/v4";
 /** Each call names at most ten bookmakers, which costs one credit per market. */
 const MAX_BOOKMAKERS = 10;
 
-const eventSchema = z.object({
-    id: z.string().length(32),
-    sport_key: z.string(),
-    commence_time: z.iso.datetime(),
-    home_team: z.string(),
-    away_team: z.string(),
+const eventSchema = zod.object({
+    id: zod.string().length(32),
+    sport_key: zod.string(),
+    commence_time: zod.iso.datetime(),
+    home_team: zod.string(),
+    away_team: zod.string(),
 });
 
-const oddsSchema = z.array(
+const oddsSchema = zod.array(
     eventSchema.extend({
-        bookmakers: z.array(
-            z.object({
-                key: z.string(),
-                last_update: z.iso.datetime(),
-                markets: z.array(
-                    z.object({
-                        key: z.string(),
-                        last_update: z.iso.datetime().optional(),
+        bookmakers: zod.array(
+            zod.object({
+                key: zod.string(),
+                last_update: zod.iso.datetime(),
+                markets: zod.array(
+                    zod.object({
+                        key: zod.string(),
+                        last_update: zod.iso.datetime().optional(),
                         // Not .gt(1): a bookmaker sometimes sends 1.0 for a suspended market, and one bad price must not
                         // throw away the whole league. odds() drops such markets instead.
-                        outcomes: z.array(z.object({ name: z.string(), price: z.number() })),
+                        outcomes: zod.array(zod.object({ name: zod.string(), price: zod.number() })),
                     }),
                 ),
             }),
@@ -47,10 +47,10 @@ const oddsSchema = z.array(
     }),
 );
 
-const scoresSchema = z.array(
+const scoresSchema = zod.array(
     eventSchema.extend({
-        completed: z.boolean(),
-        scores: z.array(z.object({ name: z.string(), score: z.string() })).nullable(),
+        completed: zod.boolean(),
+        scores: zod.array(zod.object({ name: zod.string(), score: zod.string() })).nullable(),
     }),
 );
 
@@ -78,7 +78,7 @@ export class OddsApiClient implements OddsSource {
     }
 
     async events(league: string): Promise<Priced<EventInfo[]>> {
-        const { data, balance } = await this.get(`/sports/${league}/events`, z.array(eventSchema), "events", {});
+        const { data, balance } = await this.get(`/sports/${league}/events`, zod.array(eventSchema), "events", {});
         return { data: data.map(toEventInfo), balance };
     }
 
@@ -97,7 +97,9 @@ export class OddsApiClient implements OddsSource {
                 quotes: event.bookmakers.flatMap((bookmaker) =>
                     bookmaker.markets
                         // A price of 1 or less means the market is suspended, so its other prices are stale too.
-                        .filter((market) => market.key === "h2h" && market.outcomes.every((o) => o.price > 1))
+                        .filter(
+                            (market) => market.key === "h2h" && market.outcomes.every((outcome) => outcome.price > 1),
+                        )
                         .flatMap((market) =>
                             market.outcomes.flatMap((outcome): Quote[] => {
                                 const selection = selectionOf(outcome.name, event);
@@ -130,7 +132,7 @@ export class OddsApiClient implements OddsSource {
         return {
             data: data.map((event): MatchResultInfo => {
                 const goals = (team: string) => {
-                    const score = event.scores?.find((s) => s.name === team)?.score;
+                    const score = event.scores?.find((teamScore) => teamScore.name === team)?.score;
                     const value = score === undefined ? Number.NaN : Number(score);
                     return Number.isInteger(value) ? value : null;
                 };
@@ -151,16 +153,16 @@ export class OddsApiClient implements OddsSource {
     }
 
     async balance(): Promise<CreditBalance> {
-        const { balance } = await this.get("/sports", z.array(z.unknown()), "sports", {});
+        const { balance } = await this.get("/sports", zod.array(zod.unknown()), "sports", {});
         return balance;
     }
 
-    private async get<S extends z.ZodType>(
+    private async get<S extends zod.ZodType>(
         path: string,
         schema: S,
         endpoint: OddsEndpoint,
         params: Record<string, string>,
-    ): Promise<Priced<z.output<S>>> {
+    ): Promise<Priced<zod.output<S>>> {
         const url = new URL(BASE_URL + path);
         for (const [key, value] of Object.entries({ ...params, dateFormat: "iso", apiKey: this.options.apiKey })) {
             url.searchParams.set(key, value);
@@ -186,7 +188,7 @@ export class OddsApiClient implements OddsSource {
     }
 }
 
-function toEventInfo(event: z.output<typeof eventSchema>): EventInfo {
+function toEventInfo(event: zod.output<typeof eventSchema>): EventInfo {
     return {
         id: event.id,
         league: event.sport_key,

@@ -16,7 +16,7 @@ describe("timeAxis", () => {
     it("labels longer spans by day, at local midnight", () => {
         const axis = timeAxis(at("2026-11-01T12:00:00Z"), at("2026-11-09T12:00:00Z"), TZ);
         expect(axis.ticks.map(axis.label)).toEqual(["3 Nov", "5 Nov", "7 Nov", "9 Nov"]);
-        expect(axis.ticks.every((t) => new Date(t).getUTCHours() === 23)).toBe(true);
+        expect(axis.ticks.every((tick) => new Date(tick).getUTCHours() === 23)).toBe(true);
     });
 
     it("keeps to the tick limit over months, and gives no ticks for a single point", () => {

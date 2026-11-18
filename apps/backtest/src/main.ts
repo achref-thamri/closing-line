@@ -12,7 +12,9 @@ const flagValue = (name: string) => {
     return i >= 0 ? args[i + 1] : undefined;
 };
 const edges = flagValue("--edges")?.split(",").map(Number) ?? [0.02, 0.03, 0.04, 0.05];
-const flagValues = new Set(["--edges", "--max-odds"].map((name) => args.indexOf(name) + 1).filter((i) => i > 0));
+const flagValues = new Set(
+    ["--edges", "--max-odds"].map((name) => args.indexOf(name) + 1).filter((index) => index > 0),
+);
 const files = args.filter((arg, i) => !arg.startsWith("--") && !flagValues.has(i));
 if (files.length === 0) {
     console.error("Pass one or more football-data.co.uk season CSVs (https://football-data.co.uk/data.php).");

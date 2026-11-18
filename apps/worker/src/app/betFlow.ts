@@ -1,7 +1,7 @@
 import type { Config } from "@closing-line/config";
 import { bookName, fixtureNamed, isOutcome, teamsOf } from "@closing-line/core";
 import type { Bet, NewBet, Repositories } from "@closing-line/db";
-import { z } from "zod";
+import * as zod from "zod";
 import type { Logger } from "../lib/logger.ts";
 import { WAITING, type Bettors } from "./bettors.ts";
 import { hasAction, rows, type Button, type ButtonHandler, type Messenger, type Reply } from "./chat.ts";
@@ -77,37 +77,37 @@ const STEPS = ["sport", "match", "market", "player", "pick", "book", "odds", "st
 type Step = (typeof STEPS)[number];
 
 /** A complete bet as entered, one answer at a time. */
-const draftSchema = z.object({
-    sport: z.enum(SPORTS),
-    eventName: z.string(),
+const draftSchema = zod.object({
+    sport: zod.enum(SPORTS),
+    eventName: zod.string(),
     /** The fixture the typed match names, when it is one we track; null otherwise. */
-    fixtureId: z.string().nullable(),
-    market: z.enum(MARKET_KEYS),
-    playerName: z.string().nullable(),
-    selection: z.string(),
-    line: z.number().nullable(),
-    bookmaker: z.string(),
-    odds: z.number(),
-    stakeOre: z.int(),
+    fixtureId: zod.string().nullable(),
+    market: zod.enum(MARKET_KEYS),
+    playerName: zod.string().nullable(),
+    selection: zod.string(),
+    line: zod.number().nullable(),
+    bookmaker: zod.string(),
+    odds: zod.number(),
+    stakeOre: zod.int(),
 });
-export type Draft = z.infer<typeof draftSchema>;
+export type Draft = zod.infer<typeof draftSchema>;
 
 /**
  * A stored draft is read back through this, so a row written by an older version cannot break the flow: one that
  * does not fit (a market since removed, say) is dropped and the bettor starts again.
  */
-const storedDraft = z.object({
-    step: z.enum(STEPS),
+const storedDraft = zod.object({
+    step: zod.enum(STEPS),
     draft: draftSchema
         .extend({
             /** Started from a tip's "I bet this" button: logged as a value tip once the stake is in. */
-            fromTip: z.boolean(),
+            fromTip: zod.boolean(),
         })
         .partial(),
 });
 
 /** The answers so far for a bet being entered. */
-type Answers = z.infer<typeof storedDraft>["draft"];
+type Answers = zod.infer<typeof storedDraft>["draft"];
 
 interface Pending {
     step: Step;

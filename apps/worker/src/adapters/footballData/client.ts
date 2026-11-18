@@ -1,20 +1,20 @@
-import { z } from "zod";
+import * as zod from "zod";
 import { getJson, type Fetch } from "../../lib/http.ts";
 import { retry, type RetryOptions } from "../../lib/retry.ts";
 import type { MatchResultInfo, ResultStatus, ResultsSource } from "../../ports/results.ts";
 
 const BASE_URL = "https://api.football-data.org/v4";
 
-const goals = z.object({ home: z.int().nullable(), away: z.int().nullable() });
-const teamSchema = z.object({ name: z.string().nullable(), shortName: z.string().nullable() });
-const matchesSchema = z.object({
-    matches: z.array(
-        z.object({
-            utcDate: z.iso.datetime(),
-            status: z.string(),
+const goals = zod.object({ home: zod.int().nullable(), away: zod.int().nullable() });
+const teamSchema = zod.object({ name: zod.string().nullable(), shortName: zod.string().nullable() });
+const matchesSchema = zod.object({
+    matches: zod.array(
+        zod.object({
+            utcDate: zod.iso.datetime(),
+            status: zod.string(),
             homeTeam: teamSchema,
             awayTeam: teamSchema,
-            score: z.object({ fullTime: goals, regularTime: goals.optional() }),
+            score: zod.object({ fullTime: goals, regularTime: goals.optional() }),
         }),
     ),
 });
@@ -70,6 +70,6 @@ export class FootballDataClient implements ResultsSource {
     }
 }
 
-function names(team: z.output<typeof teamSchema>): string[] {
+function names(team: zod.output<typeof teamSchema>): string[] {
     return [team.name, team.shortName].filter((name): name is string => name !== null && name !== "");
 }
