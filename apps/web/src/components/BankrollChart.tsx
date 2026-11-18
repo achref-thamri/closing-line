@@ -12,8 +12,8 @@ export interface ChartSeries {
 }
 
 const TIME_ZONE = "Europe/Copenhagen";
-const fullLabel = (t: number) =>
-    new Date(t).toLocaleString("en-GB", {
+const fullLabel = (timestamp: number) =>
+    new Date(timestamp).toLocaleString("en-GB", {
         timeZone: TIME_ZONE,
         day: "numeric",
         month: "short",
@@ -44,7 +44,7 @@ export function BankrollChart({ series, testId = "bankroll-chart" }: { series: C
                     />
                     <YAxis tickFormatter={percentLabel} width={64} domain={["auto", "auto"]} />
                     <Tooltip
-                        labelFormatter={(t) => fullLabel(Number(t))}
+                        labelFormatter={(timestamp) => fullLabel(Number(timestamp))}
                         formatter={(growth) => percentLabel(Number(growth))}
                     />
                     <Legend />

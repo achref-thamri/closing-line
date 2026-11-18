@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { z } from "zod";
+import * as zod from "zod";
 import { HttpError, TransientError } from "../errors.ts";
 import { getJson, type Fetch } from "../http.ts";
 
@@ -8,7 +8,7 @@ const url = new URL("https://api.example.com/things?apiKey=secret");
 function request(response: Response) {
     return getJson({
         url,
-        schema: z.array(z.number()),
+        schema: zod.array(zod.number()),
         label: "Example",
         fetch: vi.fn<Fetch>().mockResolvedValue(response),
     });
@@ -42,7 +42,7 @@ describe("getJson", () => {
     it("never puts the URL in errors", async () => {
         const failing = getJson({
             url,
-            schema: z.unknown(),
+            schema: zod.unknown(),
             label: "Example",
             fetch: vi.fn<Fetch>().mockRejectedValue(new Error("connect ECONNREFUSED")),
         });
@@ -52,7 +52,7 @@ describe("getJson", () => {
 
     it("uses the global fetch by default", async () => {
         const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("[3]"));
-        expect((await getJson({ url, schema: z.array(z.number()), label: "Example" })).data).toEqual([3]);
+        expect((await getJson({ url, schema: zod.array(zod.number()), label: "Example" })).data).toEqual([3]);
         spy.mockRestore();
     });
 });

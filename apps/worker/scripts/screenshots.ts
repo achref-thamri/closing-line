@@ -101,7 +101,10 @@ function chat(title: string, messages: Message[]): string {
     const bubbles = messages
         .map((message) => {
             const buttons = (message.keyboard ?? [])
-                .map((row) => `<div class="row">${row.map((b) => `<span>${escape(b.text)}</span>`).join("")}</div>`)
+                .map(
+                    (row) =>
+                        `<div class="row">${row.map((button) => `<span>${escape(button.text)}</span>`).join("")}</div>`,
+                )
                 .join("");
             return `<div class="msg ${message.from}"><div class="bubble">${escape(message.text)}</div>${
                 buttons ? `<div class="keys">${buttons}</div>` : ""

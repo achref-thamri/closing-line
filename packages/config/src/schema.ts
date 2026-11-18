@@ -1,45 +1,48 @@
 import type { StakeRules } from "@closing-line/core";
-import { z } from "zod";
+import * as zod from "zod";
 
 const emptyToUndefined = (value: unknown): unknown => (value === "" ? undefined : value);
 
-const requiredSecret = z.preprocess(emptyToUndefined, z.string({ error: "is required" }).trim().min(1, "is required"));
-const chatId = z.coerce.number({ error: "must be an integer chat id" }).int();
-const fraction = z.number().gt(0).lte(1);
+const requiredSecret = zod.preprocess(
+    emptyToUndefined,
+    zod.string({ error: "is required" }).trim().min(1, "is required"),
+);
+const chatId = zod.coerce.number({ error: "must be an integer chat id" }).int();
+const fraction = zod.number().gt(0).lte(1);
 
 /** Secrets and deployment settings, read from environment variables. */
-export const envSchema = z.object({
+export const envSchema = zod.object({
     ODDS_API_KEY: requiredSecret,
     FOOTBALL_DATA_TOKEN: requiredSecret,
     TELEGRAM_BOT_TOKEN: requiredSecret,
-    TELEGRAM_OWNER_CHAT_ID: z.preprocess(emptyToUndefined, chatId),
+    TELEGRAM_OWNER_CHAT_ID: zod.preprocess(emptyToUndefined, chatId),
     /** Postgres connection string. Without it the worker uses an embedded PGlite database in `PGLITE_DIR`. */
-    DATABASE_URL: z.preprocess(emptyToUndefined, z.url({ protocol: /^postgres(ql)?$/ }).optional()),
-    PGLITE_DIR: z.preprocess(emptyToUndefined, z.string().min(1).default("data/pglite")),
+    DATABASE_URL: zod.preprocess(emptyToUndefined, zod.url({ protocol: /^postgres(ql)?$/ }).optional()),
+    PGLITE_DIR: zod.preprocess(emptyToUndefined, zod.string().min(1).default("data/pglite")),
     /** Touched every minute by the worker; Docker's health check reads its age. */
-    HEARTBEAT_PATH: z.preprocess(emptyToUndefined, z.string().min(1).default("data/heartbeat")),
-    HEALTHCHECK_PING_URL: z.preprocess(emptyToUndefined, z.url({ protocol: /^https$/ }).optional()),
-    LOG_LEVEL: z.preprocess(
+    HEARTBEAT_PATH: zod.preprocess(emptyToUndefined, zod.string().min(1).default("data/heartbeat")),
+    HEALTHCHECK_PING_URL: zod.preprocess(emptyToUndefined, zod.url({ protocol: /^https$/ }).optional()),
+    LOG_LEVEL: zod.preprocess(
         emptyToUndefined,
-        z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+        zod.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
     ),
 });
 
-const leagueSchema = z.strictObject({
+const leagueSchema = zod.strictObject({
     /** The Odds API sport key, e.g. `soccer_epl`. */
-    oddsApiKey: z.string().min(1),
+    oddsApiKey: zod.string().min(1),
     /** football-data.org competition code for results; leagues without one settle from The Odds API scores. */
-    footballDataCode: z.string().min(1).optional(),
-    name: z.string().min(1),
+    footballDataCode: zod.string().min(1).optional(),
+    name: zod.string().min(1),
 });
 
-const stakeRulesSchema = z
+const stakeRulesSchema = zod
     .strictObject({
         kellyMultiplier: fraction.default(0.25),
         maxBankrollFraction: fraction.default(0.02),
-        minStake: z.number().positive().default(50),
-        maxStake: z.number().positive().default(500),
-        step: z.number().positive().default(10),
+        minStake: zod.number().positive().default(50),
+        maxStake: zod.number().positive().default(500),
+        step: zod.number().positive().default(10),
     })
     .refine((rules) => rules.minStake <= rules.maxStake, {
         message: "minStake cannot exceed maxStake",
@@ -48,7 +51,7 @@ const stakeRulesSchema = z
     .refine((rules) => rules.minStake % rules.step === 0, {
         message: "minStake must be a multiple of step",
         path: ["minStake"],
-    }) satisfies z.ZodType<StakeRules>;
+    }) satisfies zod.ZodType<StakeRules>;
 
 /**
  * Pinnacle as the reference, plus only books with a Danish betting licence, where winnings are tax-free. Checked
@@ -59,9 +62,9 @@ const stakeRulesSchema = z
 const DEFAULT_BOOKMAKERS = ["pinnacle", "nordicbet", "marathonbet", "betsson", "unibet_se", "leovegas_se", "sport888"];
 
 /** Tunable settings with defaults (spec §2, §5, §6). Money is in kroner. `prefault` runs nested defaults too. */
-export const settingsSchema = z
+export const settingsSchema = zod
     .strictObject({
-        leagues: z
+        leagues: zod
             .array(leagueSchema)
             .min(1)
             // More leagues, more chances for value (owner, 2026-11-02; ADR 0008 picked them by back-test). All have
@@ -78,58 +81,58 @@ export const settingsSchema = z
                 { oddsApiKey: "soccer_belgium_first_div", name: "Belgian Pro League" },
             ]),
         /** Up to 10 bookmakers cost one region's worth of credits per call. */
-        bookmakers: z.array(z.string().min(1)).min(2).max(10).default(DEFAULT_BOOKMAKERS),
+        bookmakers: zod.array(zod.string().min(1)).min(2).max(10).default(DEFAULT_BOOKMAKERS),
         /** Reference bookmaker whose de-vigged prices count as fair. */
-        sharpBookmaker: z.string().min(1).default("pinnacle"),
+        sharpBookmaker: zod.string().min(1).default("pinnacle"),
         /**
          * Commission on net winnings per exchange in `bookmakers`, e.g. { "betfair_ex_eu": 0.05 }. Empty while the
          * feed has no exchange (dropped 2026-11-02).
          */
-        exchangeCommission: z.record(z.string(), z.number().min(0).max(0.2)).default({}),
-        scanner: z
+        exchangeCommission: zod.record(zod.string(), zod.number().min(0).max(0.2)).default({}),
+        scanner: zod
             .strictObject({
                 // 2% since 2026-11-02 (owner): more tips, still clear of price noise; the record decides later.
-                minEdge: z.number().gt(0).lt(1).default(0.02),
-                maxSharpAgeMinutes: z.int().positive().default(10),
+                minEdge: zod.number().gt(0).lt(1).default(0.02),
+                maxSharpAgeMinutes: zod.int().positive().default(10),
                 // The back-test (ADR 0008) only checked prices taken a day or two before kickoff. On 2026-11-04 the
                 // scanner tipped 22 matches up to 18 days out, edges up to 16%, which are more likely stale soft lines.
-                maxHoursToKickoff: z.int().positive().default(72),
+                maxHoursToKickoff: zod.int().positive().default(72),
                 // Outsiders don't beat the close: in four past seasons, tips at odds of 5+ averaged -1.6% CLV against
                 // +2.8% below 5, and the first live week agreed (-7.2%, 3 of 9). Pinnacle's early outsider prices are
                 // too rough to price an edge against (ADR 0008, 2026-11-08).
-                maxFairOdds: z.number().gt(1).default(5),
+                maxFairOdds: zod.number().gt(1).default(5),
                 // An edge must be big enough for its odds: Kelly fraction of 2% or more. Smaller ones had no edge at
                 // Danish-licensed books, in past seasons and live. Draws are the exception: at 1-2% they still beat
                 // the close (+1.9% CLV over 63 past tips), and at 2% almost none qualify (ADR 0008, 2026-11-09).
-                minKellyFraction: z
+                minKellyFraction: zod
                     .strictObject({ home: fraction, draw: fraction, away: fraction })
                     .default({ home: 0.02, draw: 0.01, away: 0.02 }),
                 stake: stakeRulesSchema.prefault({}),
             })
             .prefault({}),
         /** Flat stake for the "always back the favourite" benchmark. */
-        benchmarkStake: z.number().positive().default(100),
+        benchmarkStake: zod.number().positive().default(100),
         /** Polls this close to kickoff record closing prices and place the benchmark bet. */
-        closingWindowMinutes: z.int().positive().max(180).default(45),
-        bettors: z
+        closingWindowMinutes: zod.int().positive().max(180).default(45),
+        bettors: zod
             .strictObject({
                 maxBankrollFraction: fraction.default(0.05),
                 /** Large enough that the friend's usual 3,000 kr stakes fit the cap (owner, 2026-11-02). */
-                startingBankroll: z.number().positive().default(60_000),
+                startingBankroll: zod.number().positive().default(60_000),
             })
             .prefault({}),
-        startingBankroll: z.number().positive().default(10_000),
+        startingBankroll: zod.number().positive().default(10_000),
         /** The scanner stops betting while its losses over the last seven days are above this share of its bankroll. */
         weeklyLossPause: fraction.default(0.15),
-        credits: z
+        credits: zod
             .strictObject({
                 /** Routine polls stop at this level; the rest is kept for closing prices and scores. */
-                reserve: z.int().min(0).default(50),
+                reserve: zod.int().min(0).default(50),
                 /** Usage shares that trigger a Telegram warning. */
-                warnAt: z.array(fraction).default([0.7, 0.9]),
+                warnAt: zod.array(fraction).default([0.7, 0.9]),
             })
             .prefault({}),
-        timezone: z.string().min(1).default("Europe/Copenhagen"),
+        timezone: zod.string().min(1).default("Europe/Copenhagen"),
     })
     .refine((settings) => settings.bookmakers.includes(settings.sharpBookmaker), {
         message: "sharpBookmaker must be one of bookmakers",
@@ -149,5 +152,5 @@ function isTimeZone(timeZone: string): boolean {
     }
 }
 
-export type Settings = z.infer<typeof settingsSchema>;
-export type League = z.infer<typeof leagueSchema>;
+export type Settings = zod.infer<typeof settingsSchema>;
+export type League = zod.infer<typeof leagueSchema>;

@@ -158,8 +158,8 @@ function followerLines(
     if (scored.length > 0) {
         const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
         lines.push(
-            `CLV on those: ${percent(mean(scored.map((s) => s.follower)))} at the next poll's price, ` +
-                `${percent(mean(scored.map((s) => s.tip)))} at the tip's`,
+            `CLV on those: ${percent(mean(scored.map((clv) => clv.follower)))} at the next poll's price, ` +
+                `${percent(mean(scored.map((clv) => clv.tip)))} at the tip's`,
         );
     }
     return lines;

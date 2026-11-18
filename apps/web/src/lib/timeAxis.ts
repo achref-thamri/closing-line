@@ -16,7 +16,7 @@ const STEPS_MS = [
 export interface TimeAxis {
     ticks: number[];
     /** Hours and the day for steps under a day ("2 Nov 18:00"), the day alone otherwise ("2 Nov"). */
-    label: (t: number) => string;
+    label: (timestamp: number) => string;
 }
 
 /**
@@ -28,8 +28,8 @@ export function timeAxis(from: number, to: number, timeZone: string, maxTicks = 
     const step =
         STEPS_MS.find((candidate) => span / candidate <= maxTicks - 1) ?? STEPS_MS[STEPS_MS.length - 1] ?? DAY_MS;
     const withTime = step < DAY_MS;
-    const label = (t: number) =>
-        new Date(t).toLocaleString("en-GB", {
+    const label = (timestamp: number) =>
+        new Date(timestamp).toLocaleString("en-GB", {
             timeZone,
             day: "numeric",
             month: "short",

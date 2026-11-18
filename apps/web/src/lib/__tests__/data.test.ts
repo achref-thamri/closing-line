@@ -13,7 +13,7 @@ describe("byClv", () => {
         const favourite = player("favourite", -0.017, 70, 0.01);
         const lucky = player("friend", undefined, 0, 0.19);
         const fewClv = player("owner", 0.048, 1, 0.02);
-        expect([lucky, favourite, fewClv, scanner].sort(byClv).map((p) => p.id)).toEqual([
+        expect([lucky, favourite, fewClv, scanner].sort(byClv).map((entry) => entry.id)).toEqual([
             "scanner",
             "favourite",
             "owner",
@@ -27,7 +27,7 @@ describe("byClv", () => {
         const a = player("a", 0.1, 10, 0);
         const b = player("b", 0.1, 10, 0.5);
         const c = player("c", -0.1, 20, 0);
-        expect([a, b, c].sort(byClv).map((p) => p.id)).toEqual(["c", "b", "a"]);
+        expect([a, b, c].sort(byClv).map((entry) => entry.id)).toEqual(["c", "b", "a"]);
         expect(MIN_CLV_BETS_TO_RANK).toBe(30);
     });
 });

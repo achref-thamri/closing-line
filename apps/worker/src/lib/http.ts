@@ -1,9 +1,9 @@
-import type { z } from "zod";
+import type * as zod from "zod";
 import { HttpError, messageOf, PermanentError, TransientError } from "./errors.ts";
 
 export type Fetch = typeof fetch;
 
-export interface GetJsonRequest<S extends z.ZodType> {
+export interface GetJsonRequest<S extends zod.ZodType> {
     url: URL;
     headers?: Record<string, string>;
     schema: S;
@@ -23,7 +23,7 @@ export interface JsonResponse<T> {
  * - Network errors, timeouts, 429 and 5xx throw TransientError (429 carries Retry-After as the minimum wait).
  * - Other non-2xx throw HttpError; an unexpected response shape throws PermanentError.
  */
-export async function getJson<S extends z.ZodType>(request: GetJsonRequest<S>): Promise<JsonResponse<z.output<S>>> {
+export async function getJson<S extends zod.ZodType>(request: GetJsonRequest<S>): Promise<JsonResponse<zod.output<S>>> {
     const { url, headers = {}, schema, timeoutMs = 15_000, label } = request;
     const doFetch = request.fetch ?? fetch;
     let response: Response;

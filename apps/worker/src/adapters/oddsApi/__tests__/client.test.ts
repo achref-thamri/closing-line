@@ -132,7 +132,7 @@ describe("OddsApiClient.odds", () => {
             "pinnacle",
             "betfair_ex_eu",
         ]);
-        expect(data[0]?.quotes.map((q) => [q.bookmaker, q.price])).toEqual([["pinnacle", 2.6]]);
+        expect(data[0]?.quotes.map((quote) => [quote.bookmaker, quote.price])).toEqual([["pinnacle", 2.6]]);
     });
 
     it("refuses more than ten bookmakers, which would cost double", async () => {

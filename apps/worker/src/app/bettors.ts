@@ -1,6 +1,6 @@
 import type { Config } from "@closing-line/config";
 import type { Player, Repositories } from "@closing-line/db";
-import { z } from "zod";
+import * as zod from "zod";
 import { hasAction, type ButtonHandler, type Messenger, type Reply } from "./chat.ts";
 
 const WELCOME =
@@ -9,7 +9,7 @@ const WELCOME =
     "You also get value tips, the same ones the owner gets; /tips off pauses them.";
 export const WAITING = 'Still waiting for the owner to let you in. Send /log once you get "You\'re in!".';
 
-const storedRequest = z.object({ name: z.string() });
+const storedRequest = zod.object({ name: zod.string() });
 
 export interface BettorsDeps {
     repos: Pick<Repositories, "players" | "chats">;

@@ -15,14 +15,19 @@ describe("meanWithRange", () => {
 
 describe("goLiveCheck", () => {
     const start = new Date("2026-11-01T12:00:00Z");
-    const day = (n: number) => new Date(start.getTime() + n * 86_400_000);
-    const bet = (n: number, profitOre: number, clv: number | null, status = profitOre > 0 ? "won" : "lost") => ({
+    const day = (dayOffset: number) => new Date(start.getTime() + dayOffset * 86_400_000);
+    const bet = (
+        dayOffset: number,
+        profitOre: number,
+        clv: number | null,
+        status = profitOre > 0 ? "won" : "lost",
+    ) => ({
         status,
         stakeOre: 10_000,
         profitOre,
         clv,
-        createdAt: day(n),
-        settledAt: day(n + 1),
+        createdAt: day(dayOffset),
+        settledAt: day(dayOffset + 1),
     });
 
     it("ticks nothing early on and says how far each rule is", () => {
