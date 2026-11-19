@@ -104,6 +104,8 @@ which Dependabot keeps current.
 
 Stopping the worker waits for the job it is running, up to two minutes (`stop_grace_period`), because a job killed
 halfway is never run again. A deploy during a poll can take that much longer.
+If Telegram can't be reached while the worker stops, it logs `telegram stop failed` and still stops cleanly, so
+the restart alert stays quiet.
 
 Deploys rebuild the worker and dashboard but never pull Postgres. Take a minor release with
 `docker compose pull postgres && docker compose up -d postgres`, and a major one only by dump and restore.
