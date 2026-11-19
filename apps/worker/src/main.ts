@@ -54,7 +54,11 @@ async function shutdown(signal: string): Promise<void> {
     logger.info({ signal }, "shutting down");
     clearTimeout(timer);
     polling.stop();
-    await worker.bot.stop();
+    // Stopping tells Telegram which updates were read. If Telegram can't be reached the next start just reads them
+    // again, so the worker still marks a clean stop and the next start sends no crash alert.
+    await worker.bot.stop().catch((error: unknown) => {
+        logger.warn({ error: messageOf(error) }, "telegram stop failed");
+    });
     await polling.done;
     await running;
     await markStopped({ repos: worker.repos });
