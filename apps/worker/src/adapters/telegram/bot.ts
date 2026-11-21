@@ -2,7 +2,7 @@ import { Bot, InlineKeyboard, type Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 import type { BetFlow } from "../../app/betFlow.ts";
 import type { Bettors } from "../../app/bettors.ts";
-import type { ButtonHandler, Keyboard, Messenger, Reply } from "../../app/chat.ts";
+import type { ButtonHandler, Messenger, Reply } from "../../app/chat.ts";
 import type { SettleFlow } from "../../app/settleFlow.ts";
 import type { Logger } from "../../lib/logger.ts";
 
@@ -14,9 +14,11 @@ export const COMMANDS = [
     { command: "start", description: "Join or show the help" },
 ];
 
-function keyboardOf(rows: Keyboard | undefined): InlineKeyboard | undefined {
-    if (!rows) return undefined;
-    return InlineKeyboard.from(rows.map((row) => row.map((button) => InlineKeyboard.text(button.text, button.data))));
+/** Telegram's message options for a reply: its buttons, if it has any. */
+function replyOptions(reply: Reply): { reply_markup?: InlineKeyboard } {
+    if (!reply.keyboard) return {};
+    const rows = reply.keyboard.map((row) => row.map((button) => InlineKeyboard.text(button.text, button.data)));
+    return { reply_markup: InlineKeyboard.from(rows) };
 }
 
 /** The Telegram side of the bet flow and the API client for every message the worker sends. */
@@ -38,15 +40,13 @@ export function createTelegramBot(options: {
     });
     const messenger: Messenger = {
         async send(chatId: number, reply: Reply) {
-            const keyboard = keyboardOf(reply.keyboard);
-            await bot.api.sendMessage(chatId, reply.text, keyboard ? { reply_markup: keyboard } : {});
+            await bot.api.sendMessage(chatId, reply.text, replyOptions(reply));
         },
     };
 
     async function sendAll(ctx: Context, replies: Reply[]): Promise<void> {
         for (const reply of replies) {
-            const keyboard = keyboardOf(reply.keyboard);
-            await ctx.reply(reply.text, keyboard ? { reply_markup: keyboard } : {});
+            await ctx.reply(reply.text, replyOptions(reply));
         }
     }
 
@@ -98,8 +98,7 @@ export function createTelegramBot(options: {
             if (reply.newMessage) {
                 await sendAll(ctx, [reply]);
             } else {
-                const keyboard = keyboardOf(reply.keyboard);
-                await ctx.editMessageText(reply.text, keyboard ? { reply_markup: keyboard } : {});
+                await ctx.editMessageText(reply.text, replyOptions(reply));
             }
             await ctx.answerCallbackQuery();
         });
