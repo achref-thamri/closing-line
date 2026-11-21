@@ -89,6 +89,7 @@ dashboard shows where it stands.
 - [How it works](docs/how-it-works.md): the maths of one bet
 - [Architecture](docs/architecture.md): code layout, tech stack and tests
 - [Running and deploying](docs/operations.md): settings, the back-test, deployment and backups
+- [Scanner rules](docs/scanner-rules.md): why each scanner setting is what it is, with the back-tests
 - [Decision records](docs/adr/): why things are built the way they are
 
 Not betting advice. This is a personal project, under the [MIT license](LICENSE).

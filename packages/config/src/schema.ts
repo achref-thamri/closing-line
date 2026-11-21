@@ -66,8 +66,8 @@ export const settingsSchema = zod
         leagues: zod
             .array(leagueSchema)
             .min(1)
-            // Picked by back-test (ADR 0008); all have Pinnacle on the free plan. Serie B and the Belgian Pro League
-            // have no free football-data.org results, so they settle from The Odds API's scores (2 credits a day).
+            // Picked by back-test (docs/scanner-rules.md); all have Pinnacle on the free plan. Serie B and the
+            // Belgian Pro League have no free football-data.org results, so they settle from The Odds API's scores.
             .default([
                 { oddsApiKey: "soccer_epl", footballDataCode: "PL", name: "Premier League" },
                 { oddsApiKey: "soccer_efl_champ", footballDataCode: "ELC", name: "Championship" },
@@ -86,15 +86,16 @@ export const settingsSchema = zod
         exchangeCommission: zod.record(zod.string(), zod.number().min(0).max(0.2)).default({}),
         scanner: zod
             .strictObject({
-                // The edge over Pinnacle's fair price a tip needs (ADR 0008).
+                // The edge over Pinnacle's fair price a tip needs (docs/scanner-rules.md).
                 minEdge: zod.number().gt(0).lt(1).default(0.02),
                 maxSharpAgeMinutes: zod.int().positive().default(10),
-                // Further out than a week, Pinnacle's line is thin and early tips have the weakest record (ADR 0008).
+                // Further out than a week, Pinnacle's line is thin and early tips have the weakest record
+                // (docs/scanner-rules.md).
                 maxHoursToKickoff: zod.int().positive().default(168),
-                // Outsiders don't beat the close, in past seasons or live (ADR 0008).
+                // Outsiders don't beat the close, in past seasons or live (docs/scanner-rules.md).
                 maxFairOdds: zod.number().gt(1).default(5),
                 // Longer odds need a bigger edge. Draws get a lower bar: at 2% almost none qualify, and at 1-2% they
-                // still beat the close (ADR 0008).
+                // still beat the close (docs/scanner-rules.md).
                 minKellyFraction: zod
                     .strictObject({ home: fraction, draw: fraction, away: fraction })
                     .default({ home: 0.02, draw: 0.01, away: 0.02 }),

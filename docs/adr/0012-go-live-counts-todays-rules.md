@@ -6,16 +6,16 @@ Date: 2026-11-16. Status: accepted.
 
 The go-live rule (300 settled bets over at least three months, positive average CLV, an ROI above the favourite
 benchmark, a drawdown under 30% of the start, no unexplained bugs in the last 30 days) was set on 1 November, before
-the scanner's rules settled down. Since then it gained a 72-hour limit before kickoff (#93), an outsider cap at fair
-odds of 5 (ADR 0008) and a minimum Kelly fraction (ADR 0008). Bets placed before those rules, like the 4 November
+the scanner's rules settled down. Since then it gained a limit on how long before kickoff it bets, an outsider cap at
+fair odds of 5 and a minimum Kelly fraction. Bets placed before those rules, like the 4 November
 run of tips up to 18 days out, are not the strategy real money would follow. Counting them would judge a scanner
 that no longer exists.
 
 ## Decision
 
 - For the value scanner, the go-live check counts only settled bets that today's rules would still place
-  (`meetsScannerRules` in core: at most a week before kickoff (72 hours until 2026-11-21) but not in the closing window (#126), fair odds
-  cap, Kelly minimum).
+  (`meetsScannerRules` in core: the time before kickoff, not in the closing window, the fair odds cap and the Kelly
+  minimum, as described in [docs/scanner-rules.md](../scanner-rules.md)).
 - The dashboard shows the check at the top, each rule met or not, with average CLV and its 95% range. The
   all-time figures stay on the scanner's card next to the today's-rules CLV, and older bets are marked "old rules" in
   the table. Nothing is deleted or rewritten.

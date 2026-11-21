@@ -10,7 +10,7 @@ history makes it possible to answer the question before running anything live.
 
 ## Decision
 
-`apps/backtest` has a Dixon-Coles goal model: each side's goals are Poisson with a mean set by its attack, the
+The test used a Dixon-Coles goal model in `apps/backtest` (removed since, see below): each side's goals are Poisson with a mean set by its attack, the
 other side's defence and home advantage, a correction for the four low scores, and older matches weighted down by a
 half-life. It is refitted every Monday on that country's earlier results only (both divisions, so promoted teams
 have history) and rates the week's matches, which is how it would run live.

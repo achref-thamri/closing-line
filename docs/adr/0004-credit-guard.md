@@ -18,9 +18,8 @@ Every paid call goes through `CreditGuard.spend(cost, priority, call)`. The rule
 - `closing` (pre-kickoff polls and the daily scores call for leagues without free results) may go past that share
   and use the reserve, down to zero.
 
-Until 2026-11-16 the reserve was kept for a `bet` priority, people asking for prices in Telegram, and `closing` stopped
-at it. Nothing asks for prices any more (`/picks` was removed), so the reserve now protects what matters most when a
-month runs short: the closing prices that measure CLV and the scores that settle bets already placed.
+So when a month runs short, the reserve goes to the closing prices that measure CLV and the scores that settle bets
+already placed.
 
 The guard records the balance that every response reports in its headers, warns at 70% and 90% usage, and treats
 `OUT_OF_USAGE_CREDITS` as a pause until the reset.
@@ -30,3 +29,8 @@ The guard records the balance that every response reports in its headers, warns 
 - The free plan lasts the month whatever the fixture list looks like; busy weekends cannot drain it.
 - Missing balance headers read as zero, which stops paid calls instead of guessing.
 - More leagues or more frequent polls need the paid plan, a settings change.
+
+## Changes
+
+- 2026-11-16: the reserve used to be kept for a `bet` priority (people asking for prices in Telegram), and `closing`
+  stopped at it. `/picks` was removed, so nothing asks for prices any more and `closing` took the reserve.
