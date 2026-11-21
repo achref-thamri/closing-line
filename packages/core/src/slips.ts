@@ -1,4 +1,5 @@
 import { playerStats, type MetricsBet, type PlayerStats } from "./metrics.ts";
+import { closingLineValue } from "./value.ts";
 
 /** How a bettor's bet from a slip ended: the selection's own result, or cashed out early. */
 export type SlipStatus = "won" | "lost" | "void" | "cashed_out";
@@ -18,7 +19,10 @@ export function heldProfitOre(
  * The bookmaker keeps a margin on cash-outs, so this overstates the current price and understates the move;
  * undefined when the offer is not a usable price (nothing offered, or more than the bet could pay).
  */
-export function impliedOddsFromCashout(bet: { stakeOre: number; lockedOdds: number }, offerOre: number) {
+export function impliedOddsFromCashout(
+    bet: { stakeOre: number; lockedOdds: number },
+    offerOre: number,
+): number | undefined {
     if (offerOre <= 0) return undefined;
     const odds = (bet.stakeOre * bet.lockedOdds) / offerOre;
     return odds > 1 ? odds : undefined;
@@ -26,10 +30,10 @@ export function impliedOddsFromCashout(bet: { stakeOre: number; lockedOdds: numb
 
 /**
  * How far the price moved after the bet, the player-prop version of CLV: positive when the bookmaker
- * cut the price, i.e. agreed with the bet. Same formula as `closingLineValue`.
+ * cut the price, i.e. agreed with the bet.
  */
 export function priceMove(lockedOdds: number, currentOdds: number): number {
-    return lockedOdds / currentOdds - 1;
+    return closingLineValue(lockedOdds, currentOdds);
 }
 
 /**

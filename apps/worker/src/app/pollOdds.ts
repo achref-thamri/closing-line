@@ -221,11 +221,12 @@ async function checkPriceGone(
 ): Promise<void> {
     const { config } = deps;
     const selection = toOutcome(bet.selection);
-    const best = findValueBets(event.quotes, fair, {
-        sharpBookmaker: config.sharpBookmaker,
-        commission: config.exchangeCommission,
-        minEdge: -Infinity,
-    }).find((value) => value.selection === selection);
+    const best = bestOffer(
+        event.quotes,
+        fair,
+        { sharpBookmaker: config.sharpBookmaker, commission: config.exchangeCommission },
+        selection,
+    );
     if (best && best.edge >= 0) return;
     // Two polls of the same league can overlap (a slow one and the next); only the one that marks the tip alerts.
     if (!(await deps.repos.bets.markPriceGone(bet.id, now))) return;
