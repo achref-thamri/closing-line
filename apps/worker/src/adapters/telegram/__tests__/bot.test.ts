@@ -37,6 +37,7 @@ function setup(
     const bot = createTelegramBot({ botToken: "1:secret", logger: silentLogger, botInfo });
     bot.api.config.use((_prev, method, payload) => {
         calls.push({ method, payload });
+        // grammY types each reply by the method called; one stand-in for every method can't be typed.
         return Promise.resolve({ ok: true, result: true } as never);
     });
     const owns = (actions: string[]) => (data: string) => hasAction(data, actions);
