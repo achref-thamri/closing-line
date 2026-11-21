@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase, type DatabaseHandle } from "../client.ts";
-import { createRepositories, type NewBet, type Repositories } from "../repositories.ts";
+import type { NewBet } from "../bets.ts";
+import { createRepositories, type Repositories } from "../repositories.ts";
 
 const kickoff = new Date("2026-11-08T16:30:00Z");
 const fixture = { id: "evt1", league: "soccer_epl", homeTeam: "Liverpool", awayTeam: "Arsenal", kickoff };

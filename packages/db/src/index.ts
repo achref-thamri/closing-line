@@ -1,10 +1,9 @@
 export { openDatabase } from "./client.ts";
 export type { Database, DatabaseHandle, DatabaseTarget } from "./client.ts";
+export type { Bet, BetWithFixture, NewBet, Settlement } from "./bets.ts";
 export { createRepositories } from "./repositories.ts";
 export type {
     ApiUsage,
-    Bet,
-    BetWithFixture,
     ChatSession,
     ChatSessionKind,
     Decision,
@@ -12,7 +11,6 @@ export type {
     Fixture,
     FixtureResult,
     JobRun,
-    NewBet,
     NewDecision,
     NewFixture,
     NewOddsSnapshot,
@@ -20,6 +18,5 @@ export type {
     OddsSnapshot,
     Player,
     Repositories,
-    Settlement,
 } from "./repositories.ts";
 export * as schema from "./schema.ts";
