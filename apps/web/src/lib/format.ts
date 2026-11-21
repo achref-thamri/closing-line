@@ -1,3 +1,5 @@
+import { TIME_ZONE } from "./rules.ts";
+
 export function kroner(ore: number): string {
     return `${Math.round(ore / 100).toLocaleString("en-GB")} kr`;
 }
@@ -15,7 +17,7 @@ export function odds(value: number): string {
     return value.toFixed(2);
 }
 
-export function shortDate(date: Date, timeZone = "Europe/Copenhagen"): string {
+export function shortDate(date: Date, timeZone = TIME_ZONE): string {
     return date.toLocaleString("en-GB", {
         timeZone,
         day: "numeric",
