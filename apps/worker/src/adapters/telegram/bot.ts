@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard, type Context } from "grammy";
-import type { UserFromGetMe } from "grammy/types";
+import type { Update, UserFromGetMe } from "grammy/types";
 import type { BetFlow } from "../../app/betFlow.ts";
 import type { Bettors } from "../../app/bettors.ts";
 import type { ButtonHandler, Messenger, Reply } from "../../app/chat.ts";
@@ -120,7 +120,7 @@ export function createTelegramBot(options: {
         messenger,
         attach,
         api: bot.api,
-        handleUpdate: (update: Parameters<typeof bot.handleUpdate>[0]) => bot.handleUpdate(update),
+        handleUpdate: (update: Update) => bot.handleUpdate(update),
         start: async () => {
             // The menu next to the message box lists these, so nobody has to remember them.
             await bot.api.setMyCommands(COMMANDS);
