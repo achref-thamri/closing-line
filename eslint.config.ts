@@ -12,6 +12,8 @@ export default defineConfig(
         "**/next-env.d.ts",
         "**/playwright-report",
         "**/test-results",
+        // Local notes folder that git ignores through its own .gitignore.
+        ".remember",
     ]),
     js.configs.recommended,
     tseslint.configs.strictTypeChecked,
