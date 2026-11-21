@@ -102,12 +102,12 @@ export function tipRecipients(
  */
 export function tipKeyboard(tip: Tip): Keyboard {
     return tip.offers
-        .slice(0, TIP_BUTTONS)
         .map((offer) => ({
             text: `✅ I bet this at ${bookName(offer.bookmaker)} ${offer.offeredOdds.toFixed(2)}`,
             data: `tb:${tip.fixtureId}:${tip.selection}:${offer.bookmaker}:${offer.offeredOdds.toFixed(2)}`,
         }))
         .filter((button) => Buffer.byteLength(button.data) <= MAX_BUTTON_DATA_BYTES)
+        .slice(0, TIP_BUTTONS)
         .map((button) => [button]);
 }
 

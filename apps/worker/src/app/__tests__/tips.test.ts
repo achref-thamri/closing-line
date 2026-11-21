@@ -64,6 +64,17 @@ describe("tipKeyboard", () => {
         const long = { ...tip, offers: [offer] };
         expect(tipKeyboard(long)).toEqual([]);
     });
+
+    it("fills its three buttons from the books that fit", () => {
+        const long = { bookmaker: "a_bookmaker_with_a_long_key", offeredOdds: 3.5, netOdds: 3.5, edge: 0.129 };
+        const fourth = { bookmaker: "betsson", offeredOdds: 3.18, netOdds: 3.18, edge: 0.0258 };
+        const buttons = tipKeyboard({ ...tip, offers: [long, ...tip.offers, fourth] });
+        expect(buttons.map(([button]) => button?.text)).toEqual([
+            "✅ I bet this at Unibet 3.40",
+            "✅ I bet this at NordicBet 3.25",
+            "✅ I bet this at Marathonbet 3.20",
+        ]);
+    });
 });
 
 describe("createTipSender", () => {
