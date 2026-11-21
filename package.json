@@ -24,15 +24,15 @@
         "@next/eslint-plugin-next": "16.4.6",
         "@types/node": "24.19.2",
         "@vitest/coverage-v8": "5.1.0",
-        "eslint": "10.14.0",
+        "eslint": "10.15.0",
         "husky": "9.1.7",
         "jiti": "2.7.0",
         "knip": "6.45.1",
-        "lint-staged": "17.6.0",
-        "prettier": "3.10.0",
-        "turbo": "2.11.11",
+        "lint-staged": "17.6.1",
+        "prettier": "3.10.1",
+        "turbo": "2.11.12",
         "typescript": "6.0.3",
-        "typescript-eslint": "8.72.2",
+        "typescript-eslint": "8.73.0",
         "vitest": "5.1.0"
     }
 }
