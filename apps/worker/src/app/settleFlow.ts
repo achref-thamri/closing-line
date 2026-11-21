@@ -7,7 +7,11 @@ import { describeBet, kroner, parseKroner, signedKroner } from "./format.ts";
 
 type Outcome = "won" | "lost" | "void";
 type SlipSettlement = Omit<Settlement, "settledAt">;
-const OUTCOME_KEYS: Record<string, Outcome> = { w: "won", l: "lost", v: "void" };
+const OUTCOME_KEYS: ReadonlyMap<string, Outcome> = new Map([
+    ["w", "won"],
+    ["l", "lost"],
+    ["v", "void"],
+]);
 const storedCashout = zod.object({ betId: zod.string() });
 
 export interface SettleFlowDeps {
@@ -54,7 +58,7 @@ export class SettleFlow implements ButtonHandler {
         if (!bet) return { text: "That bet is not yours or no longer exists." };
 
         if (action === "hd") {
-            const held = OUTCOME_KEYS[key];
+            const held = OUTCOME_KEYS.get(key);
             if (!held || bet.status !== "cashed_out") return { text: describeBet(bet) };
             await this.deps.repos.bets.setHeldStatus(bet.id, held);
             const gain = cashoutGainOre({ ...bet, cashoutOfferOre: bet.cashoutOfferOre ?? 0 }, held);
@@ -70,7 +74,7 @@ export class SettleFlow implements ButtonHandler {
             await this.deps.repos.chats.put(chatId, "cashout", { betId: bet.id }, this.now());
             return { text: `${describeBet(bet)}\n\nHow much did the cash-out pay? Reply with the amount, e.g. 2557.` };
         }
-        const outcome = OUTCOME_KEYS[key];
+        const outcome = OUTCOME_KEYS.get(key);
         if (action !== "st" || !outcome) return { text: "Unknown button." };
         return this.settle(chatId, bet, { status: outcome, profitOre: heldProfitOre(bet, outcome) });
     }

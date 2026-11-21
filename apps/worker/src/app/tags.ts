@@ -7,4 +7,4 @@ export const TAGS = {
     p: { tag: "value_tip", label: "🔎 Value tip" },
 } as const;
 export type TagKey = keyof typeof TAGS;
-export const isTagKey = (value: string): value is TagKey => value in TAGS;
+export const isTagKey = (value: string): value is TagKey => Object.hasOwn(TAGS, value);
