@@ -124,6 +124,14 @@ export interface ScannerRules {
     minKellyFraction: Readonly<Record<Outcome, number>>;
 }
 
+/** What the scanner rules look at in a bet. */
+export interface ScannerRuleBet {
+    createdAt: Date;
+    selection: string;
+    lockedOdds: number;
+    sharpFairOddsAtBet: number | null;
+}
+
 /** The rule a bet breaks under today's scanner settings. */
 export type BrokenScannerRule = "too_early" | "too_late" | "outsider" | "small_kelly";
 
@@ -133,7 +141,7 @@ export type BrokenScannerRule = "too_early" | "too_late" | "outsider" | "small_k
  * place it, or when it can't be judged (no fair price, not a 1X2 selection).
  */
 export function brokenScannerRule(
-    bet: { createdAt: Date; selection: string; lockedOdds: number; sharpFairOddsAtBet: number | null },
+    bet: ScannerRuleBet,
     kickoff: Date,
     rules: ScannerRules,
 ): BrokenScannerRule | undefined {
@@ -150,10 +158,6 @@ export function brokenScannerRule(
 }
 
 /** Whether today's scanner would still have placed a bet; see `brokenScannerRule`. */
-export function meetsScannerRules(
-    bet: Parameters<typeof brokenScannerRule>[0],
-    kickoff: Date,
-    rules: ScannerRules,
-): boolean {
+export function meetsScannerRules(bet: ScannerRuleBet, kickoff: Date, rules: ScannerRules): boolean {
     return brokenScannerRule(bet, kickoff, rules) === undefined;
 }

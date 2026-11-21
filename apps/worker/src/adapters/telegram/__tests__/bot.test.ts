@@ -4,7 +4,7 @@ import type { Bettors } from "../../../app/bettors.ts";
 import { hasAction, type Reply } from "../../../app/chat.ts";
 import type { SettleFlow } from "../../../app/settleFlow.ts";
 import { silentLogger } from "../../../lib/logger.ts";
-import { COMMANDS, createTelegramBot } from "../bot.ts";
+import { COMMANDS, createTelegramBot, type BotFlows } from "../bot.ts";
 
 const botInfo = {
     id: 1,
@@ -37,19 +37,18 @@ function setup(
     const bot = createTelegramBot({ botToken: "1:secret", logger: silentLogger, botInfo });
     bot.api.config.use((_prev, method, payload) => {
         calls.push({ method, payload });
+        // grammY types each reply by the method called; one stand-in for every method can't be typed.
         return Promise.resolve({ ok: true, result: true } as never);
     });
     const owns = (actions: string[]) => (data: string) => hasAction(data, actions);
-    // Stand-ins with only what each test needs; attach takes the parts of each flow it calls.
-    type Flows = Parameters<typeof bot.attach>[0];
     bot.attach({
-        bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as Flows["bettors"],
-        bets: { owns: owns(["w", "t", "x", "tb"]), ...flows.bets } as Flows["bets"],
+        bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as BotFlows["bettors"],
+        bets: { owns: owns(["w", "t", "x", "tb"]), ...flows.bets } as BotFlows["bets"],
         settle: {
             owns: owns(["st", "hd"]),
             amount: () => Promise.resolve(undefined),
             ...flows.settle,
-        } as Flows["settle"],
+        } as BotFlows["settle"],
     });
     return bot;
 }

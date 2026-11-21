@@ -4,10 +4,16 @@ export const GO_LIVE = { bets: 300, months: 3, maxDrawdown: 0.3 } as const;
 /** 1.96 standard errors either side of the mean: a 95% range under a normal approximation. */
 const Z95 = 1.96;
 
-/** The mean and its 95% range; no range from a single value. Undefined without values. */
-export function meanWithRange(
-    values: readonly number[],
-): { mean: number; low: number | undefined; high: number | undefined; count: number } | undefined {
+/** A mean and its 95% range; no range from a single value. */
+export interface MeanWithRange {
+    mean: number;
+    low: number | undefined;
+    high: number | undefined;
+    count: number;
+}
+
+/** The mean and its 95% range of `values`; undefined without values. */
+export function meanWithRange(values: readonly number[]): MeanWithRange | undefined {
     const count = values.length;
     if (count === 0) return undefined;
     const mean = values.reduce((sum, value) => sum + value, 0) / count;
@@ -35,7 +41,7 @@ export interface GoLiveCheck {
     /** Won, lost and cashed-out bets; void ones don't count. */
     settled: number;
     firstBetAt: Date | undefined;
-    clv: ReturnType<typeof meanWithRange>;
+    clv: MeanWithRange | undefined;
     roi: number | undefined;
     benchmarkRoi: number | undefined;
     /** Largest fall from a bankroll peak, as a share of the starting bankroll. */

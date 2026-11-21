@@ -1,6 +1,6 @@
 import { parseConfig } from "@closing-line/config";
 import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { MatchResultInfo } from "../../ports/results.ts";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import { settleBets, type SettleBetsDeps } from "../settleBets.ts";
@@ -59,7 +59,7 @@ const finished = (home: string[], away: string[], homeGoals: number, awayGoals: 
 function deps(
     results: MatchResultInfo[],
     scores: MatchResultInfo[] | "refused" = [],
-): SettleBetsDeps & { fetchResults: ReturnType<typeof vi.fn>; fetchScores: ReturnType<typeof vi.fn> } {
+): SettleBetsDeps & { fetchResults: Mock; fetchScores: Mock } {
     const fetchResults = vi.fn(() => Promise.resolve(results));
     const fetchScores = vi.fn(() => Promise.resolve(scores === "refused" ? undefined : scores));
     return {

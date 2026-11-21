@@ -10,7 +10,7 @@ export {
     meetsScannerRules,
     netOdds,
 } from "./scanner.ts";
-export type { BrokenScannerRule, PriceQuote, ScannerRules, ValueBet, ValueOffer } from "./scanner.ts";
+export type { BrokenScannerRule, PriceQuote, ScannerRuleBet, ScannerRules, ValueBet, ValueOffer } from "./scanner.ts";
 export { availableFromTotals, bankrollSeries, playerStats, statsFromTotals, totalsOf } from "./metrics.ts";
 export type { BankrollPoint, MetricsBet, PlayerStats, PlayerTotals } from "./metrics.ts";
 export { dueJobs } from "./schedule.ts";
@@ -29,4 +29,4 @@ export { bookName, pickText, sideName, teamsOf } from "./picks.ts";
 export { calibration, forecastScores } from "./calibration.ts";
 export type { CalibrationBand, Forecast, MatchForecast } from "./calibration.ts";
 export { GO_LIVE, goLiveCheck, meanWithRange } from "./goLive.ts";
-export type { GoLiveBet, GoLiveCheck, GoLiveItem } from "./goLive.ts";
+export type { GoLiveBet, GoLiveCheck, GoLiveItem, MeanWithRange } from "./goLive.ts";

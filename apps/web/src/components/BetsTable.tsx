@@ -1,7 +1,7 @@
 import { bookName, brokenScannerRule, pickText, type BrokenScannerRule } from "@closing-line/core";
 import type { BetWithFixture, Player } from "@closing-line/db";
 import { odds, percent, shortDate, signedKroner, kroner } from "../lib/format.ts";
-import { groupBets } from "../lib/groups.ts";
+import { groupBets, type BetGroup } from "../lib/groups.ts";
 import { SCANNER_RULES } from "../lib/rules.ts";
 import { playerColour } from "./players.ts";
 
@@ -190,7 +190,7 @@ function result(bet: BetWithFixture): string {
 }
 
 /** Phones: one block per bet, match and pick first, so nothing important is off screen. */
-function BetList({ groups, players }: { groups: ReturnType<typeof groupBets>; players: Map<string, Player> }) {
+function BetList({ groups, players }: { groups: BetGroup[]; players: Map<string, Player> }) {
     return (
         <div className="space-y-4 md:hidden" data-testid="bets-list">
             {groups.map((group) => (

@@ -57,6 +57,7 @@ function composeOffline(now?: () => Date): { worker: Worker; chats: number[] } {
     const chats: number[] = [];
     worker.bot.api.config.use((_prev, method, payload) => {
         if (method === "sendMessage") chats.push((payload as { chat_id: number }).chat_id);
+        // grammY types each reply by the method called; one stand-in for every method can't be typed.
         return Promise.resolve({ ok: true, result: true } as never);
     });
     return { worker, chats };

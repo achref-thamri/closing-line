@@ -1,5 +1,5 @@
 import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { OutOfCreditsError, type CreditBalance, type Priced } from "../../ports/odds.ts";
 import { CreditGuard } from "../creditGuard.ts";
 
@@ -7,7 +7,7 @@ let handle: DatabaseHandle;
 let repos: Repositories;
 let now: Date;
 let warnings: string[];
-let freeBalance: ReturnType<typeof vi.fn<() => Promise<CreditBalance>>>;
+let freeBalance: Mock<() => Promise<CreditBalance>>;
 
 beforeAll(async () => {
     handle = await openDatabase({ kind: "pglite" });

@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard, type Context } from "grammy";
-import type { UserFromGetMe } from "grammy/types";
+import type { Update, UserFromGetMe } from "grammy/types";
 import type { BetFlow } from "../../app/betFlow.ts";
 import type { Bettors } from "../../app/bettors.ts";
 import type { ButtonHandler, Messenger, Reply } from "../../app/chat.ts";
@@ -19,6 +19,13 @@ function replyOptions(reply: Reply): { reply_markup?: InlineKeyboard } {
     if (!reply.keyboard) return {};
     const rows = reply.keyboard.map((row) => row.map((button) => InlineKeyboard.text(button.text, button.data)));
     return { reply_markup: InlineKeyboard.from(rows) };
+}
+
+/** The parts of each flow the bot calls. */
+export interface BotFlows {
+    bettors: Pick<Bettors, "isAllowed" | "start" | "tips"> & ButtonHandler;
+    bets: Pick<BetFlow, "bet" | "text" | "undo"> & ButtonHandler;
+    settle: Pick<SettleFlow, "open" | "amount"> & ButtonHandler;
 }
 
 /** The Telegram side of the bet flow and the API client for every message the worker sends. */
@@ -51,11 +58,7 @@ export function createTelegramBot(options: {
     }
 
     /** Routes commands, typed text and button taps to the flows. */
-    function attach(flows: {
-        bettors: Pick<Bettors, "isAllowed" | "start" | "tips"> & ButtonHandler;
-        bets: Pick<BetFlow, "bet" | "text" | "undo"> & ButtonHandler;
-        settle: Pick<SettleFlow, "open" | "amount"> & ButtonHandler;
-    }): void {
+    function attach(flows: BotFlows): void {
         const { bettors, bets, settle } = flows;
         const buttons: ButtonHandler[] = [bettors, settle, bets];
 
@@ -117,7 +120,7 @@ export function createTelegramBot(options: {
         messenger,
         attach,
         api: bot.api,
-        handleUpdate: (update: Parameters<typeof bot.handleUpdate>[0]) => bot.handleUpdate(update),
+        handleUpdate: (update: Update) => bot.handleUpdate(update),
         start: async () => {
             // The menu next to the message box lists these, so nobody has to remember them.
             await bot.api.setMyCommands(COMMANDS);
