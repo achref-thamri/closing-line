@@ -40,10 +40,16 @@ function setup(
         return Promise.resolve({ ok: true, result: true } as never);
     });
     const owns = (actions: string[]) => (data: string) => hasAction(data, actions);
+    // Stand-ins with only what each test needs; attach takes the parts of each flow it calls.
+    type Flows = Parameters<typeof bot.attach>[0];
     bot.attach({
-        bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as Bettors,
-        bets: { owns: owns(["w", "t", "x", "tb"]), ...flows.bets } as BetFlow,
-        settle: { owns: owns(["st", "hd"]), amount: () => Promise.resolve(undefined), ...flows.settle } as SettleFlow,
+        bettors: { owns: owns(["ap", "dn"]), ...flows.bettors } as Flows["bettors"],
+        bets: { owns: owns(["w", "t", "x", "tb"]), ...flows.bets } as Flows["bets"],
+        settle: {
+            owns: owns(["st", "hd"]),
+            amount: () => Promise.resolve(undefined),
+            ...flows.settle,
+        } as Flows["settle"],
     });
     return bot;
 }
