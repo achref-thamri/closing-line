@@ -54,22 +54,20 @@ const stakeRulesSchema = zod
     }) satisfies zod.ZodType<StakeRules>;
 
 /**
- * Pinnacle as the reference, plus only books with a Danish betting licence, where winnings are tax-free. Checked
- * against Spillemyndigheden's list on 2026-11-08: Unibet, LeoVegas, NordicBet and Betsson, 888 and Marathonbet have
- * one. Casumo and Coolbet don't, so they were dropped. William Hill and 1xBet aren't licensed either. Other licensed
- * brands (Bet365, bwin, Betano, Danske Spil) aren't in The Odds API.
+ * Pinnacle as the reference, plus only books with a Danish betting licence (Spillemyndigheden's list), where winnings
+ * are tax-free. Casumo, Coolbet, William Hill and 1xBet have none. Bet365, bwin, Betano and Danske Spil do, but
+ * aren't in The Odds API.
  */
 const DEFAULT_BOOKMAKERS = ["pinnacle", "nordicbet", "marathonbet", "betsson", "unibet_se", "leovegas_se", "sport888"];
 
-/** Tunable settings with defaults (spec §2, §5, §6). Money is in kroner. `prefault` runs nested defaults too. */
+/** Tunable settings with defaults. Money is in kroner. `prefault` runs nested defaults too. */
 export const settingsSchema = zod
     .strictObject({
         leagues: zod
             .array(leagueSchema)
             .min(1)
-            // More leagues, more chances for value (owner, 2026-11-02; ADR 0008 picked them by back-test). All have
-            // Pinnacle on the free plan. Serie B and the Belgian Pro League (added 2026-11-15) have no free
-            // football-data.org results, so they settle from The Odds API's scores, once a day for 2 credits.
+            // Picked by back-test (ADR 0008); all have Pinnacle on the free plan. Serie B and the Belgian Pro League
+            // have no free football-data.org results, so they settle from The Odds API's scores (2 credits a day).
             .default([
                 { oddsApiKey: "soccer_epl", footballDataCode: "PL", name: "Premier League" },
                 { oddsApiKey: "soccer_efl_champ", footballDataCode: "ELC", name: "Championship" },
@@ -84,26 +82,19 @@ export const settingsSchema = zod
         bookmakers: zod.array(zod.string().min(1)).min(2).max(10).default(DEFAULT_BOOKMAKERS),
         /** Reference bookmaker whose de-vigged prices count as fair. */
         sharpBookmaker: zod.string().min(1).default("pinnacle"),
-        /**
-         * Commission on net winnings per exchange in `bookmakers`, e.g. { "betfair_ex_eu": 0.05 }. Empty while the
-         * feed has no exchange (dropped 2026-11-02).
-         */
+        /** Commission on net winnings per exchange in `bookmakers`, e.g. { "betfair_ex_eu": 0.05 }. */
         exchangeCommission: zod.record(zod.string(), zod.number().min(0).max(0.2)).default({}),
         scanner: zod
             .strictObject({
-                // 2% since 2026-11-02 (owner): more tips, still clear of price noise; the record decides later.
+                // The edge over Pinnacle's fair price a tip needs (ADR 0008).
                 minEdge: zod.number().gt(0).lt(1).default(0.02),
                 maxSharpAgeMinutes: zod.int().positive().default(10),
-                // 72 h from 2026-11-06, a week since 2026-11-21: early prices held up live, best at 3-7 days out
-                // (ADR 0008). Further out Pinnacle's line is thin and the record is weakest.
+                // Further out than a week, Pinnacle's line is thin and early tips have the weakest record (ADR 0008).
                 maxHoursToKickoff: zod.int().positive().default(168),
-                // Outsiders don't beat the close: in four past seasons, tips at odds of 5+ averaged -1.6% CLV against
-                // +2.8% below 5, and the first live week agreed (-7.2%, 3 of 9). Pinnacle's early outsider prices are
-                // too rough to price an edge against (ADR 0008, 2026-11-08).
+                // Outsiders don't beat the close, in past seasons or live (ADR 0008).
                 maxFairOdds: zod.number().gt(1).default(5),
-                // An edge must be big enough for its odds: Kelly fraction of 2% or more. Smaller ones had no edge at
-                // Danish-licensed books, in past seasons and live. Draws are the exception: at 1-2% they still beat
-                // the close (+1.9% CLV over 63 past tips), and at 2% almost none qualify (ADR 0008, 2026-11-09).
+                // Longer odds need a bigger edge. Draws get a lower bar: at 2% almost none qualify, and at 1-2% they
+                // still beat the close (ADR 0008).
                 minKellyFraction: zod
                     .strictObject({ home: fraction, draw: fraction, away: fraction })
                     .default({ home: 0.02, draw: 0.01, away: 0.02 }),
@@ -117,7 +108,7 @@ export const settingsSchema = zod
         bettors: zod
             .strictObject({
                 maxBankrollFraction: fraction.default(0.05),
-                /** Large enough that the friend's usual 3,000 kr stakes fit the cap (owner, 2026-11-02). */
+                /** Large enough that a usual 3,000 kr stake fits under `maxBankrollFraction`. */
                 startingBankroll: zod.number().positive().default(60_000),
             })
             .prefault({}),

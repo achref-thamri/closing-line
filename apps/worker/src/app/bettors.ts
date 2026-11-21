@@ -19,7 +19,7 @@ export interface BettorsDeps {
 }
 
 /**
- * Who may use the bot and their own settings (spec §4). The owner always may; anyone else sends `/start` and waits
+ * Who may use the bot and their own settings. The owner always may; anyone else sends `/start` and waits
  * for the owner's Allow button. Join requests are stored, so they survive a restart.
  */
 export class Bettors implements ButtonHandler {
