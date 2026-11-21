@@ -1,4 +1,5 @@
 import { PercentChart } from "../components/PercentChart.tsx";
+import { TIME_ZONE } from "../lib/rules.ts";
 import { GoLivePanel } from "../components/GoLivePanel.tsx";
 import { BetsTable } from "../components/BetsTable.tsx";
 import { Pagination } from "../components/Pagination.tsx";
@@ -74,7 +75,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             <section className="space-y-3">
                 <h2 className="font-semibold">Bankroll growth</h2>
                 {dashboard.players.some((summary) => summary.stats.settled + summary.stats.void > 0) ? (
-                    <PercentChart series={series} />
+                    <PercentChart series={series} timeZone={TIME_ZONE} />
                 ) : (
                     <p className="text-sm text-zinc-500">The chart starts with the first settled bet.</p>
                 )}
@@ -87,7 +88,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                         Shows skill long before profit does. The scanner&apos;s line counts only bets today&apos;s rules
                         would place.
                     </p>
-                    <PercentChart series={clvSeries} testId="clv-chart" />
+                    <PercentChart series={clvSeries} timeZone={TIME_ZONE} testId="clv-chart" />
                 </section>
             )}
 

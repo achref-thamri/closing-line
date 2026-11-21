@@ -11,10 +11,9 @@ export interface ChartSeries {
     points: { t: number; value: number }[];
 }
 
-const TIME_ZONE = "Europe/Copenhagen";
-const fullLabel = (timestamp: number) =>
+const fullLabel = (timestamp: number, timeZone: string) =>
     new Date(timestamp).toLocaleString("en-GB", {
-        timeZone: TIME_ZONE,
+        timeZone,
         day: "numeric",
         month: "short",
         hour: "2-digit",
@@ -26,9 +25,17 @@ const percentLabel = (value: number) => `${(value * 100).toFixed(1)}%`;
  * A percentage over time, one line per player, stepping at each settled bet: bankroll growth (rather than kroner,
  * because players start with different bankrolls), or the running average CLV.
  */
-export function PercentChart({ series, testId = "bankroll-chart" }: { series: ChartSeries[]; testId?: string }) {
+export function PercentChart({
+    series,
+    timeZone,
+    testId = "bankroll-chart",
+}: {
+    series: ChartSeries[];
+    timeZone: string;
+    testId?: string;
+}) {
     const times = series.flatMap((line) => line.points.map((point) => point.t));
-    const axis = timeAxis(Math.min(...times), Math.max(...times), TIME_ZONE);
+    const axis = timeAxis(Math.min(...times), Math.max(...times), timeZone);
     return (
         <div className="h-72 w-full" data-testid={testId}>
             <ResponsiveContainer>
@@ -44,7 +51,7 @@ export function PercentChart({ series, testId = "bankroll-chart" }: { series: Ch
                     />
                     <YAxis tickFormatter={percentLabel} width={64} domain={["auto", "auto"]} />
                     <Tooltip
-                        labelFormatter={(timestamp) => fullLabel(Number(timestamp))}
+                        labelFormatter={(timestamp) => fullLabel(Number(timestamp), timeZone)}
                         formatter={(value) => percentLabel(Number(value))}
                     />
                     <Legend />

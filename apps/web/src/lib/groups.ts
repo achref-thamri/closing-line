@@ -1,4 +1,5 @@
 import type { BetWithFixture } from "@closing-line/db";
+import { TIME_ZONE } from "./rules.ts";
 
 export interface BetGroup {
     label: string;
@@ -17,7 +18,7 @@ function startOf(bet: BetWithFixture): Date {
  * kickoff day for open bets, so what plays today stands out, and one for everything settled. Open bets on a day
  * already past are still waiting for their result.
  */
-export function groupBets(bets: readonly BetWithFixture[], now: Date, timeZone = "Europe/Copenhagen"): BetGroup[] {
+export function groupBets(bets: readonly BetWithFixture[], now: Date, timeZone = TIME_ZONE): BetGroup[] {
     const dayKey = (date: Date) => date.toLocaleDateString("en-CA", { timeZone });
     const today = dayKey(now);
     const tomorrow = dayKey(new Date(now.getTime() + DAY_MS));

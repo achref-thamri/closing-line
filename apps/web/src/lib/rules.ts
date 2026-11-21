@@ -7,3 +7,5 @@ import type { ScannerRules } from "@closing-line/core";
  */
 const settings = defaultSettings();
 export const SCANNER_RULES: ScannerRules = { ...settings.scanner, closingWindowMinutes: settings.closingWindowMinutes };
+/** The time zone dates and times are shown in. */
+export const TIME_ZONE = settings.timezone;
