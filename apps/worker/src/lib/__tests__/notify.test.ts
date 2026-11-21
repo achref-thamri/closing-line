@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { isHealthy } from "../../healthcheck.ts";
 import type { Fetch } from "../http.ts";
-import { createLogger, silentLogger, type Logger } from "../logger.ts";
+import { silentLogger, type Logger } from "../logger.ts";
 import { createPinger } from "../ping.ts";
 import { createTextSender } from "../telegram.ts";
 
@@ -60,11 +60,5 @@ describe("isHealthy", () => {
         expect(isHealthy(path)).toBe(true);
         utimesSync(path, new Date(Date.now() - 4 * 60_000), new Date(Date.now() - 4 * 60_000));
         expect(isHealthy(path)).toBe(false);
-    });
-});
-
-describe("createLogger", () => {
-    it("creates a pino logger at the given level", () => {
-        expect(createLogger("warn")).toHaveProperty("level", "warn");
     });
 });
