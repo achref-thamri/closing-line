@@ -28,7 +28,10 @@ export function createPinger(options: {
                 if (!response.ok) options.logger.warn({ status: response.status }, "healthcheck ping refused");
             })
             .catch((error: unknown) => {
-                options.logger.warn({ error: (error as Error).name }, "healthcheck ping failed");
+                options.logger.warn(
+                    { error: error instanceof Error ? error.name : typeof error },
+                    "healthcheck ping failed",
+                );
             })
             .finally(() => {
                 inFlight = false;

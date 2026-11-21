@@ -59,9 +59,9 @@ export class CreditGuard {
     async record(balance: CreditBalance): Promise<void> {
         const previous = await this.currentMonthLatest();
         await this.deps.usage.record({ provider: PROVIDER, ...balance });
-        const before = previous ?? { used: 0, remaining: balance.used + balance.remaining };
+        const total = balance.used + balance.remaining;
+        const before = previous ?? { used: 0, remaining: total };
         for (const level of crossedUsageLevels(before, balance, this.deps.warnAt)) {
-            const total = balance.used + balance.remaining;
             await this.deps.warn(
                 `⚠️ Odds API credits: ${Math.round(level * 100)}% used (${balance.used} of ${total}). ` +
                     "Routine checks slow down to make the rest last the month.",
@@ -71,7 +71,7 @@ export class CreditGuard {
 
     private async state(): Promise<CreditState> {
         const now = this.deps.now();
-        const latest = (await this.currentMonthLatest()) ?? (await this.refresh());
+        const latest = (await this.currentMonthLatest()) ?? (await this.fetchBalance());
         const dayStart = startOfUtcDay(now);
         const before = await this.deps.usage.latestBefore(PROVIDER, dayStart);
 
@@ -89,7 +89,8 @@ export class CreditGuard {
         return latest && latest.takenAt >= startOfUtcMonth(this.deps.now()) ? latest : undefined;
     }
 
-    private async refresh(): Promise<CreditBalance> {
+    /** Asks the API for the balance (a free call) and records it. */
+    private async fetchBalance(): Promise<CreditBalance> {
         const balance = await this.deps.source.balance();
         await this.record(balance);
         return balance;
