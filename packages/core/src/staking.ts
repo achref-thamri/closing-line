@@ -27,8 +27,10 @@ export function kellyStake(bankroll: number, decimalOdds: number, fairProbabilit
     return stake >= rules.minStake ? stake : 0;
 }
 
-/** Share of the edge seen that a scanner bet keeps by kickoff on average, and the most it keeps (see
- * docs/scanner-rules.md). */
+/**
+ * Share of the edge seen that a scanner bet keeps by kickoff on average, and the most it keeps
+ * (docs/scanner-rules.md).
+ */
 const KEPT_EDGE_SHARE = 0.7;
 const MAX_KEPT_EDGE = 0.035;
 
