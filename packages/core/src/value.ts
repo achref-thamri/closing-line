@@ -33,14 +33,17 @@ export interface TipLifetime {
     atClosing: boolean | undefined;
 }
 
+/** The prices seen after `sentAt`, earliest first. */
+function pricesAfter(later: readonly LaterPrice[], sentAt: Date): LaterPrice[] {
+    return later.filter((seen) => seen.takenAt > sentAt).toSorted((a, b) => a.takenAt.getTime() - b.takenAt.getTime());
+}
+
 /**
  * How long a tip's price lasted, from the prices stored by later polls: still offered means the same bookmaker paid
  * at least the tip's odds. A tip with no later poll yet has neither answer.
  */
 export function tipLifetime(tip: { odds: number; sentAt: Date }, later: readonly LaterPrice[]): TipLifetime {
-    const after = later
-        .filter((seen) => seen.takenAt > tip.sentAt)
-        .toSorted((a, b) => a.takenAt.getTime() - b.takenAt.getTime());
+    const after = pricesAfter(later, tip.sentAt);
     const kept = (seen: LaterPrice | undefined) => (seen ? seen.price >= tip.odds : undefined);
     return { nextPoll: kept(after[0]), atClosing: kept(after.findLast((seen) => seen.kind === "closing")) };
 }
@@ -58,12 +61,7 @@ export function followerFill(
     tip: { sentAt: Date; minOdds: number },
     later: readonly LaterPrice[],
 ): FollowerFill | undefined {
-    const next = later
-        .filter((seen) => seen.takenAt > tip.sentAt)
-        .reduce<LaterPrice | undefined>(
-            (first, seen) => (!first || seen.takenAt < first.takenAt ? seen : first),
-            undefined,
-        );
+    const [next] = pricesAfter(later, tip.sentAt);
     if (!next) return undefined;
     if (next.price < tip.minOdds) return { at: "missed" };
     return { at: next.kind === "closing" ? "closing" : "next_poll", price: next.price };

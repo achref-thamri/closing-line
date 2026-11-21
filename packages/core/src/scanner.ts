@@ -92,13 +92,19 @@ export function findValueBets(
     return bets;
 }
 
-/** The single best soft price against the fair price, on any selection, whether it reaches a threshold or not. */
+/**
+ * The single best soft price against the fair price, whether it reaches a threshold or not: on any selection, or on
+ * `selection` when given.
+ */
 export function bestOffer(
     quotes: readonly PriceQuote[],
     fair: Record<Outcome, number>,
     options: { sharpBookmaker: string; commission: Readonly<Record<string, number>> },
+    selection?: Outcome,
 ): ValueBet | undefined {
-    const all = findValueBets(quotes, fair, { ...options, minEdge: -Infinity });
+    const all = findValueBets(quotes, fair, { ...options, minEdge: -Infinity }).filter(
+        (bet) => selection === undefined || bet.selection === selection,
+    );
     return all.reduce<ValueBet | undefined>((best, bet) => (!best || bet.edge > best.edge ? bet : best), undefined);
 }
 
