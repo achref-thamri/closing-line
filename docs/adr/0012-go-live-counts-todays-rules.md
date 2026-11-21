@@ -14,7 +14,7 @@ that no longer exists.
 ## Decision
 
 - For the value scanner, the go-live check counts only settled bets that today's rules would still place
-  (`meetsScannerRules` in core: at most 72 hours before kickoff but not in the closing window (#126), fair odds
+  (`meetsScannerRules` in core: at most a week before kickoff (72 hours until 2026-11-21) but not in the closing window (#126), fair odds
   cap, Kelly minimum).
 - The dashboard shows the check at the top, each rule met or not, with average CLV and its 95% range. The
   all-time figures stay on the scanner's card next to the today's-rules CLV, and older bets are marked "old rules" in

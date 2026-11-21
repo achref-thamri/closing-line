@@ -94,9 +94,9 @@ export const settingsSchema = zod
                 // 2% since 2026-11-02 (owner): more tips, still clear of price noise; the record decides later.
                 minEdge: zod.number().gt(0).lt(1).default(0.02),
                 maxSharpAgeMinutes: zod.int().positive().default(10),
-                // The back-test (ADR 0008) only checked prices taken a day or two before kickoff. On 2026-11-04 the
-                // scanner tipped 22 matches up to 18 days out, edges up to 16%, which are more likely stale soft lines.
-                maxHoursToKickoff: zod.int().positive().default(72),
+                // 72 h from 2026-11-06, a week since 2026-11-21: early prices held up live, best at 3-7 days out
+                // (ADR 0008). Further out Pinnacle's line is thin and the record is weakest.
+                maxHoursToKickoff: zod.int().positive().default(168),
                 // Outsiders don't beat the close: in four past seasons, tips at odds of 5+ averaged -1.6% CLV against
                 // +2.8% below 5, and the first live week agreed (-7.2%, 3 of 9). Pinnacle's early outsider prices are
                 // too rough to price an edge against (ADR 0008, 2026-11-08).

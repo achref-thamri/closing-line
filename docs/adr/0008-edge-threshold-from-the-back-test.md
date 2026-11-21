@@ -48,6 +48,13 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   further out are recorded as `too_early` passes with their best price. This followed a /picks refresh on
   2026-11-04 that produced 22 tips in one minute, most 14-18 days out, with edges up to 16%. The 22 bets stay on the
   books and will show whether those early edges held.
+- They held. By 21 Nov the 24 scanner bets placed more than 72 hours out averaged +5.1% CLV (18 beat the close)
+  against +0.3% for the 48 placed later. The `too_early` passes say the same with more matches: 2%+ prices (fair odds
+  under 5) closed at about +6.0% CLV when taken 3-7 days out (15, 80% beat the close) and +1.2% past a week (40
+  prices on 13 matches), next to about +3% inside 72 hours. So since 2026-11-21 the limit is a week (168 hours). The
+  match-day morning poll already returns matches that far out, so this costs no credits. Most of the early bets came
+  from one poll, so the live record still has to confirm it; past a week stays out because that's where the evidence
+  is weakest.
 - Since 2026-11-08 the scanner leaves out selections at fair odds of 5 or longer (`scanner.maxFairOdds`). Counting
   every 2%+ value bet at a flat stake over 2021/22 to 2024/25 in the six live leagues (493 bets): odds under 5
   averaged about +2.8% CLV with three in four beating the close; odds 5-8 averaged -0.6% (58 bets) and 8+ -2.7%

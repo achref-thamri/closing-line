@@ -217,8 +217,8 @@ describe("pollOdds", () => {
         expect(decision).toMatchObject({ outcome: "pass", reason: "no_edge" });
     });
 
-    it("records a pass and sends no tip for a match more than three days out", async () => {
-        const far = event(72 * 60 + 1, quotes("unibet_se", 2.9, 3.4, 2.75));
+    it("records a pass and sends no tip for a match more than a week out", async () => {
+        const far = event(168 * 60 + 1, quotes("unibet_se", 2.9, 3.4, 2.75));
         expect(await pollOdds(deps([far]), "soccer_epl", "scan")).toMatchObject({ scannerBets: 0 });
         expect(messages).toEqual([]);
         const [decision] = await repos.decisions.since(now);

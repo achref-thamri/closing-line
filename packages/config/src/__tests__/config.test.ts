@@ -61,7 +61,7 @@ describe("parseConfig", () => {
         expect(config.scanner).toEqual({
             minEdge: 0.02,
             maxSharpAgeMinutes: 10,
-            maxHoursToKickoff: 72,
+            maxHoursToKickoff: 168,
             maxFairOdds: 5,
             minKellyFraction: { home: 0.02, draw: 0.01, away: 0.02 },
             stake: { kellyMultiplier: 0.25, maxBankrollFraction: 0.02, minStake: 50, maxStake: 500, step: 10 },
