@@ -1,21 +1,17 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
+import { parseArgs } from "node:util";
 import { defaultSettings } from "@closing-line/config";
 import { parseSeason, type PastMatch } from "./seasons.ts";
 import { backtest } from "./simulate.ts";
 
 // Usage: pnpm --filter @closing-line/backtest backtest <season.csv>... [--edges 0.02,0.03,0.04] [--max-odds 5]
 // --max-odds defaults to the live scanner's cap; 0 turns it off.
-const args = process.argv.slice(2);
-const flagValue = (name: string) => {
-    const i = args.indexOf(name);
-    return i >= 0 ? args[i + 1] : undefined;
-};
-const edges = flagValue("--edges")?.split(",").map(Number) ?? [0.02, 0.03, 0.04, 0.05];
-const flagValues = new Set(
-    ["--edges", "--max-odds"].map((name) => args.indexOf(name) + 1).filter((index) => index > 0),
-);
-const files = args.filter((arg, i) => !arg.startsWith("--") && !flagValues.has(i));
+const { values: flags, positionals: files } = parseArgs({
+    options: { edges: { type: "string" }, "max-odds": { type: "string" } },
+    allowPositionals: true,
+});
+const edges = flags.edges?.split(",").map(Number) ?? [0.02, 0.03, 0.04, 0.05];
 if (files.length === 0) {
     console.error("Pass one or more football-data.co.uk season CSVs (https://football-data.co.uk/data.php).");
     process.exit(1);
@@ -23,7 +19,7 @@ if (files.length === 0) {
 
 // The live scanner's stake rules and bankroll, read from the same defaults the worker uses.
 const settings = defaultSettings();
-const maxOdds = Number(flagValue("--max-odds") ?? settings.scanner.maxFairOdds);
+const maxOdds = Number(flags["max-odds"] ?? settings.scanner.maxFairOdds);
 const options = {
     startingBankroll: settings.startingBankroll,
     stake: settings.scanner.stake,
