@@ -27,7 +27,7 @@ export function kellyStake(bankroll: number, decimalOdds: number, fairProbabilit
     return stake >= rules.minStake ? stake : 0;
 }
 
-/** Share of the edge seen that a scanner bet keeps by kickoff on average, and the most it keeps (ADR 0008). */
+/** Share of the edge seen that a scanner bet keeps by kickoff on average, and the most it keeps (docs/scanner-rules.md). */
 const KEPT_EDGE_SHARE = 0.7;
 const MAX_KEPT_EDGE = 0.035;
 
@@ -43,7 +43,7 @@ export function keptEdge(seenEdge: number): number {
  * The live scanner's stake: Kelly under the caps on the edge the bet is likely to keep (`keptEdge`), not the edge
  * seen, so big, noisy edges aren't overbet. A stake Kelly rounds below the minimum is raised to it: every value
  * bet is then placed, and so tipped. Zero only without an edge, or when the minimum would break the bankroll cap.
- * The back-test keeps plain `kellyStake`, so ADR 0008's figures still hold.
+ * The back-test keeps plain `kellyStake`, so its figures still hold.
  */
 export function scannerStake(
     bankroll: number,
