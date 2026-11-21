@@ -1,14 +1,14 @@
 import { mkdtempSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
 import { isHealthy } from "../../healthcheck.ts";
 import type { Fetch } from "../http.ts";
 import { silentLogger, type Logger } from "../logger.ts";
 import { createPinger } from "../ping.ts";
 import { createTextSender } from "../telegram.ts";
 
-function spyLogger(): { logger: Logger; warn: ReturnType<typeof vi.fn> } {
+function spyLogger(): { logger: Logger; warn: Mock } {
     const warn = vi.fn();
     return { logger: { ...silentLogger, warn }, warn };
 }

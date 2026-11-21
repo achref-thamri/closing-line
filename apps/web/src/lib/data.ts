@@ -8,6 +8,7 @@ import {
     type BankrollPoint,
     type GoLiveCheck,
     type PlayerStats,
+    type ScannerRuleBet,
 } from "@closing-line/core";
 import {
     createRepositories,
@@ -174,7 +175,7 @@ export async function loadDashboard(requestedPage?: string, requestedPlayer?: st
     };
 }
 
-function underTodaysRules(bet: Parameters<typeof meetsScannerRules>[0] & { kickoff: Date }): boolean {
+function underTodaysRules(bet: ScannerRuleBet & { kickoff: Date }): boolean {
     return meetsScannerRules(bet, bet.kickoff, SCANNER_RULES);
 }
 

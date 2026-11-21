@@ -1,5 +1,5 @@
 import type { LaterPrice, PlayerTotals } from "@closing-line/core";
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
 import type { Fixture } from "./repositories.ts";
@@ -76,9 +76,8 @@ export function betRepository(db: Database) {
          */
         async totals(options: { settledSince?: Date } = {}): Promise<Map<string, PlayerTotals>> {
             const decided = sql`${bets.status} in ('won', 'lost', 'cashed_out')`;
-            const count = (condition: ReturnType<typeof sql>) =>
-                sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
-            const sum = (column: ReturnType<typeof sql>, condition: ReturnType<typeof sql>) =>
+            const count = (condition: SQL) => sql<number>`count(*) filter (where ${condition})`.mapWith(Number);
+            const sum = (column: SQL, condition: SQL) =>
                 sql<number>`coalesce(sum(${column}) filter (where ${condition}), 0)`.mapWith(Number);
             const rows = await db
                 .select({
