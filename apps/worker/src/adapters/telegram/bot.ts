@@ -21,6 +21,13 @@ function replyOptions(reply: Reply): { reply_markup?: InlineKeyboard } {
     return { reply_markup: InlineKeyboard.from(rows) };
 }
 
+/** The parts of each flow the bot calls. */
+export interface BotFlows {
+    bettors: Pick<Bettors, "isAllowed" | "start" | "tips"> & ButtonHandler;
+    bets: Pick<BetFlow, "bet" | "text" | "undo"> & ButtonHandler;
+    settle: Pick<SettleFlow, "open" | "amount"> & ButtonHandler;
+}
+
 /** The Telegram side of the bet flow and the API client for every message the worker sends. */
 export type TelegramBot = ReturnType<typeof createTelegramBot>;
 
@@ -51,11 +58,7 @@ export function createTelegramBot(options: {
     }
 
     /** Routes commands, typed text and button taps to the flows. */
-    function attach(flows: {
-        bettors: Pick<Bettors, "isAllowed" | "start" | "tips"> & ButtonHandler;
-        bets: Pick<BetFlow, "bet" | "text" | "undo"> & ButtonHandler;
-        settle: Pick<SettleFlow, "open" | "amount"> & ButtonHandler;
-    }): void {
+    function attach(flows: BotFlows): void {
         const { bettors, bets, settle } = flows;
         const buttons: ButtonHandler[] = [bettors, settle, bets];
 
