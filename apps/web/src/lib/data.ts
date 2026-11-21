@@ -74,7 +74,7 @@ export interface Dashboard {
     /** The scanner against the go-live rule, counting only bets today's rules would place. */
     goLive: GoLiveCheck | undefined;
     /** Running average CLV per automated player, one point per settled bet with a closing price. */
-    clvSeries: { playerId: string; points: { t: number; growth: number }[] }[];
+    clvSeries: { playerId: string; points: { t: number; value: number }[] }[];
 }
 
 /** Reads `?page=` leniently: anything that is not a whole number falls back to the first page, too high to the last. */
@@ -105,18 +105,24 @@ function database(): Promise<DatabaseHandle> {
 export async function loadDashboard(requestedPage?: string, requestedPlayer?: string): Promise<Dashboard> {
     const repos = createRepositories((await database()).db);
     const totals = await repos.bets.totals();
-    const settledByPlayer = new Map<string, Awaited<ReturnType<typeof repos.bets.settledWithFixture>>>();
+    const list = await repos.players.list();
+    // Settled bets for the CLV chart and the go-live check; the scanner's only under today's rules.
+    const settledByPlayer = new Map(
+        await Promise.all(
+            list
+                .filter((player) => player.kind !== "bettor")
+                .map(async (player) => {
+                    const settled = await repos.bets.settledWithFixture(player.id);
+                    const counted =
+                        player.kind === "scanner" ? settled.filter((bet) => underTodaysRules(bet)) : settled;
+                    return [player.id, counted] as const;
+                }),
+        ),
+    );
     const players = await Promise.all(
-        (await repos.players.list()).map(async (player) => {
+        list.map(async (player) => {
             const stats = statsFromTotals(totals.get(player.id) ?? totalsOf([]));
             const ledger = await repos.bets.settledLedger(player.id);
-            if (player.kind !== "bettor") {
-                const settled = await repos.bets.settledWithFixture(player.id);
-                settledByPlayer.set(
-                    player.id,
-                    player.kind === "scanner" ? settled.filter((bet) => underTodaysRules(bet)) : settled,
-                );
-            }
             return {
                 player,
                 stats,
@@ -175,13 +181,13 @@ function underTodaysRules(bet: Parameters<typeof meetsScannerRules>[0] & { kicko
 /** The average CLV so far after each settled bet that has one, in settling order. */
 export function runningClv(
     bets: readonly { clv: number | null; settledAt: Date | null }[],
-): { t: number; growth: number }[] {
+): { t: number; value: number }[] {
     let sum = 0;
     let count = 0;
     return bets.flatMap((bet) => {
         if (bet.clv === null || !bet.settledAt) return [];
         sum += bet.clv;
         count++;
-        return [{ t: bet.settledAt.getTime(), growth: sum / count }];
+        return [{ t: bet.settledAt.getTime(), value: sum / count }];
     });
 }

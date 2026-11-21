@@ -57,8 +57,8 @@ describe("runningClv", () => {
                 { clv: -0.02, settledAt: at(3) },
             ]),
         ).toEqual([
-            { t: at(1).getTime(), growth: 0.04 },
-            { t: at(3).getTime(), growth: 0.01 },
+            { t: at(1).getTime(), value: 0.04 },
+            { t: at(3).getTime(), value: 0.01 },
         ]);
     });
 });
