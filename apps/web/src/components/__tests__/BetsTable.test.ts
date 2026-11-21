@@ -1,9 +1,9 @@
 import type { BetWithFixture } from "@closing-line/db";
+import { testBetWithFixture } from "@closing-line/db/testing";
 import { describe, expect, it } from "vitest";
 import { oldRule, reason } from "../BetsTable.tsx";
 
-const bet = (overrides: Partial<BetWithFixture>) =>
-    ({ selfReported: false, tag: null, edgeAtBet: null, ...overrides }) as BetWithFixture;
+const bet = (overrides: Partial<BetWithFixture>) => testBetWithFixture({ edgeAtBet: null, ...overrides });
 
 describe("reason", () => {
     it("shows the scanner's edge over Pinnacle's fair price", () => {

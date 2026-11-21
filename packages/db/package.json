@@ -4,7 +4,8 @@
     "type": "module",
     "description": "PostgreSQL schema, migrations and repositories (Drizzle), with PGlite for tests and local runs",
     "exports": {
-        ".": "./src/index.ts"
+        ".": "./src/index.ts",
+        "./testing": "./src/testing.ts"
     },
     "scripts": {
         "typecheck": "tsc",

@@ -3,6 +3,7 @@ import { createRepositories, openDatabase, type DatabaseHandle, type Repositorie
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import type { Bet, DecisionWithResult } from "@closing-line/db";
+import { testBet } from "@closing-line/db/testing";
 import { allTimeSection, bettorBreakdown, decisionsSection, tipsSection, weeklyReport } from "../weeklyReport.ts";
 
 const config = parseConfig({
@@ -122,13 +123,13 @@ describe("weeklyReport", () => {
 
 describe("bettorBreakdown", () => {
     let n = 0;
+    // A settled shots-on-target bet a bettor logged by hand.
     function bet(overrides: Partial<Bet>): Bet {
         n++;
-        return {
+        return testBet({
             id: String(n),
             playerId: "tg_1",
             fixtureId: null,
-            sport: "football",
             eventName: "A – B",
             market: "player_shots_on_target",
             selection: "over",
@@ -141,20 +142,12 @@ describe("bettorBreakdown", () => {
             edgeAtBet: null,
             selfReported: true,
             tag: "lineup",
-            receivedAt: null,
-            cashoutOfferOre: null,
-            impliedCurrentOdds: null,
-            heldStatus: null,
             status: "won",
-            closingFairOdds: null,
-            closingProvisional: null,
-            priceGoneAt: null,
-            clv: null,
             profitOre: 200_000,
             createdAt: now,
             settledAt: now,
             ...overrides,
-        };
+        });
     }
     const times = (count: number, overrides: Partial<Bet>) => Array.from({ length: count }, () => bet(overrides));
 
@@ -212,14 +205,14 @@ describe("bettorBreakdown", () => {
 describe("tipsSection", () => {
     const sentAt = new Date("2026-11-07T08:00:00Z");
     const tip = (clv: number | null) =>
-        ({
+        testBet({
             lockedOdds: 2.5,
             createdAt: sentAt,
             clv,
             selection: "home",
             sharpFairOddsAtBet: 2.4,
             closingFairOdds: clv === null ? null : 2.45,
-        }) as Bet;
+        });
     const seen = (hours: number, price: number, kind = "poll") => ({
         price,
         takenAt: new Date(sentAt.getTime() + hours * 3_600_000),

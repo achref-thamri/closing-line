@@ -1,4 +1,5 @@
 import type { BetWithFixture } from "@closing-line/db";
+import { testBetWithFixture } from "@closing-line/db/testing";
 import { describe, expect, it } from "vitest";
 import { groupBets } from "../groups.ts";
 
@@ -6,13 +7,12 @@ import { groupBets } from "../groups.ts";
 const now = new Date("2026-11-06T19:50:00Z");
 
 function bet(status: BetWithFixture["status"], kickoff: string | null, id: string): BetWithFixture {
-    return {
+    return testBetWithFixture({
         id,
         status,
-        createdAt: new Date("2026-11-01T10:00:00Z"),
         receivedAt: kickoff === null ? new Date("2026-11-06T12:00:00Z") : null,
         fixture: kickoff === null ? null : { homeTeam: "A", awayTeam: "B", kickoff: new Date(kickoff), league: "x" },
-    } as BetWithFixture;
+    });
 }
 
 const labels = (bets: BetWithFixture[]) =>
