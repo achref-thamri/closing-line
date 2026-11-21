@@ -1,5 +1,5 @@
 import { GO_LIVE, type GoLiveCheck, type GoLiveItem } from "@closing-line/core";
-import { percent } from "../lib/format.ts";
+import { percent, share } from "../lib/format.ts";
 
 /** What each go-live rule needs, and where the scanner stands on it. */
 function describe(item: GoLiveItem, check: GoLiveCheck, now: Date): { rule: string; status: string } {
@@ -29,7 +29,7 @@ function describe(item: GoLiveItem, check: GoLiveCheck, now: Date): { rule: stri
         case "drawdown":
             return {
                 rule: `Drawdown under ${GO_LIVE.maxDrawdown * 100}% of the start`,
-                status: `worst so far ${percent(check.maxDrawdown).replace("+", "")}`,
+                status: `worst so far ${share(check.maxDrawdown)}`,
             };
     }
 }

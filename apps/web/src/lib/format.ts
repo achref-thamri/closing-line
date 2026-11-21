@@ -13,6 +13,11 @@ export function percent(value: number | undefined): string {
     return `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value * 100).toFixed(1)}%`;
 }
 
+/** A share without a sign, for amounts that are never negative, like a drawdown. */
+export function share(value: number): string {
+    return `${(value * 100).toFixed(1)}%`;
+}
+
 export function odds(value: number): string {
     return value.toFixed(2);
 }
