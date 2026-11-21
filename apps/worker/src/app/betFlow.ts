@@ -47,7 +47,7 @@ const SPORT_MARKETS: Record<Sport, MarketKey[]> = {
     counter_strike: ["match_winner", "other"],
 };
 
-/** The friend's books first (spec §4), then other books used in Denmark. */
+/** The books bettors use most first, then other books used in Denmark. */
 const BOOKS = [
     "nordicbet",
     "bet25",
@@ -125,7 +125,7 @@ export interface BetFlowDeps {
 }
 
 /**
- * Logging a bet in Telegram (spec §4): `/log` asks one question at a time (buttons where the answers are known, typed
+ * Logging a bet in Telegram: `/log` asks one question at a time (buttons where the answers are known, typed
  * text for the match, player, odds and stake), and a tap on a reason logs the bet. Each answer is checked when it
  * arrives, so a logged bet is complete. The answers so far are stored, so a restart does not lose them. A typed
  * match that names a fixture we track is linked to it: a match-result bet on it then gets a closing price and CLV,

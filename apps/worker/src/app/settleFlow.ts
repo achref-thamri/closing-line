@@ -19,7 +19,7 @@ export interface SettleFlowDeps {
 }
 
 /**
- * Settling bettors' bets (spec §4): `/open` lists them with Won / Lost / Void / Cashed out buttons; a cash-out asks
+ * Settling bettors' bets: `/open` lists them with Won / Lost / Void / Cashed out buttons; a cash-out asks
  * for the amount, records the price it implies, then asks how the bet would have ended. The bet waiting for its
  * cash-out amount is stored in the database, so a restart in between does not lose it.
  */
