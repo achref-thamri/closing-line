@@ -18,7 +18,7 @@ import {
     type PlayerStats,
 } from "@closing-line/core";
 import type { Bet, DecisionWithResult, Repositories } from "@closing-line/db";
-import { TAGS } from "./betFlow.ts";
+import { TAGS } from "./tags.ts";
 import { SCANNER } from "./players.ts";
 
 const WEEK_MS = 7 * 86_400_000;

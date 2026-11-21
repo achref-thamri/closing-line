@@ -6,16 +6,7 @@ import type { Logger } from "../lib/logger.ts";
 import { WAITING, type Bettors } from "./bettors.ts";
 import { hasAction, rows, type Button, type ButtonHandler, type Messenger, type Reply } from "./chat.ts";
 import { describeBet, kroner, parseDecimal, parseKroner, type BetCard } from "./format.ts";
-
-export const TAGS = {
-    l: { tag: "lineup", label: "⚡ Lineup" },
-    s: { tag: "skewed_price", label: "📈 Skewed price" },
-    g: { tag: "game_read", label: "🧠 Game read" },
-    v: { tag: "slow_live_price", label: "⏱ Slow live price" },
-    p: { tag: "value_tip", label: "🔎 Value tip" },
-} as const;
-type TagKey = keyof typeof TAGS;
-const isTagKey = (value: string): value is TagKey => value in TAGS;
+import { isTagKey, TAGS, type TagKey } from "./tags.ts";
 
 /** Markets offered as buttons: `line` asks over/under, `result` home/draw/away, `team` a side, `free` a typed pick. */
 const MARKETS = {
