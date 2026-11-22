@@ -37,13 +37,17 @@ describe("retry", () => {
 
     it("waits for real by default", async () => {
         vi.useFakeTimers();
-        const fn = vi
-            .fn<() => Promise<string>>()
-            .mockRejectedValueOnce(new TransientError("blip"))
-            .mockResolvedValue("ok");
-        const pending = retry(fn, { baseDelayMs: 100, random: () => 1 });
-        await vi.advanceTimersByTimeAsync(100);
-        await expect(pending).resolves.toBe("ok");
-        vi.useRealTimers();
+        try {
+            const fn = vi
+                .fn<() => Promise<string>>()
+                .mockRejectedValueOnce(new TransientError("blip"))
+                .mockResolvedValue("ok");
+            const pending = retry(fn, { baseDelayMs: 100, random: () => 1 });
+            await vi.advanceTimersByTimeAsync(100);
+            await expect(pending).resolves.toBe("ok");
+        } finally {
+            // Even when an assertion fails, so later tests get real timers.
+            vi.useRealTimers();
+        }
     });
 });
