@@ -8,7 +8,6 @@ SCRATCH=restore_check
 dump=$(ls -t /backups/closing-line-*.sql.gz 2>/dev/null | head -n 1 || true)
 if [ -z "$dump" ]; then
     dump=/tmp/closing-line-check.sql.gz
-    # A plain file first, as backup.sh does: in a pipe a failed pg_dump would leave a short dump that looks fine.
     pg_dump --no-owner > /tmp/closing-line-check.sql
     gzip -c /tmp/closing-line-check.sql > "$dump"
     rm -f /tmp/closing-line-check.sql
