@@ -1,3 +1,4 @@
+import { toOre } from "@closing-line/core";
 import type { Config } from "@closing-line/config";
 import type { Player, Repositories } from "@closing-line/db";
 import * as zod from "zod";
@@ -108,7 +109,7 @@ export class Bettors implements ButtonHandler {
                 id,
                 name: owner ? "Owner" : name,
                 kind: "bettor",
-                startingBankrollOre: Math.round(this.deps.config.bettors.startingBankroll * 100),
+                startingBankrollOre: toOre(this.deps.config.bettors.startingBankroll),
                 telegramChatId: String(chatId),
             },
         ]);

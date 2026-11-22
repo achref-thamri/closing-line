@@ -29,6 +29,14 @@ describe("retry", () => {
         expect(fn.mock.calls.map(([attempt]) => attempt)).toEqual([1, 2, 3]);
     });
 
+    it("gives up at once when the server asks for a longer wait than it would ever back off", async () => {
+        const sleep = vi.fn(() => Promise.resolve());
+        const fn = vi.fn<() => Promise<string>>().mockRejectedValue(new TransientError("quota", 86_400_000));
+        await expect(retry(fn, { attempts: 3, maxDelayMs: 30_000, sleep })).rejects.toThrow("quota");
+        expect(fn).toHaveBeenCalledOnce();
+        expect(sleep).not.toHaveBeenCalled();
+    });
+
     it("does not retry permanent errors", async () => {
         const fn = vi.fn(() => Promise.reject(new PermanentError("bad request")));
         await expect(retry(fn, { sleep: () => Promise.resolve() })).rejects.toThrow("bad request");

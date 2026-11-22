@@ -31,6 +31,17 @@ describe("getJson", () => {
         expect((noHeader as TransientError).retryAfterMs).toBeUndefined();
     });
 
+    it("reads Retry-After given as an HTTP date", async () => {
+        const inTwoMinutes = new Date(Date.now() + 120_000).toUTCString();
+        const error = await request(new Response("", { status: 429, headers: { "retry-after": inTwoMinutes } })).catch(
+            (caught: unknown) => caught,
+        );
+        expect(error).toBeInstanceOf(TransientError);
+        // toUTCString drops milliseconds, so allow a second either way.
+        expect((error as TransientError).retryAfterMs).toBeGreaterThan(118_000);
+        expect((error as TransientError).retryAfterMs).toBeLessThanOrEqual(120_000);
+    });
+
     it("uses the vendor's message, or the start of the body", async () => {
         await expect(request(new Response('{"error":"nope"}', { status: 403 }))).rejects.toThrow("Example: 403 nope");
         await expect(request(new Response("plain text failure", { status: 400 }))).rejects.toThrow(
