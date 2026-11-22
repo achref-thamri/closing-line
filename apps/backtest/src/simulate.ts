@@ -9,7 +9,7 @@ import {
     type PriceQuote,
     type StakeRules,
 } from "@closing-line/core";
-import { SOFT_BOOKS, type PastMatch, type Prices } from "./seasons.ts";
+import { SOFT_BOOKS, SOFT_PREFIXES, type PastMatch, type Prices } from "./seasons.ts";
 
 export interface BacktestOptions {
     minEdge: number;
@@ -97,16 +97,23 @@ export function backtest(matches: readonly PastMatch[], options: BacktestOptions
 
 function quotesOf(match: PastMatch): PriceQuote[] {
     const updatedAt = new Date(0);
-    return Object.entries(match.soft).flatMap(([prefix, prices]) =>
-        OUTCOMES.map((selection) => ({
-            bookmaker: SOFT_BOOKS[prefix as keyof typeof SOFT_BOOKS],
+    return SOFT_PREFIXES.flatMap((prefix) => {
+        const prices = match.soft[prefix];
+        if (!prices) return [];
+        return OUTCOMES.map((selection) => ({
+            bookmaker: SOFT_BOOKS[prefix],
             selection,
             price: prices[selection],
             updatedAt,
-        })),
-    );
+        }));
+    });
 }
 
-function toRecord([home = 0, draw = 0, away = 0]: number[]): Prices {
+/** Home, draw and away from a three-way list; anything else is a bug upstream, so it throws. */
+function toRecord(values: readonly number[]): Prices {
+    const [home, draw, away] = values;
+    if (values.length !== 3 || home === undefined || draw === undefined || away === undefined) {
+        throw new RangeError(`expected home, draw and away, got ${values.length} values`);
+    }
     return { home, draw, away };
 }
