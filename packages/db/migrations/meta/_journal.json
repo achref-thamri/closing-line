@@ -141,6 +141,13 @@
             "when": 1794853039044,
             "tag": "0019_api_usage_endpoint",
             "breakpoints": true
+        },
+        {
+            "idx": 20,
+            "version": "7",
+            "when": 1795346438393,
+            "tag": "0020_money_as_bigint",
+            "breakpoints": true
         }
     ]
 }

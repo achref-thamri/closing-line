@@ -285,6 +285,14 @@ describe("bets", () => {
         expect(await repos.bets.open([])).toEqual([]);
     });
 
+    it("stores money past the 32-bit limit: a 1,000,000 kr stake winning at 1000.0", async () => {
+        const placed = await repos.bets.place(bet({ stakeOre: 100_000_000, lockedOdds: 1000 }));
+        if (!placed) throw new Error("the bet wasn't placed");
+        const profitOre = 99_900_000_000;
+        await repos.bets.settle(placed.id, { status: "won", profitOre, settledAt: new Date() });
+        expect(await repos.bets.get(placed.id)).toMatchObject({ stakeOre: 100_000_000, profitOre });
+    });
+
     it("rejects a bet on an unknown fixture, with no stake, or on a team name instead of a 1X2 outcome", async () => {
         await expect(repos.bets.place(bet({ fixtureId: "nope" }))).rejects.toThrow();
         await expect(repos.bets.place(bet({ stakeOre: 0 }))).rejects.toThrow();
