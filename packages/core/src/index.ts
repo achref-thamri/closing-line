@@ -15,7 +15,7 @@ export { availableFromTotals, bankrollSeries, playerStats, statsFromTotals, tota
 export type { BankrollPoint, MetricsBet, PlayerStats, PlayerTotals } from "./metrics.ts";
 export { dueJobs } from "./schedule.ts";
 export type { JobKind, PlanInput, PlannedJob, UpcomingFixture } from "./schedule.ts";
-export { isOutcome, OUTCOMES, outcomeOf, settle1x2, toOutcome } from "./settlement.ts";
+export { isOutcome, OUTCOMES, outcomeOf, settle1x2, settlesFromScore, toOutcome } from "./settlement.ts";
 export type { MatchResult, Outcome, Settlement } from "./settlement.ts";
 export { fixtureNamed, matchFixture } from "./teams.ts";
 export type { ResultCandidate } from "./teams.ts";

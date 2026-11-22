@@ -6,6 +6,8 @@ import {
     followerFill,
     minimumOdds,
     forecastScores,
+    GO_LIVE,
+    isOutcome,
     OUTCOMES,
     outcomeOf,
     priceMove,
@@ -17,13 +19,11 @@ import {
     type MatchForecast,
     type PlayerStats,
 } from "@closing-line/core";
-import type { Bet, DecisionWithResult, Repositories } from "@closing-line/db";
+import type { Bet, DecisionReason, DecisionWithResult, Repositories } from "@closing-line/db";
 import { TAGS } from "./tags.ts";
 import { SCANNER } from "./players.ts";
 
 const WEEK_MS = 7 * 86_400_000;
-/** Settled bets a player needs before its results mean much (the spec's go-live rule). */
-const BETS_TO_JUDGE = 300;
 /** Settled bets per reason before comparing reasons is worth a lesson. */
 const LESSON_MIN_BETS = 5;
 
@@ -84,8 +84,8 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
 
     const usage = await deps.repos.apiUsage.latest("odds-api");
     if (usage) lines.push("", `Odds API: ${usage.used} credits used this month, ${usage.remaining} left.`);
-    if (mostSettled < BETS_TO_JUDGE) {
-        lines.push(`Too early to judge: ${mostSettled} of ${BETS_TO_JUDGE} settled bets so far.`);
+    if (mostSettled < GO_LIVE.bets) {
+        lines.push(`Too early to judge: ${mostSettled} of ${GO_LIVE.bets} settled bets so far.`);
     }
     return lines.join("\n");
 }
@@ -138,8 +138,8 @@ function followerLines(
     const counts = { next_poll: 0, closing: 0, missed: 0 };
     const scored: { follower: number; tip: number }[] = [];
     for (const { bet, later } of tips) {
-        const selection = OUTCOMES.find((outcome) => outcome === bet.selection);
-        if (!selection || bet.sharpFairOddsAtBet === null) continue;
+        if (!isOutcome(bet.selection) || bet.sharpFairOddsAtBet === null) continue;
+        const selection = bet.selection;
         const minOdds = minimumOdds(bet.sharpFairOddsAtBet, scanner.minEdge, scanner.minKellyFraction[selection]);
         const fill = followerFill({ sentAt: bet.createdAt, minOdds }, later);
         if (!fill) continue;
@@ -165,7 +165,7 @@ function followerLines(
     return lines;
 }
 
-const PASS_REASONS: Record<string, string> = {
+const PASS_REASONS: Record<Exclude<DecisionReason, "value">, string> = {
     no_edge: "no edge",
     no_fresh_sharp: "no fresh Pinnacle price",
     stake_too_small: "stake below the minimum",

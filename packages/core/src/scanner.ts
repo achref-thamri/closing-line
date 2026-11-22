@@ -1,5 +1,5 @@
 import { devigPower } from "./devig.ts";
-import { OUTCOMES, type Outcome } from "./settlement.ts";
+import { isOutcome, OUTCOMES, type Outcome } from "./settlement.ts";
 import { kellyFraction } from "./staking.ts";
 import { edge } from "./value.ts";
 
@@ -145,8 +145,8 @@ export function brokenScannerRule(
     kickoff: Date,
     rules: ScannerRules,
 ): BrokenScannerRule | undefined {
-    const selection = OUTCOMES.find((outcome) => outcome === bet.selection);
-    if (!selection || bet.sharpFairOddsAtBet === null) return undefined;
+    if (!isOutcome(bet.selection) || bet.sharpFairOddsAtBet === null) return undefined;
+    const selection = bet.selection;
     const minutesOut = (kickoff.getTime() - bet.createdAt.getTime()) / 60_000;
     if (minutesOut > rules.maxHoursToKickoff * 60) return "too_early";
     if (minutesOut <= rules.closingWindowMinutes) return "too_late";

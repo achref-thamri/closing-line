@@ -7,6 +7,7 @@ export type {
     ChatSession,
     ChatSessionKind,
     Decision,
+    DecisionReason,
     DecisionWithResult,
     Fixture,
     FixtureResult,
