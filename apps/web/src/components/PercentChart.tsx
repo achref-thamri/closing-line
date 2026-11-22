@@ -1,6 +1,7 @@
 "use client";
 
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { share } from "../lib/format.ts";
 import { timeAxis } from "../lib/timeAxis.ts";
 
 export interface ChartSeries {
@@ -19,7 +20,6 @@ const fullLabel = (timestamp: number, timeZone: string) =>
         hour: "2-digit",
         minute: "2-digit",
     });
-const percentLabel = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 /**
  * A percentage over time, one line per player, stepping at each settled bet: bankroll growth (rather than kroner,
@@ -49,10 +49,10 @@ export function PercentChart({
                         ticks={axis.ticks}
                         tickFormatter={axis.label}
                     />
-                    <YAxis tickFormatter={percentLabel} width={64} domain={["auto", "auto"]} />
+                    <YAxis tickFormatter={share} width={64} domain={["auto", "auto"]} />
                     <Tooltip
                         labelFormatter={(timestamp) => fullLabel(Number(timestamp), timeZone)}
-                        formatter={(value) => percentLabel(Number(value))}
+                        formatter={(value) => share(Number(value))}
                     />
                     <Legend />
                     {series.map((line) => (

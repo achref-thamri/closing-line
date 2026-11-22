@@ -1,8 +1,8 @@
 import { bookName, brokenScannerRule, pickText, type BrokenScannerRule } from "@closing-line/core";
 import type { BetWithFixture, Player } from "@closing-line/db";
 import { odds, percent, shortDate, signedKroner, kroner } from "../lib/format.ts";
-import { groupBets, type BetGroup } from "../lib/groups.ts";
-import { SCANNER_RULES } from "../lib/rules.ts";
+import { groupBets } from "../lib/groups.ts";
+import { SCANNER_RULES, TIME_ZONE } from "../lib/rules.ts";
 import { playerColour } from "./players.ts";
 
 const STATUS_STYLE: Record<BetWithFixture["status"], string> = {
@@ -15,7 +15,7 @@ const STATUS_STYLE: Record<BetWithFixture["status"], string> = {
 
 function pick(bet: BetWithFixture): string {
     if (bet.market === "h2h" && bet.fixture) {
-        // The scanner's 1X2 bets: the team itself, as before.
+        // The scanner's 1X2 bets: the team itself.
         if (bet.selection === "home") return bet.fixture.homeTeam;
         if (bet.selection === "away") return bet.fixture.awayTeam;
         return "Draw";
@@ -83,6 +83,53 @@ function match(bet: BetWithFixture): string {
     return bet.fixture ? `${bet.fixture.homeTeam} v ${bet.fixture.awayTeam}` : (bet.eventName ?? "");
 }
 
+/** Everything one bet shows, worked out once for both the desktop table and the phone list. */
+interface BetRow {
+    id: string;
+    player: string;
+    colour: string | undefined;
+    /** Kickoff, or when the bet was logged for a match we don't track. */
+    when: string;
+    logged: boolean;
+    match: string;
+    pick: string;
+    book: string;
+    reason: string;
+    oldRule: BrokenScannerRule | undefined;
+    odds: string;
+    stake: string;
+    clv: string | undefined;
+    result: string;
+    resultStyle: string;
+}
+
+function betRow(bet: BetWithFixture, players: Map<string, Player>): BetRow {
+    const player = players.get(bet.playerId);
+    return {
+        id: bet.id,
+        player: player?.name ?? bet.playerId,
+        colour: player ? playerColour(player) : undefined,
+        when: shortDate(bet.fixture?.kickoff ?? bet.receivedAt ?? bet.createdAt, TIME_ZONE),
+        logged: bet.fixture === null,
+        match: match(bet),
+        pick: pick(bet),
+        book: bookName(bet.bookmaker),
+        reason: reason(bet, player),
+        oldRule: oldRule(bet, player),
+        odds: odds(bet.lockedOdds),
+        stake: kroner(bet.stakeOre),
+        clv: bet.clv === null ? undefined : percent(bet.clv),
+        result: bet.status === "open" ? "open" : signedKroner(bet.profitOre ?? 0),
+        resultStyle: STATUS_STYLE[bet.status],
+    };
+}
+
+interface RowGroup {
+    key: string;
+    label: string;
+    rows: BetRow[];
+}
+
 export function BetsTable({
     bets,
     players,
@@ -92,10 +139,14 @@ export function BetsTable({
     players: Map<string, Player>;
     now?: Date;
 }) {
-    const groups = groupBets(bets, now);
+    const groups: RowGroup[] = groupBets(bets, now).map((group) => ({
+        key: `${group.label}-${group.bets[0]?.id ?? ""}`,
+        label: group.label,
+        rows: group.bets.map((bet) => betRow(bet, players)),
+    }));
     return (
         <>
-            <BetList groups={groups} players={players} />
+            <BetList groups={groups} />
             <div className="hidden overflow-x-auto rounded-xl border border-zinc-200 md:block dark:border-zinc-800">
                 <table className="w-full text-sm" data-testid="bets-table">
                     <thead className="bg-zinc-50 text-left text-xs text-zinc-500 dark:bg-zinc-900">
@@ -118,10 +169,7 @@ export function BetsTable({
                         </tr>
                     </thead>
                     {groups.map((group) => (
-                        <tbody
-                            key={`${group.label}-${group.bets[0]?.id ?? ""}`}
-                            className="divide-y divide-zinc-100 dark:divide-zinc-900"
-                        >
+                        <tbody key={group.key} className="divide-y divide-zinc-100 dark:divide-zinc-900">
                             <tr className="bg-zinc-50/60 dark:bg-zinc-900/60">
                                 <th
                                     colSpan={10}
@@ -131,52 +179,38 @@ export function BetsTable({
                                     {group.label}
                                 </th>
                             </tr>
-                            {group.bets.map((bet) => {
-                                const player = players.get(bet.playerId);
-                                const broken = oldRule(bet, player);
-                                return (
-                                    <tr key={bet.id} data-testid="bet-row">
-                                        <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
-                                            {bet.fixture ? (
-                                                shortDate(bet.fixture.kickoff)
-                                            ) : (
-                                                // A match we do not track has no kickoff, only when the bet was logged.
-                                                <span title="Match time unknown: when the bet was logged">
-                                                    logged {shortDate(bet.receivedAt ?? bet.createdAt)}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-2 whitespace-nowrap">
-                                            <span
-                                                className="mr-2 inline-block size-2 rounded-full"
-                                                style={{ background: player ? playerColour(player) : undefined }}
-                                            />
-                                            {player?.name ?? bet.playerId}
-                                        </td>
-                                        <td className="px-3 py-2 whitespace-nowrap">{match(bet)}</td>
-                                        <td className="px-3 py-2 whitespace-nowrap">{pick(bet)}</td>
-                                        <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
-                                            {bookName(bet.bookmaker)}
-                                        </td>
-                                        <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
-                                            {reason(bet, player)}
-                                            {broken && <OldRule rule={broken} />}
-                                        </td>
-                                        <td className="px-3 py-2 text-right tabular-nums">{odds(bet.lockedOdds)}</td>
-                                        <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
-                                            {kroner(bet.stakeOre)}
-                                        </td>
-                                        <td className="px-3 py-2 text-right tabular-nums">
-                                            {percent(bet.clv ?? undefined)}
-                                        </td>
-                                        <td
-                                            className={`px-3 py-2 text-right tabular-nums whitespace-nowrap ${STATUS_STYLE[bet.status]}`}
-                                        >
-                                            {result(bet)}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                            {group.rows.map((row) => (
+                                <tr key={row.id} data-testid="bet-row">
+                                    <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
+                                        {row.logged ? (
+                                            <span title="Match time unknown: when the bet was logged">
+                                                logged {row.when}
+                                            </span>
+                                        ) : (
+                                            row.when
+                                        )}
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap">
+                                        <PlayerDot colour={row.colour} className="mr-2" />
+                                        {row.player}
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{row.match}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{row.pick}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-zinc-500">{row.book}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-zinc-500">
+                                        {row.reason}
+                                        {row.oldRule && <OldRule rule={row.oldRule} />}
+                                    </td>
+                                    <td className="px-3 py-2 text-right tabular-nums">{row.odds}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">{row.stake}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums">{row.clv ?? "–"}</td>
+                                    <td
+                                        className={`px-3 py-2 text-right tabular-nums whitespace-nowrap ${row.resultStyle}`}
+                                    >
+                                        {row.result}
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     ))}
                 </table>
@@ -185,53 +219,41 @@ export function BetsTable({
     );
 }
 
-function result(bet: BetWithFixture): string {
-    return bet.status === "open" ? "open" : signedKroner(bet.profitOre ?? 0);
+function PlayerDot({ colour, className }: { colour: string | undefined; className: string }) {
+    return <span className={`${className} inline-block size-2 rounded-full`} style={{ background: colour }} />;
 }
 
 /** Phones: one block per bet, match and pick first, so nothing important is off screen. */
-function BetList({ groups, players }: { groups: BetGroup[]; players: Map<string, Player> }) {
+function BetList({ groups }: { groups: RowGroup[] }) {
     return (
         <div className="space-y-4 md:hidden" data-testid="bets-list">
             {groups.map((group) => (
-                <section key={`${group.label}-${group.bets[0]?.id ?? ""}`}>
+                <section key={group.key}>
                     <h3 className="mb-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300">{group.label}</h3>
                     <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-900 dark:border-zinc-800">
-                        {group.bets.map((bet) => {
-                            const player = players.get(bet.playerId);
-                            const broken = oldRule(bet, player);
-                            return (
-                                <li key={bet.id} className="px-3 py-2 text-sm" data-testid="bet-item">
-                                    <div className="flex items-baseline justify-between gap-3">
-                                        <span className="font-medium">{match(bet)}</span>
-                                        <span className={`tabular-nums whitespace-nowrap ${STATUS_STYLE[bet.status]}`}>
-                                            {result(bet)}
-                                        </span>
-                                    </div>
-                                    <div className="text-zinc-600 dark:text-zinc-300">
-                                        {pick(bet)} @ {odds(bet.lockedOdds)} · {bookName(bet.bookmaker)} ·{" "}
-                                        {kroner(bet.stakeOre)}
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-500">
-                                        <span>
-                                            <span
-                                                className="mr-1 inline-block size-2 rounded-full"
-                                                style={{ background: player ? playerColour(player) : undefined }}
-                                            />
-                                            {player?.name ?? bet.playerId}
-                                        </span>
-                                        <span>
-                                            {bet.fixture
-                                                ? shortDate(bet.fixture.kickoff)
-                                                : `logged ${shortDate(bet.receivedAt ?? bet.createdAt)}`}
-                                        </span>
-                                        {bet.clv !== null && <span>CLV {percent(bet.clv)}</span>}
-                                        {reason(bet, player) && <span>{reason(bet, player)}</span>}
-                                        {broken && <OldRule rule={broken} />}
-                                    </div>
-                                </li>
-                            );
-                        })}
+                        {group.rows.map((row) => (
+                            <li key={row.id} className="px-3 py-2 text-sm" data-testid="bet-item">
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <span className="font-medium">{row.match}</span>
+                                    <span className={`tabular-nums whitespace-nowrap ${row.resultStyle}`}>
+                                        {row.result}
+                                    </span>
+                                </div>
+                                <div className="text-zinc-600 dark:text-zinc-300">
+                                    {row.pick} @ {row.odds} · {row.book} · {row.stake}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-500">
+                                    <span>
+                                        <PlayerDot colour={row.colour} className="mr-1" />
+                                        {row.player}
+                                    </span>
+                                    <span>{row.logged ? `logged ${row.when}` : row.when}</span>
+                                    {row.clv && <span>CLV {row.clv}</span>}
+                                    {row.reason && <span>{row.reason}</span>}
+                                    {row.oldRule && <OldRule rule={row.oldRule} />}
+                                </div>
+                            </li>
+                        ))}
                     </ul>
                 </section>
             ))}
