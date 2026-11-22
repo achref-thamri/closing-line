@@ -47,15 +47,7 @@ describe("parseConfig", () => {
             ["soccer_italy_serie_b", undefined],
             ["soccer_belgium_first_div", undefined],
         ]);
-        expect(config.bookmakers).toEqual([
-            "pinnacle",
-            "nordicbet",
-            "marathonbet",
-            "betsson",
-            "unibet_se",
-            "leovegas_se",
-            "sport888",
-        ]);
+        expect(config.bookmakers).toEqual(["pinnacle", "unibet_se", "leovegas_se"]);
         expect(config.sharpBookmaker).toBe("pinnacle");
         expect(config.exchangeCommission).toEqual({});
         expect(config.scanner).toEqual({

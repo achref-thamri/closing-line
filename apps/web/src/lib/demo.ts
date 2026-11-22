@@ -113,7 +113,8 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
                     selection: demoBet.selection,
                     stakeOre: demoBet.stakeOre,
                     lockedOdds,
-                    bookmaker: demoBet.playerId === "favourite" ? "pinnacle" : next() < 0.5 ? "unibet_se" : "betsson",
+                    bookmaker:
+                        demoBet.playerId === "favourite" ? "pinnacle" : next() < 0.5 ? "unibet_se" : "leovegas_se",
                     // The friend's bets come from Telegram with a reason.
                     ...(demoBet.playerId === "friend"
                         ? {
