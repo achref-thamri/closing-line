@@ -51,6 +51,11 @@ const stakeRulesSchema = zod
     .refine((rules) => rules.minStake % rules.step === 0, {
         message: "minStake must be a multiple of step",
         path: ["minStake"],
+    })
+    // The cap is applied after rounding to the step, so an odd cap would give an odd stake.
+    .refine((rules) => rules.maxStake % rules.step === 0, {
+        message: "maxStake must be a multiple of step",
+        path: ["maxStake"],
     }) satisfies zod.ZodType<StakeRules>;
 
 /**
