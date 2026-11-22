@@ -56,6 +56,13 @@ Pinnacle, 2021/22 to 2024/25 in all eight leagues, leaving out matches with a fr
 (+2.7%, 59), 5-8% kept 41% (+2.6%, 19), over 8% kept 31% (+3.3%, 9). Every band closed positive, so big edges aren't
 capped, just staked as if smaller. Which bets pass doesn't change. The back-test keeps plain `kellyStake`.
 
+## Only books the bets are placed at (`bookmakers`)
+
+The scanner polls Pinnacle for the fair price and Unibet and LeoVegas for bets, the only two books the tips are
+taken at. Until 22 November it also polled NordicBet, Marathonbet, Betsson and 888 (and Coolbet before 8 November),
+and 18 of its first 116 bets went there: a record built partly on prices nobody here could take. Those bets now count
+as old rules. Unibet and LeoVegas carried 98 bets at +2.9% average CLV.
+
 ## Leagues (`leagues`)
 
 The first back-test picked the Premier League, Championship, Bundesliga and La Liga, with Serie A (21 bets, +4.0%

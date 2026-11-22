@@ -128,16 +128,24 @@ describe("meetsScannerRules", () => {
         closingWindowMinutes: 45,
         maxFairOdds: 5,
         minKellyFraction: { home: 0.02, draw: 0.01, away: 0.02 },
+        bookmakers: ["pinnacle", "unibet_se", "leovegas_se"],
     };
     const kickoff = new Date("2026-11-21T15:00:00Z");
     const hoursBefore = (hours: number) => new Date(kickoff.getTime() - hours * 3_600_000);
-    const bet = { createdAt: hoursBefore(10), selection: "home", lockedOdds: 2.17, sharpFairOddsAtBet: 2.07 };
+    const bet = {
+        createdAt: hoursBefore(10),
+        selection: "home",
+        lockedOdds: 2.17,
+        sharpFairOddsAtBet: 2.07,
+        bookmaker: "unibet_se",
+    };
 
     it("passes a bet today's scanner would still place", () => {
         expect(meetsScannerRules(bet, kickoff, rules)).toBe(true);
     });
 
-    it("fails a bet placed too far out or in the closing window, on an outsider, or with too small a Kelly fraction", () => {
+    it("fails a bet at a bookmaker no longer polled, placed too far out or in the closing window, on an outsider, or with too small a Kelly fraction", () => {
+        expect(meetsScannerRules({ ...bet, bookmaker: "coolbet" }, kickoff, rules)).toBe(false);
         expect(meetsScannerRules({ ...bet, createdAt: hoursBefore(17 * 24) }, kickoff, rules)).toBe(false);
         // Placed by the pre-kickoff poll, which also sets the closing price.
         expect(meetsScannerRules({ ...bet, createdAt: hoursBefore(0.25) }, kickoff, rules)).toBe(false);
@@ -161,10 +169,17 @@ describe("brokenScannerRule", () => {
         closingWindowMinutes: 45,
         maxFairOdds: 5,
         minKellyFraction: { home: 0.02, draw: 0.01, away: 0.02 },
+        bookmakers: ["pinnacle", "unibet_se", "leovegas_se"],
     };
     const kickoff = new Date("2026-11-21T15:00:00Z");
     const at = (hours: number) => new Date(kickoff.getTime() - hours * 3_600_000);
-    const bet = { createdAt: at(10), selection: "home", lockedOdds: 2.17, sharpFairOddsAtBet: 2.07 };
+    const bet = {
+        createdAt: at(10),
+        selection: "home",
+        lockedOdds: 2.17,
+        sharpFairOddsAtBet: 2.07,
+        bookmaker: "leovegas_se",
+    };
 
     it("names the rule a bet breaks", () => {
         expect(brokenScannerRule(bet, kickoff, rules)).toBeUndefined();
@@ -176,5 +191,6 @@ describe("brokenScannerRule", () => {
         expect(brokenScannerRule({ ...bet, lockedOdds: 2.47, sharpFairOddsAtBet: 2.42 }, kickoff, rules)).toBe(
             "small_kelly",
         );
+        expect(brokenScannerRule({ ...bet, bookmaker: "marathonbet" }, kickoff, rules)).toBe("other_bookmaker");
     });
 });

@@ -122,6 +122,8 @@ export interface ScannerRules {
     closingWindowMinutes: number;
     maxFairOdds: number;
     minKellyFraction: Readonly<Record<Outcome, number>>;
+    /** The bookmakers polled, so the only ones the scanner bets at. */
+    bookmakers: readonly string[];
 }
 
 /** What the scanner rules look at in a bet. */
@@ -130,14 +132,15 @@ export interface ScannerRuleBet {
     selection: string;
     lockedOdds: number;
     sharpFairOddsAtBet: number | null;
+    bookmaker: string;
 }
 
 /** The rule a bet breaks under today's scanner settings. */
-export type BrokenScannerRule = "too_early" | "too_late" | "outsider" | "small_kelly";
+export type BrokenScannerRule = "other_bookmaker" | "too_early" | "too_late" | "outsider" | "small_kelly";
 
 /**
- * Which of today's scanner rules a bet breaks, the first one checked: placed more than `maxHoursToKickoff` out or in
- * the closing window, on an outsider, or with too small a Kelly fraction. Undefined when today's scanner would still
+ * Which of today's scanner rules a bet breaks, the first one checked: at a bookmaker no longer polled, placed more
+ * than `maxHoursToKickoff` out or in the closing window, on an outsider, or with too small a Kelly fraction. Undefined when today's scanner would still
  * place it, or when it can't be judged (no fair price, not a 1X2 selection).
  */
 export function brokenScannerRule(
@@ -147,6 +150,7 @@ export function brokenScannerRule(
 ): BrokenScannerRule | undefined {
     if (!isOutcome(bet.selection) || bet.sharpFairOddsAtBet === null) return undefined;
     const selection = bet.selection;
+    if (!rules.bookmakers.includes(bet.bookmaker)) return "other_bookmaker";
     const minutesOut = (kickoff.getTime() - bet.createdAt.getTime()) / 60_000;
     if (minutesOut > rules.maxHoursToKickoff * 60) return "too_early";
     if (minutesOut <= rules.closingWindowMinutes) return "too_late";

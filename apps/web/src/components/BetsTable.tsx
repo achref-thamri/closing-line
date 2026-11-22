@@ -49,6 +49,10 @@ export function oldRule(bet: BetWithFixture, player: Pick<Player, "kind"> | unde
 }
 
 const OLD_RULE_LABEL: Record<BrokenScannerRule, { tag: string; title: string }> = {
+    other_bookmaker: {
+        tag: "other bookmaker",
+        title: "Placed at a bookmaker the scanner no longer polls; it now bets only where tips can be taken",
+    },
     too_early: {
         tag: `over ${SCANNER_RULES.maxHoursToKickoff} h out`,
         title: `Placed more than ${SCANNER_RULES.maxHoursToKickoff} hours before kickoff; the scanner no longer bets that early`,

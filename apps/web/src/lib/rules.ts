@@ -6,6 +6,10 @@ import type { ScannerRules } from "@closing-line/core";
  * there isn't seen here; the server runs on the defaults.
  */
 const settings = defaultSettings();
-export const SCANNER_RULES: ScannerRules = { ...settings.scanner, closingWindowMinutes: settings.closingWindowMinutes };
+export const SCANNER_RULES: ScannerRules = {
+    ...settings.scanner,
+    closingWindowMinutes: settings.closingWindowMinutes,
+    bookmakers: settings.bookmakers,
+};
 /** The time zone dates and times are shown in. */
 export const TIME_ZONE = settings.timezone;

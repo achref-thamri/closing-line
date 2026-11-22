@@ -14,8 +14,8 @@ that no longer exists.
 ## Decision
 
 - For the value scanner, the go-live check counts only settled bets that today's rules would still place
-  (`meetsScannerRules` in core: the time before kickoff, not in the closing window, the fair odds cap and the Kelly
-  minimum, as described in [docs/scanner-rules.md](../scanner-rules.md)).
+  (`meetsScannerRules` in core: a bookmaker still polled, the time before kickoff, not in the closing window, the fair
+  odds cap and the Kelly minimum, as described in [docs/scanner-rules.md](../scanner-rules.md)).
 - The dashboard shows the check at the top, each rule met or not, with average CLV and its 95% range. The
   all-time figures stay on the scanner's card next to the today's-rules CLV, and older bets are marked "old rules" in
   the table. Nothing is deleted or rewritten.

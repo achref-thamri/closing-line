@@ -59,12 +59,8 @@ const stakeRulesSchema = zod
         path: ["maxStake"],
     }) satisfies zod.ZodType<StakeRules>;
 
-/**
- * Pinnacle as the reference, plus only books with a Danish betting licence (Spillemyndigheden's list), where winnings
- * are tax-free. Casumo, Coolbet, William Hill and 1xBet have none. Bet365, bwin, Betano and Danske Spil do, but
- * aren't in The Odds API.
- */
-const DEFAULT_BOOKMAKERS = ["pinnacle", "nordicbet", "marathonbet", "betsson", "unibet_se", "leovegas_se", "sport888"];
+/** Pinnacle as the reference, plus the two books bets are actually placed at, so every tip is one that can be taken. */
+const DEFAULT_BOOKMAKERS = ["pinnacle", "unibet_se", "leovegas_se"];
 
 /** Tunable settings with defaults. Money is in kroner. `prefault` runs nested defaults too. */
 export const settingsSchema = zod
