@@ -1,8 +1,7 @@
-import type { LaterPrice, PlayerTotals } from "@closing-line/core";
+import type { LaterPrice, PlayerTotals, SlipStatus } from "@closing-line/core";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
-import type { Fixture } from "./repositories.ts";
 import { bets, fixtures, oddsSnapshots } from "./schema.ts";
 
 export type Bet = typeof bets.$inferSelect;
@@ -11,10 +10,12 @@ export type NewBet = Omit<
     "id" | "status" | "closingFairOdds" | "clv" | "profitOre" | "settledAt"
 >;
 /** `fixture` is null for bets on events we do not track, which carry `eventName` instead. */
-export type BetWithFixture = Bet & { fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "kickoff" | "league"> | null };
+export type BetWithFixture = Bet & {
+    fixture: Pick<typeof fixtures.$inferSelect, "homeTeam" | "awayTeam" | "kickoff" | "league"> | null;
+};
 
 export interface Settlement {
-    status: "won" | "lost" | "void" | "cashed_out";
+    status: SlipStatus;
     profitOre: number;
     settledAt: Date;
     cashoutOfferOre?: number;

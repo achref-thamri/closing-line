@@ -19,12 +19,15 @@ export function closingLineValue(lockedOdds: number, closingFairOdds: number): n
     return lockedOdds / closingFairOdds - 1;
 }
 
+/** Which poll stored a price; the database enum has the same values. */
+export type SnapshotKind = "poll" | "on_demand" | "closing";
+
 /** A later price for a tip's selection at the tip's bookmaker. */
 export interface LaterPrice {
     price: number;
     takenAt: Date;
     /** `closing` for the pre-kickoff poll. */
-    kind: string;
+    kind: SnapshotKind;
 }
 
 /** Whether a tip's price was still on offer: at the next poll, and at the pre-kickoff poll; undefined if not seen. */

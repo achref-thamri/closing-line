@@ -1,7 +1,8 @@
+import type { BetStatus } from "./settlement.ts";
 /** The fields of a bet that results depend on. */
 export interface MetricsBet {
     stakeOre: number;
-    status: "open" | "won" | "lost" | "void" | "cashed_out";
+    status: BetStatus;
     profitOre: number | null;
     settledAt: Date | null;
     clv: number | null;
