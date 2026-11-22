@@ -3,6 +3,7 @@ import {
     availableFromTotals,
     bestOffer,
     closingLineValue,
+    edge,
     fairProbabilities,
     favourite,
     findValueBets,
@@ -120,7 +121,9 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
             report.scannerBets += bets.placed;
             reason = bets.reason;
         } else {
-            reason = best && best.edge >= config.scanner.minEdge ? "paused" : "no_edge";
+            // The scanner is paused: say so only when it would have bet.
+            const wouldBet = best !== undefined && best.edge >= config.scanner.minEdge;
+            reason = wouldBet ? "paused" : "no_edge";
         }
         decisions.push({
             ...decided,
@@ -257,7 +260,7 @@ async function favouriteBet(deps: PollOddsDeps, event: EventOdds, fair: Record<O
         lockedOdds: pick.price,
         bookmaker: pick.bookmaker,
         sharpFairOddsAtBet: 1 / fair[pick.selection],
-        edgeAtBet: pick.price * fair[pick.selection] - 1,
+        edgeAtBet: edge(pick.price, fair[pick.selection]),
     });
     return bet ? 1 : 0;
 }

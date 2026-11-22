@@ -4,6 +4,11 @@ export const OUTCOMES = ["home", "draw", "away"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
 /** Narrows a stored selection to a 1X2 outcome; the database enforces the same set for `h2h` bets. */
+/** A match-result bet on a tracked fixture settles from the final score; other bets the bettor settles with /open. */
+export function settlesFromScore(bet: { fixtureId: string | null; market: string }): boolean {
+    return bet.fixtureId !== null && bet.market === "h2h";
+}
+
 export function isOutcome(value: string): value is Outcome {
     return (OUTCOMES as readonly string[]).includes(value);
 }

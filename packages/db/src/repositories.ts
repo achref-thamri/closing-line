@@ -14,6 +14,7 @@ export type NewApiUsage = Omit<typeof apiUsage.$inferInsert, "id">;
 export type JobRun = typeof jobRuns.$inferSelect;
 export type NewDecision = Omit<typeof decisions.$inferInsert, "id">;
 export type Decision = typeof decisions.$inferSelect;
+export type DecisionReason = Decision["reason"];
 /** A decision with its match's league and how it ended: null goals until it is settled. */
 export type DecisionWithResult = Decision & {
     league: string;

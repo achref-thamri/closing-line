@@ -1,5 +1,5 @@
 import type { Config } from "@closing-line/config";
-import { matchFixture, settle1x2, toOutcome } from "@closing-line/core";
+import { matchFixture, settle1x2, settlesFromScore, toOutcome } from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
 import { messageOf } from "../lib/errors.ts";
 import type { MatchResultInfo, ResultsSource } from "../ports/results.ts";
@@ -152,8 +152,7 @@ async function settleFixtureBets(
     const result = resultOf(fixture);
     const lines: string[] = [];
     for (const bet of await deps.repos.bets.open([fixtureId])) {
-        // Other markets on the fixture (a bettor's player props) are settled by the bettor with /open.
-        if (bet.market !== "h2h") continue;
+        if (!settlesFromScore(bet)) continue;
         const settlement = settle1x2(
             { selection: toOutcome(bet.selection), stakeOre: bet.stakeOre, decimalOdds: bet.lockedOdds },
             result,

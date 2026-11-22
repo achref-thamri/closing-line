@@ -1,4 +1,5 @@
-import type { Bet, Repositories } from "@closing-line/db";
+import { settlesFromScore } from "@closing-line/core";
+import type { Repositories } from "@closing-line/db";
 
 /** A bet logged this long ago has usually finished; younger ones are left alone. */
 const OPEN_FOR_MS = 12 * 3_600_000;
@@ -19,7 +20,7 @@ export async function remindOpenBets(deps: RemindDeps): Promise<number> {
     for (const player of await deps.repos.players.list()) {
         if (player.kind !== "bettor" || player.telegramChatId === null) continue;
         const due = (await deps.repos.bets.openFor(player.id)).filter(
-            (bet) => bet.createdAt.getTime() <= cutoff && !settlesItself(bet),
+            (bet) => bet.createdAt.getTime() <= cutoff && !settlesFromScore(bet),
         );
         if (due.length === 0) continue;
         const bets = due.length === 1 ? "1 open bet" : `${due.length} open bets`;
@@ -30,8 +31,4 @@ export async function remindOpenBets(deps: RemindDeps): Promise<number> {
         reminded++;
     }
     return reminded;
-}
-
-function settlesItself(bet: Pick<Bet, "fixtureId" | "market">): boolean {
-    return bet.fixtureId !== null && bet.market === "h2h";
 }

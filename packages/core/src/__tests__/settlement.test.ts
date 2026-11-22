@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isOutcome, outcomeOf, settle1x2, toOutcome } from "../settlement.ts";
+import { isOutcome, outcomeOf, settle1x2, settlesFromScore, toOutcome } from "../settlement.ts";
 
 describe("outcomeOf", () => {
     it("reads the 1X2 outcome from the score", () => {
@@ -45,5 +45,13 @@ describe("toOutcome", () => {
         expect(["home", "draw", "away"].map(toOutcome)).toEqual(["home", "draw", "away"]);
         expect(isOutcome("Arsenal")).toBe(false);
         expect(() => toOutcome("Arsenal")).toThrow(RangeError);
+    });
+});
+
+describe("settlesFromScore", () => {
+    it("is true only for a match result on a tracked fixture", () => {
+        expect(settlesFromScore({ fixtureId: "f1", market: "h2h" })).toBe(true);
+        expect(settlesFromScore({ fixtureId: "f1", market: "player_shots_on_target" })).toBe(false);
+        expect(settlesFromScore({ fixtureId: null, market: "h2h" })).toBe(false);
     });
 });
