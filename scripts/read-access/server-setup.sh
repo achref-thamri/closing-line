@@ -31,10 +31,13 @@ SQL
 mkdir -p "$HOME/bin"
 cat >"$HOME/bin/db-read" <<'SCRIPT'
 #!/usr/bin/env bash
-# Read-only SQL against Closing Line's database: SQL on stdin, run as the `reader` role.
+# Read-only SQL against Closing Line's database: SQL on stdin, run as the `reader` role. SQL only: psql's backslash
+# commands (\! runs a shell, \c switches user) are refused.
 set -euo pipefail
+sql=$(cat)
+[[ $sql =~ ^[[:space:]]*\\ ]] && { echo "db-read takes SQL only, no psql backslash commands" >&2; exit 64; }
 cd "$HOME/closing-line"
-exec docker compose exec -T postgres psql -U reader -d closing_line -v ON_ERROR_STOP=1 -P pager=off
+exec docker compose exec -T -u postgres postgres psql -X -U reader -d closing_line -v ON_ERROR_STOP=1 -P pager=off -c "$sql"
 SCRIPT
 cat >"$HOME/bin/cl-logs" <<'SCRIPT'
 #!/usr/bin/env bash
