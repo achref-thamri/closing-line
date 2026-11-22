@@ -2,7 +2,7 @@ import { GO_LIVE, type GoLiveCheck, type GoLiveItem } from "@closing-line/core";
 import { percent, share } from "../lib/format.ts";
 
 /** What each go-live rule needs, and where the scanner stands on it. */
-function describe(item: GoLiveItem, check: GoLiveCheck, now: Date): { rule: string; status: string } {
+function ruleText(item: GoLiveItem, check: GoLiveCheck, now: Date): { rule: string; status: string } {
     switch (item.key) {
         case "bets":
             return { rule: `${GO_LIVE.bets} settled bets`, status: `${check.settled} so far` };
@@ -66,7 +66,7 @@ export function GoLivePanel({ check, now = new Date() }: { check: GoLiveCheck; n
             </p>
             <ul className="mt-3 space-y-1.5 text-sm">
                 {check.items.map((item) => {
-                    const { rule, status } = describe(item, check, now);
+                    const { rule, status } = ruleText(item, check, now);
                     return (
                         <li key={item.key} className="flex gap-2" data-testid="go-live-item">
                             <span className="shrink-0">

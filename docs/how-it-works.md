@@ -49,8 +49,8 @@ tips lost to the closing price on average, so their edge was noise in Pinnacle's
 price no older than ten minutes. Otherwise it passes, and the pass is recorded with its
 reason ([ADR 0010](adr/0010-record-every-decision.md)).
 
-Value does not mean the bet will win. The away side still loses about two times in three. It means that over
-hundreds of bets like it, the returns beat the stakes.
+A value bet still loses most of the time here: the away side loses about two times in three. Over hundreds of bets
+like it, the returns beat the stakes.
 
 ## 4. Stake by the Kelly criterion, on the edge likely to last, then a quarter of it
 
