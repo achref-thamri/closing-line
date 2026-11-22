@@ -23,7 +23,9 @@ if (files.length === 0) {
 
 // The live scanner's stake rules and bankroll, read from the same defaults the worker uses.
 const settings = defaultSettings();
-const maxOdds = Number(flags["max-odds"] ?? settings.scanner.maxFairOdds);
+// An empty value ("--max-odds=") counts as not a number, not as 0, which would turn the cap off.
+const maxOddsFlag = flags["max-odds"];
+const maxOdds = maxOddsFlag === undefined ? settings.scanner.maxFairOdds : Number(maxOddsFlag.trim() || Number.NaN);
 if (!Number.isFinite(maxOdds) || maxOdds < 0) {
     console.error(`--max-odds takes a number, 0 to turn the cap off (got ${flags["max-odds"] ?? ""}).`);
     process.exit(1);

@@ -26,7 +26,11 @@ export function PlayerFilter({ players, selected }: { players: Player[]; selecte
                     href={betsHref({ player: player.id })}
                     aria-current={player.id === selected ? "page" : undefined}
                 >
-                    <span className="inline-block size-2 rounded-full" style={{ background: playerColour(player) }} />
+                    <span
+                        aria-hidden="true"
+                        className="inline-block size-2 rounded-full"
+                        style={{ background: playerColour(player) }}
+                    />
                     {player.name}
                 </Link>
             ))}

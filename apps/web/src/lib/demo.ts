@@ -40,7 +40,8 @@ function random(seed: number): () => number {
 const DEMO_TAGS = ["lineup", "skewed_price", "game_read"] as const;
 
 /**
- * Fills an empty database with ten weeks of made-up Premier League bets for every player, so the dashboard can be
+ * Fills an empty database with ten weeks of made-up Premier League results, plus the round still to come, for every
+ * player, so the dashboard can be
  * shown without real data or API keys. The value scanner and the friend get a small real edge; the favourite none.
  */
 export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
@@ -58,7 +59,7 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
         firstSaturday.setTime(firstSaturday.getTime() + DAY_MS);
     }
     for (let week = 0; week <= WEEKS; week++) {
-        const order = [...TEAMS].sort(() => next() - 0.5);
+        const order = shuffled(TEAMS, next);
         for (let match = 0; match < 10; match++) {
             const kickoff = new Date(firstSaturday.getTime() + week * 7 * DAY_MS + (match % 3) * 2.5 * 3_600_000);
             const id = `demo${String(week).padStart(2, "0")}${String(match).padStart(2, "0")}`.padEnd(32, "0");
@@ -145,4 +146,12 @@ export async function seedDemo(repos: Repositories, now: Date): Promise<void> {
         }
     }
     await repos.apiUsage.record({ provider: "odds-api", takenAt: now, used: 61, remaining: 439, lastCost: 1 });
+}
+
+/** A shuffle on the seeded `next`: one random key per item, then sort by it, so it's unbiased and repeatable. */
+function shuffled<T>(items: readonly T[], next: () => number): T[] {
+    return items
+        .map((item) => ({ item, key: next() }))
+        .sort((a, b) => a.key - b.key)
+        .map(({ item }) => item);
 }

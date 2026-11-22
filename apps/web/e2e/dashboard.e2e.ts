@@ -51,12 +51,12 @@ test("shows one player's bets and keeps the choice when paging", async ({ page }
     await expect(page).toHaveURL(/\?player=favourite#bets$/);
 
     const players = page.getByTestId("bet-row").locator("td:nth-child(2)");
-    await expect(players.first()).toHaveText("Always the favourite");
-    expect(new Set(await players.allTextContents())).toEqual(new Set(["Always the favourite"]));
+    const onlyFavourite = async () => new Set(await players.allTextContents());
+    await expect.poll(onlyFavourite).toEqual(new Set(["Always the favourite"]));
 
     await page.getByRole("navigation", { name: "Bet pages" }).getByRole("link", { name: "Next →" }).click();
     await expect(page).toHaveURL(/\?player=favourite&page=2#bets$/);
-    expect(new Set(await players.allTextContents())).toEqual(new Set(["Always the favourite"]));
+    await expect.poll(onlyFavourite).toEqual(new Set(["Always the favourite"]));
 });
 
 test("has no horizontal scroll on the page itself", async ({ page }) => {

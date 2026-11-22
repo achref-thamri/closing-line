@@ -69,8 +69,9 @@ export function GoLivePanel({ check, now = new Date() }: { check: GoLiveCheck; n
                     const { rule, status } = describe(item, check, now);
                     return (
                         <li key={item.key} className="flex gap-2" data-testid="go-live-item">
-                            <span className="shrink-0" aria-label={item.passed ? "met" : "not met"}>
-                                {item.passed ? "✅" : "⬜"}
+                            <span className="shrink-0">
+                                <span aria-hidden="true">{item.passed ? "✅" : "⬜"}</span>
+                                <span className="sr-only">{item.passed ? "Met:" : "Not met:"}</span>
                             </span>
                             <span>
                                 <span className="mr-2 font-medium">{rule}</span>

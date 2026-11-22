@@ -9,7 +9,7 @@ export interface BetGroup {
 const DAY_MS = 86_400_000;
 
 /** When an open bet's match starts; a match we do not track only has the time the bet was logged. */
-function startOf(bet: BetWithFixture): Date {
+export function startOf(bet: BetWithFixture): Date {
     return bet.fixture?.kickoff ?? bet.receivedAt ?? bet.createdAt;
 }
 
