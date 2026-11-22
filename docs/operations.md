@@ -118,3 +118,7 @@ counts with the live one:
 ```sh
 docker compose exec -T backup sh -s < docker/check-backup.sh
 ```
+
+The nightly dumps stay on the server for 14 days. A copy also goes off the server: `scripts/read-access/install.sh`
+schedules `pull-backup.sh` on the Mac, which saves the newest dump to `~/Backups/closing-line` every Sunday over the
+read-only key and keeps the last 8.
