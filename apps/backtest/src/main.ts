@@ -12,6 +12,10 @@ const { values: flags, positionals: files } = parseArgs({
     allowPositionals: true,
 });
 const edges = flags.edges?.split(",").map(Number) ?? [0.02, 0.03, 0.04, 0.05];
+if (edges.some((edge) => !Number.isFinite(edge) || edge <= 0 || edge >= 1)) {
+    console.error(`--edges takes fractions between 0 and 1, e.g. 0.02,0.03 (got ${flags.edges ?? ""}).`);
+    process.exit(1);
+}
 if (files.length === 0) {
     console.error("Pass one or more football-data.co.uk season CSVs (https://football-data.co.uk/data.php).");
     process.exit(1);
@@ -20,6 +24,10 @@ if (files.length === 0) {
 // The live scanner's stake rules and bankroll, read from the same defaults the worker uses.
 const settings = defaultSettings();
 const maxOdds = Number(flags["max-odds"] ?? settings.scanner.maxFairOdds);
+if (!Number.isFinite(maxOdds) || maxOdds < 0) {
+    console.error(`--max-odds takes a number, 0 to turn the cap off (got ${flags["max-odds"] ?? ""}).`);
+    process.exit(1);
+}
 const options = {
     startingBankroll: settings.startingBankroll,
     stake: settings.scanner.stake,
