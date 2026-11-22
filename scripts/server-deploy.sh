@@ -53,8 +53,9 @@ for _ in $(seq 1 36); do
         echo "deployed: ${SERVICES[*]} healthy"
         # Every build leaves cache and an untagged old image behind. Both projects on this server build here, so cap
         # the shared build cache by size (enough for fast rebuilds) rather than by age.
-        docker builder prune -f --max-used-space 3gb >/dev/null || true
-        docker image prune -f >/dev/null || true
+        # Cleanup only: the new containers are already healthy, so a failure here warns instead of failing the deploy.
+        docker builder prune -f --max-used-space 3gb >/dev/null || echo "warning: build cache prune failed" >&2
+        docker image prune -f >/dev/null || echo "warning: image prune failed" >&2
         exit 0
     fi
     sleep 5

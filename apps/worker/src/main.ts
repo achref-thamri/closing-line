@@ -34,7 +34,8 @@ function schedule(): void {
         () => {
             const now = new Date();
             writeFileSync(config.heartbeatPath, now.toISOString());
-            // Without polling nobody can log bets, so the dead man's switch should fire even though the scheduler runs.
+            // No ping while Telegram polling is down: nobody can log bets, so healthchecks.io should raise its
+            // missing-ping alert even though the scheduler still runs.
             if (polling.isUp()) ping?.(now);
             running ??= tick(worker.runner)
                 .catch((error: unknown) => {

@@ -33,11 +33,11 @@ The dashboard runs on demo data without a database or keys:
 pnpm --filter @closing-line/web dev   # http://localhost:3300
 ```
 
-| Script                                       | What it does                                   |
-| -------------------------------------------- | ---------------------------------------------- |
-| `pnpm check`                                 | Everything CI runs, except Postgres and Docker |
-| `pnpm test:coverage`                         | Tests with a coverage report and thresholds    |
-| `pnpm --filter @closing-line/db db:generate` | SQL migration from schema changes              |
+| Script                                       | What it does                                                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`                                 | Format, lint, typecheck, unused code and tests. CI also runs `pnpm audit`, coverage thresholds, Postgres, Docker and Playwright |
+| `pnpm test:coverage`                         | Tests with a coverage report and thresholds                                                                                     |
+| `pnpm --filter @closing-line/db db:generate` | SQL migration from schema changes                                                                                               |
 
 `node apps/worker/scripts/screenshots.ts` regenerates the README images from demo data, with the demo dashboard
 running on port 3100.
