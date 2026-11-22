@@ -226,8 +226,8 @@ const GROUP_MIN_BETS = 10;
 
 /**
  * All-time insight once there is enough of it: how well Pinnacle's fair probabilities matched what happened (each
- * match's first decision, so no match counts twice), and the scanner's results by league and by how long before
- * kickoff it bet.
+ * match's first decision, so no match counts twice), and the scanner's results by league, by how long before
+ * kickoff it bet, and by whether it backed one outcome of the match or more.
  */
 export function allTimeSection(
     decisions: readonly DecisionWithResult[],
@@ -296,6 +296,14 @@ export function allTimeSection(
         if (hours < 12) return "2–12 h";
         return hours < 72 ? "12–72 h" : "3 days or more";
     });
+    const matchOf = (bet: Bet) => bet.fixtureId ?? bet.id;
+    const outcomesBacked = new Map<string, Set<string>>();
+    for (const bet of scannerBets) {
+        outcomesBacked.set(matchOf(bet), (outcomesBacked.get(matchOf(bet)) ?? new Set()).add(bet.selection));
+    }
+    groups("Scanner by outcomes backed per match:", (bet) =>
+        (outcomesBacked.get(matchOf(bet))?.size ?? 1) > 1 ? "two or more" : "one",
+    );
     return lines;
 }
 
