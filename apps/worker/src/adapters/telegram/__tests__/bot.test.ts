@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { botInfo } from "../../../__tests__/helpers.ts";
 import type { BetFlow } from "../../../app/betFlow.ts";
 import type { Bettors } from "../../../app/bettors.ts";
 import { hasAction, type Reply } from "../../../app/chat.ts";
@@ -6,21 +7,6 @@ import type { SettleFlow } from "../../../app/settleFlow.ts";
 import { silentLogger } from "../../../lib/logger.ts";
 import { COMMANDS, createTelegramBot, type BotFlows } from "../bot.ts";
 
-const botInfo = {
-    id: 1,
-    is_bot: true,
-    first_name: "Closing Line",
-    username: "closing_line_test_bot",
-    can_join_groups: false,
-    can_read_all_group_messages: false,
-    supports_inline_queries: false,
-    can_connect_to_business: false,
-    has_main_web_app: false,
-    has_topics_enabled: false,
-    allows_users_to_create_topics: false,
-    can_manage_bots: false,
-    supports_join_request_queries: false,
-} as const;
 const chat = { id: 200, type: "private", first_name: "Sam" } as const;
 const from = { id: 200, is_bot: false, first_name: "Sam" } as const;
 

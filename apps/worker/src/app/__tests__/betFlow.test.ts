@@ -4,10 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
 import { BetFlow } from "../betFlow.ts";
 import { Bettors } from "../bettors.ts";
+import { button, FRIEND, OWNER } from "../../__tests__/helpers.ts";
 import type { Reply } from "../chat.ts";
 
-const OWNER = 100;
-const FRIEND = 200;
 const config = parseConfig({
     ODDS_API_KEY: "k",
     FOOTBALL_DATA_TOKEN: "t",
@@ -48,13 +47,6 @@ function restart(): void {
     };
     bettors = new Bettors({ repos, config, messenger, now: () => clock });
     flow = new BetFlow({ repos, bettors, config, messenger, logger: silentLogger, now: () => clock });
-}
-
-/** The callback data of the first button whose label contains `label`. */
-function button(reply: Reply | undefined, label: string): string {
-    const found = reply?.keyboard?.flat().find((candidate) => candidate.text.includes(label));
-    if (!found) throw new Error(`no ${label} button in ${JSON.stringify(reply)}`);
-    return found.data;
 }
 
 async function letFriendIn(): Promise<void> {
@@ -382,10 +374,11 @@ describe("undo and twins", () => {
     it("keeps settled bets and refuses strangers", async () => {
         await logCorners();
         const [bet] = await repos.bets.forPlayer(`tg_${FRIEND}`);
-        await repos.bets.settle(bet?.id ?? "", { status: "won", profitOre: 50_000, settledAt: clock });
+        if (!bet) throw new Error("the bet wasn't logged");
+        await repos.bets.settle(bet.id, { status: "won", profitOre: 50_000, settledAt: clock });
         expect((await flow.undo(FRIEND)).text).toMatch(/settled, so it stays\.$/);
         expect((await flow.undo(300)).text).toBe("Send /start first.");
-        expect((await flow.tap(300, `u:${bet?.id ?? ""}`)).text).toMatch(/nothing was deleted/);
+        expect((await flow.tap(300, `u:${bet.id}`)).text).toMatch(/nothing was deleted/);
     });
 });
 

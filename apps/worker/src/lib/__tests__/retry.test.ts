@@ -43,7 +43,7 @@ describe("retry", () => {
         expect(fn).toHaveBeenCalledOnce();
     });
 
-    it("waits for real by default", async () => {
+    it("waits with setTimeout when no sleep is passed in", async () => {
         vi.useFakeTimers();
         try {
             const fn = vi

@@ -9,7 +9,7 @@ function spyLogger(): { logger: Logger; warn: Mock } {
 }
 
 describe("createPinger", () => {
-    it("pings at most every few minutes and never throws", async () => {
+    it("pings at most once per interval and never throws", async () => {
         const { logger, warn } = spyLogger();
         const fetch = vi
             .fn<Fetch>()

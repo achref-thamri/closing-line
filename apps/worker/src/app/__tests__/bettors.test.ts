@@ -2,10 +2,9 @@ import { parseConfig } from "@closing-line/config";
 import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Bettors } from "../bettors.ts";
+import { button, FRIEND, OWNER } from "../../__tests__/helpers.ts";
 import type { Reply } from "../chat.ts";
 
-const OWNER = 100;
-const FRIEND = 200;
 const config = parseConfig({
     ODDS_API_KEY: "k",
     FOOTBALL_DATA_TOKEN: "t",
@@ -44,13 +43,6 @@ function restart(): void {
         },
     };
     bettors = new Bettors({ repos, config, messenger, now: () => clock });
-}
-
-/** The callback data of the first button whose label contains `label`. */
-function button(reply: Reply | undefined, label: string): string {
-    const found = reply?.keyboard?.flat().find((candidate) => candidate.text.includes(label));
-    if (!found) throw new Error(`no ${label} button in ${JSON.stringify(reply)}`);
-    return found.data;
 }
 
 async function letFriendIn(): Promise<void> {

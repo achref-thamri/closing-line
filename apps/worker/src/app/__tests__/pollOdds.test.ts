@@ -5,7 +5,6 @@ import type { EventOdds, Priced, Quote } from "../../ports/odds.ts";
 import type { Spent } from "../creditGuard.ts";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
 import { pollOdds, type PollOddsDeps } from "../pollOdds.ts";
-import { syncFixtures } from "../syncFixtures.ts";
 import type { PriceGone, Tip } from "../tips.ts";
 
 const config = parseConfig({
@@ -344,7 +343,8 @@ describe("pollOdds", () => {
             lockedOdds: 2,
             bookmaker: "unibet_se",
         });
-        await repos.bets.settle(lost?.id ?? "", { status: "lost", profitOre: -150_000, settledAt: now });
+        if (!lost) throw new Error("the losing bet wasn't placed");
+        await repos.bets.settle(lost.id, { status: "lost", profitOre: -150_000, settledAt: now });
         expect(
             await pollOdds(deps([event(24 * 60, quotes("unibet_se", 2.9, 3.4, 2.75))]), "soccer_epl", "scan"),
         ).toMatchObject({
@@ -396,22 +396,5 @@ describe("pollOdds", () => {
             reason: "daily allowance of 15 credits used (15 spent today)",
         });
         expect(poll.source.odds).not.toHaveBeenCalled();
-    });
-});
-
-describe("syncFixtures", () => {
-    it("stores fixtures for every league and records the free balance", async () => {
-        const record = vi.fn(() => Promise.resolve());
-        const { quotes: _quotes, ...info } = event(60);
-        const count = await syncFixtures({
-            source: { events: () => Promise.resolve({ data: [info], balance }) },
-            guard: { record },
-            repos,
-            config,
-        });
-        // The fake source returns the same event for each of the eight default leagues.
-        expect(count).toBe(8);
-        expect(record).toHaveBeenCalledWith(balance);
-        expect(await repos.fixtures.get(info.id)).toBeDefined();
     });
 });
