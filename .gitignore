@@ -9,6 +9,8 @@ dist
 .DS_Store
 playwright-report
 test-results
+# Local PGlite database and the worker's heartbeat file
+data/
 
 # Written by Next.js; not part of the project
 apps/web/AGENTS.md
