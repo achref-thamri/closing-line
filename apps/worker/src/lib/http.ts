@@ -59,9 +59,13 @@ export async function getJson<S extends zod.ZodType>(request: GetJsonRequest<S>)
     return { data: parsed.data, headers: response.headers };
 }
 
-function retryAfterMs(header: string | null): number | undefined {
+/** Retry-After in milliseconds, given as seconds ("120") or as an HTTP date; undefined when it is neither. */
+function retryAfterMs(header: string | null, now = Date.now()): number | undefined {
+    if (header === null || header.trim() === "") return undefined;
     const seconds = Number(header);
-    return header !== null && header !== "" && Number.isFinite(seconds) ? seconds * 1000 : undefined;
+    if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+    const at = Date.parse(header);
+    return Number.isNaN(at) ? undefined : Math.max(0, at - now);
 }
 
 /** Vendors return `{"message": "..."}` or `{"error": "..."}`; fall back to the start of the text. */

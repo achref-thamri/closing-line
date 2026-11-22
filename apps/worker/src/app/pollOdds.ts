@@ -10,6 +10,7 @@ import {
     minimumOdds,
     scannerStake,
     sideName,
+    toOre,
     toOutcome,
     type CreditPriority,
     type Outcome,
@@ -84,66 +85,70 @@ export async function pollOdds(deps: PollOddsDeps, league: string, priority: Cre
         (bet) => bet.playerId === SCANNER && bet.market === "h2h" && bet.priceGoneAt === null,
     );
 
-    for (const event of result.data) {
-        const minutes = Math.round(minutesToKickoff(event));
-        if (minutes <= 0) continue;
-        const closing = isClosing(event);
-        const decided = { fixtureId: event.id, takenAt: now, minutesToKickoff: minutes };
+    // Stored in finally: if a later match throws, the bets already placed still have their decision rows.
+    try {
+        for (const event of result.data) {
+            const minutes = Math.round(minutesToKickoff(event));
+            if (minutes <= 0) continue;
+            const closing = isClosing(event);
+            const decided = { fixtureId: event.id, takenAt: now, minutesToKickoff: minutes };
 
-        const fair = fairProbabilities(
-            event.quotes,
-            config.sharpBookmaker,
-            now,
-            config.scanner.maxSharpAgeMinutes * 60_000,
-        );
-        if (!fair) {
-            decisions.push({ ...decided, outcome: "pass", reason: "no_fresh_sharp" });
-            continue;
-        }
-        for (const bet of tipped.filter((tip) => tip.fixtureId === event.id)) {
-            await checkPriceGone(deps, event, fair, bet, now);
-        }
+            const fair = fairProbabilities(
+                event.quotes,
+                config.sharpBookmaker,
+                now,
+                config.scanner.maxSharpAgeMinutes * 60_000,
+            );
+            if (!fair) {
+                decisions.push({ ...decided, outcome: "pass", reason: "no_fresh_sharp" });
+                continue;
+            }
+            for (const bet of tipped.filter((tip) => tip.fixtureId === event.id)) {
+                await checkPriceGone(deps, event, fair, bet, now);
+            }
 
-        const best = bestOffer(event.quotes, fair, {
-            sharpBookmaker: config.sharpBookmaker,
-            commission: config.exchangeCommission,
-        });
-        let reason: Reason;
-        if (minutes > config.scanner.maxHoursToKickoff * 60) {
-            // Still recorded with the best price, so the report can show what the scanner left alone.
-            reason = "too_early";
-        } else if (closing) {
-            // This poll also records the closing price, so a bet placed now would have its own edge as its CLV. A
-            // tip minutes before kickoff is too late to act on anyway.
-            reason = "too_late";
-        } else if (scanner) {
-            const bets = await scannerBets(deps, event, fair, scanner);
-            report.scannerBets += bets.placed;
-            reason = bets.reason;
-        } else {
-            // The scanner is paused: say so only when it would have bet.
-            const wouldBet = best !== undefined && best.edge >= config.scanner.minEdge;
-            reason = wouldBet ? "paused" : "no_edge";
-        }
-        decisions.push({
-            ...decided,
-            outcome: reason === "value" ? "bet" : "pass",
-            reason,
-            bestSelection: best?.selection ?? null,
-            bestBookmaker: best?.bookmaker ?? null,
-            bestOdds: best?.netOdds ?? null,
-            bestEdge: best?.edge ?? null,
-            fairHome: fair.home,
-            fairDraw: fair.draw,
-            fairAway: fair.away,
-        });
+            const best = bestOffer(event.quotes, fair, {
+                sharpBookmaker: config.sharpBookmaker,
+                commission: config.exchangeCommission,
+            });
+            let reason: Reason;
+            if (minutes > config.scanner.maxHoursToKickoff * 60) {
+                // Still recorded with the best price, so the report can show what the scanner left alone.
+                reason = "too_early";
+            } else if (closing) {
+                // This poll also records the closing price, so a bet placed now would have its own edge as its CLV. A
+                // tip minutes before kickoff is too late to act on anyway.
+                reason = "too_late";
+            } else if (scanner) {
+                const bets = await scannerBets(deps, event, fair, scanner);
+                report.scannerBets += bets.placed;
+                reason = bets.reason;
+            } else {
+                // The scanner is paused: say so only when it would have bet.
+                const wouldBet = best !== undefined && best.edge >= config.scanner.minEdge;
+                reason = wouldBet ? "paused" : "no_edge";
+            }
+            decisions.push({
+                ...decided,
+                outcome: reason === "value" ? "bet" : "pass",
+                reason,
+                bestSelection: best?.selection ?? null,
+                bestBookmaker: best?.bookmaker ?? null,
+                bestOdds: best?.netOdds ?? null,
+                bestEdge: best?.edge ?? null,
+                fairHome: fair.home,
+                fairDraw: fair.draw,
+                fairAway: fair.away,
+            });
 
-        if (closing) {
-            report.favouriteBets += await favouriteBet(deps, event, fair);
-            report.closingUpdates += await recordClosing(deps, event, fair);
+            if (closing) {
+                report.favouriteBets += await favouriteBet(deps, event, fair);
+                report.closingUpdates += await recordClosing(deps, event, fair);
+            }
         }
+    } finally {
+        await deps.repos.decisions.insert(decisions);
     }
-    await deps.repos.decisions.insert(decisions);
     return report;
 }
 
@@ -179,7 +184,7 @@ async function scannerBets(
             fixtureId: event.id,
             market: "h2h",
             selection: value.selection,
-            stakeOre: stake * 100,
+            stakeOre: toOre(stake),
             lockedOdds: value.netOdds,
             bookmaker: value.bookmaker,
             sharpFairOddsAtBet: value.fairOdds,
@@ -256,7 +261,7 @@ async function favouriteBet(deps: PollOddsDeps, event: EventOdds, fair: Record<O
         fixtureId: event.id,
         market: "h2h",
         selection: pick.selection,
-        stakeOre: Math.round(deps.config.benchmarkStake * 100),
+        stakeOre: toOre(deps.config.benchmarkStake),
         lockedOdds: pick.price,
         bookmaker: pick.bookmaker,
         sharpFairOddsAtBet: 1 / fair[pick.selection],
@@ -283,14 +288,14 @@ async function recordClosing(deps: PollOddsDeps, event: EventOdds, fair: Record<
 /** What the scanner can stake: its starting bankroll plus settled profit, minus stakes still open. */
 async function scannerAvailableOre(deps: PollOddsDeps): Promise<number> {
     const totals = (await deps.repos.bets.totals()).get(SCANNER) ?? { profitOre: 0, openStakeOre: 0 };
-    return availableFromTotals(deps.config.startingBankroll * 100, totals);
+    return availableFromTotals(toOre(deps.config.startingBankroll), totals);
 }
 
 /** The scanner sits out after losing `weeklyLossPause` of its starting bankroll in the last seven days. */
 async function isScannerPaused(deps: PollOddsDeps, now: Date): Promise<boolean> {
     const week = (await deps.repos.bets.totals({ settledSince: new Date(now.getTime() - WEEK_MS) })).get(SCANNER);
     const lossOre = Math.max(0, -(week?.profitOre ?? 0));
-    return lossOre >= deps.config.weeklyLossPause * deps.config.startingBankroll * 100;
+    return lossOre >= toOre(deps.config.weeklyLossPause * deps.config.startingBankroll);
 }
 
 function snapshotsOf(event: EventOdds, takenAt: Date, kind: "poll" | "closing"): NewOddsSnapshot[] {

@@ -20,6 +20,7 @@ export type { BetStatus, MatchResult, Outcome, Settlement } from "./settlement.t
 export { fixtureNamed, matchFixture, teamsOf } from "./teams.ts";
 export type { ResultCandidate } from "./teams.ts";
 export { kellyStake, scannerStake } from "./staking.ts";
+export { toOre } from "./money.ts";
 export type { StakeRules } from "./staking.ts";
 export { closingLineValue, edge, followerFill, minimumOdds, tipLifetime } from "./value.ts";
 export type { FollowerFill, LaterPrice, SnapshotKind, TipLifetime } from "./value.ts";
