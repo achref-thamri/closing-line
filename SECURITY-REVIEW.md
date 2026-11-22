@@ -1,74 +1,139 @@
-# Closing Line Production Review
+# Production Code Audit
 
 Review date: 2026-11-22
 
-## Overall Verdict
+## Overall Engineering Quality
 
-The implementation is generally well-structured, typed, and test-driven. The monorepo boundaries, database constraints, retry logic, scheduler job claiming, and Telegram authorization ownership checks are sound engineering choices.
+This is generally a disciplined, senior-level implementation. The monorepo has clear package boundaries, the worker has a composition root, external integrations use ports/adapters, database writes are protected by Drizzle constraints, and configuration is validated at startup. The team has invested appropriately in testability: HTTP retries, scheduler state, settlement, Telegram flows, database repositories, scanner calculations, and dashboard behavior are covered.
 
-The code is not fully production-ready yet: settlement currently has a partial-failure path that can permanently leave open bets on a match whose fixture is already marked settled, and the read-only SSH access path allows `psql` meta-command escapes.
+The implementation is close to production-ready. It has no broad architectural rewrite or dependency-cleanup requirement. The remaining issues are concentrated in failure atomicity, retry policy, and two security/reliability boundaries.
 
-## Security Summary
+## Finding Summary
 
-| #   | Severity  | File                                | Lines | Vulnerability                                               | Confidence |
-| --- | --------- | ----------------------------------- | ----- | ----------------------------------------------------------- | ---------- |
-| 1   | 🟡 MEDIUM | scripts/read-access/server-setup.sh | 32-68 | `psql` meta-command escape from the read-only SSH interface | 9/10       |
+| #   | Severity  | File                                | Lines                   | Vulnerability                                                                                                      | Confidence |
+| --- | --------- | ----------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------- |
+| 1   | 🟠 HIGH   | apps/worker/src/app/settleBets.ts   | 95-99, 160-172, 175-193 | Fixture is marked terminal before its bets are settled, allowing permanent loss of open bets after partial failure | 9/10       |
+| 2   | 🟡 MEDIUM | scripts/read-access/server-setup.sh | 32-68                   | Read-only SSH SQL access exposes `psql` meta-command escapes                                                       | 9/10       |
+| 3   | 🟡 MEDIUM | apps/worker/src/app/betFlow.ts      | 193-197, 522-539        | Stake input has no PostgreSQL integer-range boundary                                                               | 8/10       |
+| 4   | 🟡 MEDIUM | apps/worker/src/scheduler/runner.ts | 44-48                   | Failed scheduled jobs are recorded and explicitly never retried within their key/window                            | 8/10       |
+| 5   | 🟡 MEDIUM | docker-compose.yml                  | 1-80                    | Database and backups remain on the same host/volume, with no off-host restore copy                                 | 7/10       |
 
-### 1. Read-only SQL boundary can escape PostgreSQL restrictions
+## Critical and High-Priority Issues
 
-- **Location:** `scripts/read-access/server-setup.sh:32-68`
-- **Explanation:** `~/bin/db-read` launches unrestricted `psql -U reader` and forwards SSH stdin. The database role is read-only and statements have a 30-second timeout, but `psql` interprets client-side meta-commands such as `\! command` and `\copy`, which are not constrained by the PostgreSQL role or the forced-command argument allowlist.
-- **Impact:** A holder of the read-only SSH key can escape the SQL-only boundary and execute a shell command inside the PostgreSQL container or interact with local files exposed to that container.
-- **Severity:** Medium
-- **Recommended fix:** Replace `psql` stdin access with a purpose-built read-only API or SQL wrapper that parses and allowlists `SELECT`/`WITH` statements and rejects meta-commands. Keep the PostgreSQL read-only role as defense in depth.
+### 1. Settlement is not atomic
 
-## Critical and High-Priority Findings
+**File:** `apps/worker/src/app/settleBets.ts:95-99`, `apps/worker/src/app/settleBets.ts:160-172`, `apps/worker/src/app/settleBets.ts:175-193`
 
-### 1. Fixture and bet settlement are not atomic
+**Severity:** High
 
-- **Location:** `apps/worker/src/app/settleBets.ts:95-99`, `apps/worker/src/app/settleBets.ts:160-172`, `apps/worker/src/app/settleBets.ts:175-193`
-- **Explanation:** `recordFinished` marks a fixture as `finished` before `settleFixtureBets` settles the fixture's open bets. The void path has the same ordering: the fixture is marked `void` before individual bets are settled.
-- **Impact:** If the process crashes or a database operation fails after the fixture update but while the bet loop is in progress, the remaining open bets can never be reconsidered because future settlement queries only include fixtures with `scheduled` status.
-- **Severity:** High
-- **Recommended fix:** Perform fixture-result and all h2h bet settlements in one database transaction, or make the repository retry invariant explicit: settle each open bet first and only mark the fixture terminal after every bet has been settled. Add a fault-injection test covering a failure in the middle of the loop.
+**Impact:** `recordFinished` updates the fixture to `finished` or the caller updates it to `void` before `settleFixtureBets` updates each open bet. A process crash or database failure after the fixture update but before the bet loop completes leaves the fixture terminal and all remaining bets open. Future jobs select only `scheduled` fixtures, so those bets are not reconsidered.
 
-## Reliability Findings
+**Recommended fix:** Execute the fixture update and every affected bet settlement inside one database transaction. At minimum, add a repository operation that settles each bet and flips the fixture status atomically. Add a fault-injection test that fails midway through a fixture's bet loop and prove rollback/recovery.
 
-### 1. Telegram-entered stakes can exceed the database integer range
+## Security Vulnerabilities and Risks
 
-- **Location:** `apps/worker/src/app/format.ts:44-60`, `apps/worker/src/app/betFlow.ts:193-197`, `apps/worker/src/app/betFlow.ts:522-539`, `packages/db/src/schema.ts:119`
-- **Explanation:** Stake parsing accepts any positive finite kroner value and converts it to øre. The database column is a 32-bit PostgreSQL integer, but the draft only validates `zod.int()` and has no upper bound.
-- **Impact:** A stake above roughly 21.47 million kroner produces a value above PostgreSQL's integer range, causing the bet insert to fail at runtime. The Telegram error path does not provide a reliable user-facing message for this class of failure.
-- **Severity:** Medium
-- **Recommended fix:** Define and validate an explicit maximum stake in cents/øre before accepting it, and keep the parser, draft schema, and database constraint aligned. Optionally enforce a positive 32-bit-safe range in the database.
+### 1. Read-only SSH access can escape its SQL boundary
+
+**File:** `scripts/read-access/server-setup.sh:32-68`
+
+**Severity:** Medium
+
+**Impact:** `~/bin/db-read` launches unrestricted `psql -U reader` and forwards stdin. PostgreSQL transaction/read-only settings constrain SQL, but `psql` accepts client-side meta-commands such as `\! command` and `\copy`. The read-only role and 30-second statement timeout do not contain those operations.
+
+**Recommended fix:** Replace interactive `psql` stdin access with a purpose-built constrained query service or a parser that accepts only `SELECT`/`WITH` statements and rejects meta-commands. Retain the database role as defense in depth. Test the boundary by attempting shell escape and file read/write meta-commands.
+
+No confirmed application authentication or authorization vulnerability was found. Telegram access is owner-scoped or approval-scoped through player records, and destructive bet callbacks verify ownership through `ownBet` or `removeOwnOpen`.
+
+## Reliability and Failure Scenarios
+
+### 1. Failed scheduled jobs are not retried
+
+**File:** `apps/worker/src/scheduler/runner.ts:44-48`, `apps/worker/src/scheduler/__tests__/runner.test.ts:93-103`
+
+**Severity:** Medium
+
+**Impact:** A claimed job is marked `failed`; subsequent ticks exclude the key, and the key's window is not revisited. This can miss a poll or report when an external dependency fails after its HTTP retries. This behavior is deliberate, but it does not distinguish duplicate prevention from transient failure recovery.
+
+**Recommended fix:** Keep duplicate prevention for succeeded/running work, but allow bounded retries for failed jobs or assign a retry key while preserving at-most-once completion. A crash-safe claim plus idempotent handlers is a cleaner model. Preserve stale-job skipping and expose retry count in job history.
+
+### 2. Stakes can overflow PostgreSQL integers
+
+**File:** `apps/worker/src/app/format.ts:44-60`, `apps/worker/src/app/betFlow.ts:193-197`, `apps/worker/src/app/betFlow.ts:522-539`, `packages/db/src/schema.ts:119`
+
+**Severity:** Medium
+
+**Impact:** `parseKroner` accepts any positive finite amount, and `toOre` converts it to øre. PostgreSQL integer columns reject values above 2,147,483,647 øre, so roughly 21.48 million kroner is not a valid stake despite being accepted by the Telegram flow.
+
+**Recommended fix:** Establish one exported stake range with a maximum safely below the integer limit, validate it in `parseKroner` or draft completion, and optionally add a database check constraint for `stakeOre`.
+
+### 3. Local-only backup storage
+
+**File:** `docker-compose.yml:1-80`, `docker/backup.sh:1-24`
+
+**Severity:** Medium
+
+**Impact:** PostgreSQL data and compressed backups are Docker host volumes on the same server. A host disk failure or complete server loss can destroy both the live database and restore copies.
+
+**Recommended fix:** Copy nightly backups off-host and verify restore status from the remote copy. Preserve the existing local retention for short recovery, but make off-host retention and restore testing an operational requirement.
 
 ## Architecture and Structure
 
-The project is appropriately decomposed into a domain core, database package, configuration package, web app, and worker app. The composition root at `apps/worker/src/compose.ts` is concise and prevents `main.ts` from becoming application logic. Ports/adapters and Zod validation are justified here. Database constraints and repository methods provide meaningful invariants.
+### Assessment
+
+The architecture is maintainable and appropriately simple:
+
+- `packages/core` owns domain rules and pure calculations.
+- `packages/db` owns schema, migrations, constraints, and repository operations.
+- `packages/config` owns startup environment/settings validation.
+- `apps/worker` separates composition, ports/adapters, application flows, and scheduling.
+- `apps/web` is read-only and uses the repository package to load dashboard data.
+
+The composition root in `apps/worker/src/compose.ts` wires integrations once and keeps `main.ts` focused on startup/shutdown. The port/adapters split is justified for external APIs and test doubles. The Telegram and scheduler domains are not hidden behind unnecessary framework abstractions.
 
 No repository-wide architectural blocker was found.
 
-## Redundancy and Cleanup
+## Code Quality
 
-No significant unused dependencies or justified-simplification candidates were identified. The codebase has a few deliberately defensive compatibility checks, but they match real persisted-state and external-API migration risks.
+The implementation is clean and consistent. TypeScript strictness, Zod boundaries, explicit domain types, database constraints, and repository return types are used effectively. Error handling is purposeful, especially in HTTP parsing/retry logic and Telegram polling. Comments explain real invariants rather than restating obvious code.
 
-## Performance and Reliability
+No `as any`, broad silent fallbacks, speculative abstractions, or significant unused-code findings were found.
 
-- **No confirmed scheduler duplicates:** `jobRuns` keys claim jobs atomically before execution.
-- **No major web hot-path issue found:** dashboard totals and leaderboard values are mostly aggregated or limited by the repository.
-- **Main settlement risk:** atomicity, as described above.
-- **HTTP reliability:** retries, timeouts, response validation, credit handling, and bounded backoff are implemented consistently.
+## Performance
+
+- Paid Odds API calls are guarded, credited, bounded, and recorded.
+- Scheduler ticks do not overlap.
+- Dashboard aggregates player totals and limited bet listings through SQL.
+- The odds snapshot table is explicitly indexed and bounded by query intent.
+- HTTP calls have 15-second timeouts and bounded retry backoff.
+
+No major query bottleneck or memory leak was confirmed. The main performance/reliability concerns are failure atomicity and recovery policy rather than routine hot-path operations.
 
 ## Testing
 
-The suite is substantial: 50 test files and 346 tests pass. Existing tests cover the settlement happy path, partial league failures, database constraints, Telegram flows, retries, and the dashboard.
+The suite passes under the current repository checks:
 
-Confirmed missing regressions:
+- 50 test files
+- 346 tests
+- Statement coverage: 97.69%
+- Branch coverage: 91.25%
+- Function coverage: 96.46%
+- Line coverage: 98.49%
+- Typecheck, lint, and Knip pass
 
-- A database or process failure halfway through settling fixture bets is not tested in `apps/worker/src/app/__tests__/settleBets.test.ts`.
-- The database integer range and Telegram stake upper bound are not tested in `apps/worker/src/app/__tests__/betFlow.test.ts` or `packages/db/src/__tests__/repositories.test.ts`.
-- The read-only SSH forced-command boundary is not covered by an executable test or integration check in `scripts/read-access/`.
+Tests exercise real behavior and database constraints, including PGlite and PostgreSQL CI coverage. The strongest gap is not test quantity but recovery invariants:
+
+1. Fault injection between fixture update and individual bet settlement.
+2. Telegram stake values at or beyond the database integer boundary.
+3. Failed-job retry or bounded requeue policy.
+4. Read-only SSH meta-command and file escape attempts.
+5. Real backup restore performed from an off-host copy.
 
 ## AI-Generated Pattern Assessment
 
-The implementation generally avoids AI-generated boilerplate and generic abstractions. Comments are concentrated around non-obvious domain and operational invariants. Defensive parsing is used at external boundaries and for durable JSON state. No speculative service or repository abstraction was identified.
+The code generally does not exhibit excessive AI boilerplate. Validation, adapter separation, comments, and defensive parsing solve real persisted-state or external-data problems. No speculative framework or abstraction was identified that should be removed wholesale.
+
+## Final Production-Readiness Verdict
+
+**Verdict: Nearly production-ready, with one High-priority fix before release.**
+
+The architecture, configuration, domain logic, database design, test suite, and operational tooling are strong. The release blocker is settlement atomicity: a partial database/process failure must not leave a terminal fixture with open bets. After atomic settlement and a bounded retry policy are addressed, the read-only SSH boundary and stake range should be hardened before exposure.
