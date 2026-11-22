@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fixtureNamed, matchFixture, normalizeTeam, sameTeam } from "../teams.ts";
+import { fixtureNamed, matchFixture, normalizeTeam, sameTeam, teamsOf } from "../teams.ts";
 
 import teamNames from "./team-names.json" with { type: "json" };
 
@@ -16,17 +16,20 @@ describe("normalizeTeam", () => {
 });
 
 describe("sameTeam", () => {
-    it.each(Object.keys(LEAGUES))("pairs every %s club one-to-one with the results feed", (league) => {
-        const { oddsApi, footballData } = LEAGUES[league] ?? { oddsApi: [], footballData: [] };
-        for (const name of oddsApi) {
-            const matches = footballData.filter((aliases) => sameTeam(name, aliases));
-            expect(matches, name).toHaveLength(1);
-        }
-        for (const aliases of footballData) {
-            const matches = oddsApi.filter((name) => sameTeam(name, aliases));
-            expect(matches, aliases[0]).toHaveLength(1);
-        }
-    });
+    it.each(Object.entries(LEAGUES))(
+        "pairs every %s club one-to-one with the results feed",
+        (_, { oddsApi, footballData }) => {
+            expect(oddsApi.length).toBeGreaterThan(0);
+            for (const name of oddsApi) {
+                const matches = footballData.filter((aliases) => sameTeam(name, aliases));
+                expect(matches, name).toHaveLength(1);
+            }
+            for (const aliases of footballData) {
+                const matches = oddsApi.filter((name) => sameTeam(name, aliases));
+                expect(matches, aliases[0]).toHaveLength(1);
+            }
+        },
+    );
 
     it("keeps clubs apart when one name sits inside another", () => {
         expect(sameTeam("Barcelona", ["RCD Espanyol de Barcelona", "Espanyol"])).toBe(false);
@@ -114,5 +117,33 @@ describe("fixtureNamed", () => {
         expect(fixtureNamed("Dortmund – Bayern", fixtures)).toBeUndefined();
         expect(fixtureNamed("Manchester – Everton", fixtures)).toBeUndefined();
         expect(fixtureNamed("Bayern", fixtures)).toBeUndefined();
+    });
+});
+
+describe("teamsOf", () => {
+    it("splits a match into its two sides", () => {
+        expect(teamsOf("Bayern – Arsenal")).toEqual(["Bayern", "Arsenal"]);
+        expect(teamsOf("Newcastle United v Everton")).toEqual(["Newcastle United", "Everton"]);
+        expect(teamsOf("Bayern-Dortmund")).toEqual(["Bayern", "Dortmund"]);
+        expect(teamsOf("Bayern")).toEqual([]);
+    });
+
+    it("keeps hyphens inside team names when the separator has spaces", () => {
+        expect(teamsOf("Paris Saint-Germain – Lille")).toEqual(["Paris Saint-Germain", "Lille"]);
+        expect(teamsOf("Lille - Paris Saint-Germain")).toEqual(["Lille", "Paris Saint-Germain"]);
+    });
+});
+
+describe("teamsOf with odd whitespace", () => {
+    it("splits across tabs and runs of spaces", () => {
+        expect(teamsOf("Bayern \t v   Arsenal")).toEqual(["Bayern", "Arsenal"]);
+        expect(teamsOf("Paris Saint-Germain  –  Lille")).toEqual(["Paris Saint-Germain", "Lille"]);
+    });
+
+    it("stays fast on a long run of spaces", () => {
+        const started = performance.now();
+        expect(teamsOf(`a${" ".repeat(50_000)}b`)).toEqual([]);
+        // A quadratic split takes seconds here; the bound is loose so a slow CI runner doesn't fail it.
+        expect(performance.now() - started).toBeLessThan(1_000);
     });
 });

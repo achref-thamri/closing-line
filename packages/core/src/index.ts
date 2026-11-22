@@ -17,7 +17,7 @@ export { dueJobs } from "./schedule.ts";
 export type { JobKind, PlanInput, PlannedJob, UpcomingFixture } from "./schedule.ts";
 export { heldProfitOre, isOutcome, OUTCOMES, outcomeOf, settle1x2, settlesFromScore, toOutcome } from "./settlement.ts";
 export type { BetStatus, MatchResult, Outcome, Settlement } from "./settlement.ts";
-export { fixtureNamed, matchFixture } from "./teams.ts";
+export { fixtureNamed, matchFixture, teamsOf } from "./teams.ts";
 export type { ResultCandidate } from "./teams.ts";
 export { kellyStake, scannerStake } from "./staking.ts";
 export type { StakeRules } from "./staking.ts";
@@ -25,7 +25,7 @@ export { closingLineValue, edge, followerFill, minimumOdds, tipLifetime } from "
 export type { FollowerFill, LaterPrice, SnapshotKind, TipLifetime } from "./value.ts";
 export { cashoutGainOre, impliedOddsFromCashout, priceMove, statsBy } from "./slips.ts";
 export type { SlipStatus } from "./slips.ts";
-export { bookName, pickText, sideName, teamsOf } from "./picks.ts";
+export { bookName, pickText, sideName } from "./picks.ts";
 export { calibration, forecastScores } from "./calibration.ts";
 export type { CalibrationBand, Forecast, MatchForecast } from "./calibration.ts";
 export { GO_LIVE, goLiveCheck, meanWithRange } from "./goLive.ts";

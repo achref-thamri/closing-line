@@ -1,4 +1,15 @@
-import { teamsOf } from "./picks.ts";
+/**
+ * The two sides of "Bayern – Arsenal", "Bayern v Arsenal" or "Bayern-Arsenal"; empty when it does not split. A
+ * separator with spaces around it wins, so "Paris Saint-Germain – Lille" keeps the hyphen in the team name.
+ */
+export function teamsOf(eventName: string): [string, string] | [] {
+    // One space at a time keeps the split linear; runs of whitespace would make these patterns quadratic.
+    const name = eventName.replace(/\s+/g, " ");
+    const spaced = / (?:v|vs|–|-) /i;
+    const parts = name.split(spaced.test(name) ? spaced : / ?[–-] ?/).map((part) => part.trim());
+    const [home, away] = parts;
+    return parts.length === 2 && home && away ? [home, away] : [];
+}
 
 /** Words that only say "football club" and differ between data sources. */
 const FILLER = new Set(["fc", "afc", "cf", "sc", "ac", "the"]);

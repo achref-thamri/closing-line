@@ -1,4 +1,5 @@
 import type { Outcome } from "./settlement.ts";
+import { teamsOf } from "./teams.ts";
 
 /** Display names for bookmaker keys: The Odds API's (tips) and the Danish sites bettors pick in Telegram. */
 const BOOK_NAMES: ReadonlyMap<string, string> = new Map([
@@ -34,19 +35,6 @@ export function bookName(book: string): string {
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" ")
     );
-}
-
-/**
- * The two sides of "Bayern – Arsenal", "Bayern v Arsenal" or "Bayern-Arsenal"; empty when it does not split. A
- * separator with spaces around it wins, so "Paris Saint-Germain – Lille" keeps the hyphen in the team name.
- */
-export function teamsOf(eventName: string): [string, string] | [] {
-    // One space at a time keeps the split linear; runs of whitespace would make these patterns quadratic.
-    const name = eventName.replace(/\s+/g, " ");
-    const spaced = / (?:v|vs|–|-) /i;
-    const parts = name.split(spaced.test(name) ? spaced : / ?[–-] ?/).map((part) => part.trim());
-    const [home, away] = parts;
-    return parts.length === 2 && home && away ? [home, away] : [];
 }
 
 /** The team a match-result selection backs, or "Draw". */
