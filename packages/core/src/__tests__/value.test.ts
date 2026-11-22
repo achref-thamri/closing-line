@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { kellyFraction } from "../staking.ts";
-import { closingLineValue, edge, followerFill, minimumOdds, tipLifetime } from "../value.ts";
+import { closingLineValue, edge, followerFill, minimumOdds, tipLifetime, type LaterPrice } from "../value.ts";
 
 describe("edge", () => {
     it("is the expected profit per unit staked", () => {
@@ -44,7 +44,7 @@ describe("tipLifetime", () => {
     const at = (hours: number) => new Date(sentAt.getTime() + hours * 3_600_000);
 
     it("checks the next poll and the pre-kickoff poll against the tip's odds", () => {
-        const later = [
+        const later: LaterPrice[] = [
             { price: 2.45, takenAt: at(9), kind: "closing" },
             { price: 2.5, takenAt: at(3), kind: "poll" },
             { price: 2.6, takenAt: at(-1), kind: "poll" },
@@ -54,7 +54,7 @@ describe("tipLifetime", () => {
 
     it("knows nothing before a later poll, and takes the last pre-kickoff price", () => {
         expect(tipLifetime({ odds: 2.5, sentAt }, [])).toEqual({ nextPoll: undefined, atClosing: undefined });
-        const twoClosing = [
+        const twoClosing: LaterPrice[] = [
             { price: 2.4, takenAt: at(8.8), kind: "closing" },
             { price: 2.5, takenAt: at(8.9), kind: "closing" },
         ];
@@ -68,7 +68,7 @@ describe("followerFill", () => {
     const tip = { sentAt, minOdds: 2.4 };
 
     it("fills at the next poll when the price is still worth it there, even below the tip's odds", () => {
-        const later = [
+        const later: LaterPrice[] = [
             { price: 2.6, takenAt: at(9), kind: "closing" },
             { price: 2.42, takenAt: at(3), kind: "poll" },
             { price: 2.6, takenAt: at(-1), kind: "poll" },
@@ -77,7 +77,7 @@ describe("followerFill", () => {
     });
 
     it("misses when the next poll's price is under the worth-it price, whatever happens later", () => {
-        const later = [
+        const later: LaterPrice[] = [
             { price: 2.39, takenAt: at(3), kind: "poll" },
             { price: 2.6, takenAt: at(9), kind: "closing" },
         ];

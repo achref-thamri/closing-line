@@ -1,4 +1,5 @@
 import { parseConfig } from "@closing-line/config";
+import type { SnapshotKind } from "@closing-line/core";
 import { createRepositories, openDatabase, type DatabaseHandle, type Repositories } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ensurePlayers, FAVOURITE, SCANNER } from "../players.ts";
@@ -213,7 +214,7 @@ describe("tipsSection", () => {
             sharpFairOddsAtBet: 2.4,
             closingFairOdds: clv === null ? null : 2.45,
         });
-    const seen = (hours: number, price: number, kind = "poll") => ({
+    const seen = (hours: number, price: number, kind: SnapshotKind = "poll") => ({
         price,
         takenAt: new Date(sentAt.getTime() + hours * 3_600_000),
         kind,
@@ -236,7 +237,7 @@ describe("tipsSection", () => {
     });
 
     it("counts a tip next seen just before kickoff without scoring it", () => {
-        const late = { bet: tip(0.03), later: [{ price: 2.5, takenAt: new Date(), kind: "closing" }] };
+        const late = { bet: tip(0.03), later: [seen(1, 2.5, "closing")] };
         expect(tipsSection([late], config.scanner).slice(-1)).toEqual([
             "Bet at the next poll instead: 1 only just before kickoff",
         ]);

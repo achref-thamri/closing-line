@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { goLiveCheck, meanWithRange } from "../goLive.ts";
+import type { BetStatus } from "../settlement.ts";
 
 describe("meanWithRange", () => {
     it("gives the mean and a 95% range from the spread", () => {
@@ -20,7 +21,7 @@ describe("goLiveCheck", () => {
         dayOffset: number,
         profitOre: number,
         clv: number | null,
-        status = profitOre > 0 ? "won" : "lost",
+        status: BetStatus = profitOre > 0 ? "won" : "lost",
     ) => ({
         status,
         stakeOre: 10_000,
