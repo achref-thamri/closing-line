@@ -22,6 +22,7 @@ export const envSchema = zod.object({
     /** Touched every minute by the worker; Docker's health check reads its age. */
     HEARTBEAT_PATH: zod.preprocess(emptyToUndefined, zod.string().min(1).default("data/heartbeat")),
     HEALTHCHECK_PING_URL: zod.preprocess(emptyToUndefined, zod.url({ protocol: /^https$/ }).optional()),
+    BACKUP_PING_URL: zod.preprocess(emptyToUndefined, zod.url({ protocol: /^https$/ }).optional()),
     LOG_LEVEL: zod.preprocess(
         emptyToUndefined,
         zod.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),

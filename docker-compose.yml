@@ -39,6 +39,7 @@ services:
         stop_grace_period: 2m
         volumes:
             - worker-data:/data
+            - backups:/backups:ro
         depends_on:
             postgres:
                 condition: service_healthy

@@ -18,6 +18,8 @@ export interface Config extends Settings {
     database: { kind: "postgres"; url: string } | { kind: "pglite"; dir: string };
     /** External dead man's switch (e.g. healthchecks.io), pinged while the worker runs. */
     healthcheckPingUrl: string | undefined;
+    /** A second check (e.g. healthchecks.io) told every hour whether the nightly backup is fresh. */
+    backupPingUrl: string | undefined;
     heartbeatPath: string;
     logLevel: LogLevel;
 }
@@ -46,6 +48,7 @@ export function parseConfig(env: Record<string, string | undefined>, settings: u
         },
         database: e.DATABASE_URL ? { kind: "postgres", url: e.DATABASE_URL } : { kind: "pglite", dir: e.PGLITE_DIR },
         healthcheckPingUrl: e.HEALTHCHECK_PING_URL,
+        backupPingUrl: e.BACKUP_PING_URL,
         heartbeatPath: e.HEARTBEAT_PATH,
         logLevel: e.LOG_LEVEL,
     };
