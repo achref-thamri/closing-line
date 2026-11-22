@@ -17,8 +17,8 @@ export function normalizeTeam(name: string): string[] {
 
 /**
  * Clubs where the usual word matching goes wrong, keyed by the odds feed's name (normalized), with the
- * football-data.org names they must equal. "Rennes" shares no word with "Stade Rennais FC 1901" (Rennes v Lille went
- * unsettled on 2026-11-08), and the others are contained in a second club's name: "Barcelona" in "RCD Espanyol de
+ * football-data.org names they must equal. "Rennes" shares no word with "Stade Rennais FC 1901", so its matches
+ * would never settle, and the others are contained in a second club's name: "Barcelona" in "RCD Espanyol de
  * Barcelona", "Paris FC" in "Paris Saint-Germain FC", "Inter Milan" holds "AC Milan".
  */
 const PINNED_NAMES: Readonly<Record<string, readonly string[]>> = {
