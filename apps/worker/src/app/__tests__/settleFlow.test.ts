@@ -135,6 +135,22 @@ describe("settling with buttons", () => {
 });
 
 describe("cash-outs", () => {
+    it("asks nothing more when the bet was settled before the cash-out was stored", async () => {
+        const bet = await place();
+        await flow.tap(FRIEND, `st:${bet.id}:c`);
+        // Another tap settles the bet between reading it and storing the cash-out.
+        const racing = new SettleFlow({
+            repos: { ...repos, bets: { ...repos.bets, settle: () => Promise.resolve(false) } },
+            messenger: { send: () => Promise.resolve() },
+            ownerChatId: OWNER,
+            logger: silentLogger,
+            now: () => now,
+        });
+        const reply = await racing.amount(FRIEND, "2557");
+        expect(reply?.text).toMatch(/Already settled\.$/);
+        expect(reply?.keyboard).toBeUndefined();
+    });
+
     it("asks for the amount, records the price it implies, then compares with holding", async () => {
         const bet = await place();
         const [card] = await flow.open(FRIEND);

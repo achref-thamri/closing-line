@@ -96,14 +96,18 @@ export function createTelegramBot(options: {
                 return;
             }
             const data = ctx.callbackQuery.data;
-            const handler = buttons.find((each) => each.owns(data));
-            const reply = handler ? await handler.tap(chatId, data) : { text: "Unknown button." };
-            if (reply.newMessage) {
-                await sendAll(ctx, [reply]);
-            } else {
-                await ctx.editMessageText(reply.text, replyOptions(reply));
+            try {
+                const handler = buttons.find((each) => each.owns(data));
+                const reply = handler ? await handler.tap(chatId, data) : { text: "Unknown button." };
+                if (reply.newMessage) {
+                    await sendAll(ctx, [reply]);
+                } else {
+                    await ctx.editMessageText(reply.text, replyOptions(reply));
+                }
+            } finally {
+                // Even when the flow or Telegram fails, or the button keeps spinning on the bettor's phone.
+                await ctx.answerCallbackQuery();
             }
-            await ctx.answerCallbackQuery();
         });
 
         bot.on("message:text", async (ctx) => {
