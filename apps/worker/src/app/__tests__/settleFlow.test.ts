@@ -7,11 +7,10 @@ import {
 } from "@closing-line/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { silentLogger } from "../../lib/logger.ts";
+import { button, FRIEND, OWNER } from "../../__tests__/helpers.ts";
 import type { Reply } from "../chat.ts";
 import { SettleFlow } from "../settleFlow.ts";
 
-const OWNER = 100;
-const FRIEND = 200;
 const now = new Date("2026-11-08T22:00:00Z");
 
 let handle: DatabaseHandle;
@@ -71,12 +70,6 @@ async function place(overrides: Partial<NewBet> = {}) {
     });
     if (!bet) throw new Error("not placed");
     return bet;
-}
-
-function button(reply: Reply | undefined, label: string): string {
-    const found = reply?.keyboard?.flat().find((candidate) => candidate.text.includes(label));
-    if (!found) throw new Error(`no ${label} button`);
-    return found.data;
 }
 
 describe("/open", () => {

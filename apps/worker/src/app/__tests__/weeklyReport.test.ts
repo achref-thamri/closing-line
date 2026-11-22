@@ -103,7 +103,8 @@ describe("weeklyReport", () => {
                 selfReported: true,
                 tag,
             });
-            await repos.bets.settle(bet?.id ?? "", {
+            if (!bet) throw new Error("the bet wasn't placed");
+            await repos.bets.settle(bet.id, {
                 status,
                 profitOre: status === "won" ? 200_000 : -100_000,
                 settledAt: now,

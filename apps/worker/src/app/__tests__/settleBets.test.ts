@@ -109,7 +109,7 @@ describe("settleBets for a league without football-data.org results", () => {
         expect(await repos.bets.forPlayer(SCANNER)).toMatchObject([{ status: "won", profitOre: 22_000 }]);
     });
 
-    it("asks for scores only once a day, in the 22:00 UTC run", async () => {
+    it("doesn't ask for scores outside the 22:00 UTC run", async () => {
         const run = deps([]);
         await settleBets(run);
         expect(run.fetchScores).not.toHaveBeenCalled();

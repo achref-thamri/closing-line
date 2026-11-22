@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { botInfo } from "./helpers.ts";
 import { parseConfig } from "@closing-line/config";
 import { createRepositories, openDatabase, type DatabaseHandle } from "@closing-line/db";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,21 +37,6 @@ afterEach(() => {
 });
 
 /** Composes the worker with Telegram answered locally; returns the chats each message went to. */
-const botInfo = {
-    id: 9,
-    is_bot: true,
-    first_name: "Closing Line",
-    username: "closing_line_test_bot",
-    can_join_groups: false,
-    can_read_all_group_messages: false,
-    supports_inline_queries: false,
-    can_connect_to_business: false,
-    has_main_web_app: false,
-    has_topics_enabled: false,
-    allows_users_to_create_topics: false,
-    can_manage_bots: false,
-    supports_join_request_queries: false,
-} as const;
 
 function composeOffline(now?: () => Date): { worker: Worker; chats: number[] } {
     const worker = compose({ config, db: handle.db, logger: silentLogger, botInfo, ...(now ? { now } : {}) });

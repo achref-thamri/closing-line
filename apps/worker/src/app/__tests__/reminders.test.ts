@@ -23,9 +23,14 @@ beforeEach(async () => {
     ]);
 });
 
+/** When the bets are logged; the reminders run hours later on the same fixed clock. */
+const loggedAt = new Date("2026-11-07T08:00:00Z");
+const hoursLater = (hours: number) => new Date(loggedAt.getTime() + hours * 3_600_000);
+
 function slipBet(playerId: string) {
     return repos.bets.place({
         playerId,
+        createdAt: loggedAt,
         eventName: "A – B",
         market: "player_shots_on_target",
         selection: "over",
@@ -43,10 +48,10 @@ describe("remindOpenBets", () => {
         await slipBet("owner");
         const send = vi.fn((_chatId: number, _text: string) => Promise.resolve());
 
-        const soon = await remindOpenBets({ repos, send, now: () => new Date(Date.now() + 3_600_000) });
+        const soon = await remindOpenBets({ repos, send, now: () => hoursLater(1) });
         expect(soon).toBe(0);
 
-        const later = new Date(Date.now() + 13 * 3_600_000);
+        const later = hoursLater(13);
         expect(await remindOpenBets({ repos, send, now: () => later })).toBe(2);
         expect(send.mock.calls).toEqual([
             [1, expect.stringMatching(/^🔔 You have 1 open bet from earlier/) as string],
@@ -55,11 +60,12 @@ describe("remindOpenBets", () => {
     });
 
     it("leaves out match results on tracked fixtures, which settle themselves", async () => {
-        const kickoff = new Date(Date.now() + 2 * 3_600_000);
+        const kickoff = hoursLater(2);
         await repos.fixtures.upsert([{ id: "f1", league: "soccer_epl", homeTeam: "A", awayTeam: "B", kickoff }]);
         await repos.bets.place({
             playerId: "tg_2",
             fixtureId: "f1",
+            createdAt: loggedAt,
             eventName: "A – B",
             market: "h2h",
             selection: "home",
@@ -69,10 +75,10 @@ describe("remindOpenBets", () => {
             selfReported: true,
         });
         const send = vi.fn((_chatId: number, _text: string) => Promise.resolve());
-        expect(await remindOpenBets({ repos, send, now: () => new Date(Date.now() + 13 * 3_600_000) })).toBe(0);
+        expect(await remindOpenBets({ repos, send, now: () => hoursLater(13) })).toBe(0);
 
         await slipBet("tg_2");
-        expect(await remindOpenBets({ repos, send, now: () => new Date(Date.now() + 13 * 3_600_000) })).toBe(1);
+        expect(await remindOpenBets({ repos, send, now: () => hoursLater(13) })).toBe(1);
         expect(send.mock.calls[0]?.[1]).toMatch(/^🔔 You have 1 open bet from earlier/);
     });
 });
