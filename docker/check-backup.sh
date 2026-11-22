@@ -8,7 +8,10 @@ SCRATCH=restore_check
 dump=$(ls -t /backups/closing-line-*.sql.gz 2>/dev/null | head -n 1 || true)
 if [ -z "$dump" ]; then
     dump=/tmp/closing-line-check.sql.gz
-    pg_dump --no-owner | gzip > "$dump"
+    # A plain file first, as backup.sh does: in a pipe a failed pg_dump would leave a short dump that looks fine.
+    pg_dump --no-owner > /tmp/closing-line-check.sql
+    gzip -c /tmp/closing-line-check.sql > "$dump"
+    rm -f /tmp/closing-line-check.sql
     echo "no nightly backup yet; made a fresh dump the same way"
 fi
 echo "restoring $dump ($(du -h "$dump" | cut -f1))"

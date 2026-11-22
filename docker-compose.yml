@@ -29,6 +29,8 @@ services:
             dockerfile: docker/Dockerfile
         image: closing-line-worker:latest
         restart: unless-stopped
+        # A small init as PID 1 passes SIGTERM on and reaps children; a bare sh or node there can miss it.
+        init: true
         env_file: .env
         environment:
             DATABASE_URL: postgres://closing_line:${POSTGRES_PASSWORD}@postgres:5432/closing_line
@@ -50,6 +52,8 @@ services:
             dockerfile: docker/web.Dockerfile
         image: closing-line-web:latest
         restart: unless-stopped
+        # A small init as PID 1 passes SIGTERM on and reaps children; a bare sh or node there can miss it.
+        init: true
         environment:
             DATABASE_URL: postgres://closing_line:${POSTGRES_PASSWORD}@postgres:5432/closing_line
         # Only on the server's loopback: open it through an SSH tunnel (see docs/operations.md).
@@ -64,6 +68,8 @@ services:
     backup:
         image: postgres:18@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b547f540c730478583
         restart: unless-stopped
+        # A small init as PID 1 passes SIGTERM on and reaps children; a bare sh or node there can miss it.
+        init: true
         entrypoint: ["/bin/sh", "/backup.sh"]
         environment:
             PGHOST: postgres

@@ -1,6 +1,8 @@
 name: Deploy
 
-# Ships main to the server after CI passes on it. The deploy key may only run scripts/server-deploy.sh there.
+# Ships main to the server after CI passes on it. A manual run ships main as it is, to redo a deploy that lost the
+# server's deploy lock; main only changes through PRs whose checks passed. The deploy key may only run
+# scripts/server-deploy.sh there.
 on:
     workflow_run:
         workflows: [CI]
@@ -27,6 +29,7 @@ jobs:
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
+                  persist-credentials: false
                   ref: ${{ github.event.workflow_run.head_sha || github.sha }}
             - name: Set up SSH
               env:
