@@ -21,7 +21,7 @@ const MARKETS = {
 } as const;
 type MarketKey = keyof typeof MARKETS;
 const MARKET_KEYS = Object.keys(MARKETS) as [MarketKey, ...MarketKey[]];
-const isMarketKey = (value: string): value is MarketKey => value in MARKETS;
+const isMarketKey = (value: string): value is MarketKey => Object.hasOwn(MARKETS, value);
 
 const SPORTS = ["football", "counter_strike"] as const;
 type Sport = (typeof SPORTS)[number];

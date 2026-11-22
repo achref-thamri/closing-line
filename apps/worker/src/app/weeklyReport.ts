@@ -27,9 +27,7 @@ const WEEK_MS = 7 * 86_400_000;
 /** Settled bets per reason before comparing reasons is worth a lesson. */
 const LESSON_MIN_BETS = 5;
 
-const TAG_LABELS: Record<string, string> = Object.fromEntries(
-    Object.values(TAGS).map(({ tag, label }) => [tag, label]),
-);
+const TAG_LABELS: ReadonlyMap<string, string> = new Map(Object.values(TAGS).map(({ tag, label }) => [tag, label]));
 
 export interface WeeklyReportDeps {
     repos: Pick<Repositories, "players" | "bets" | "apiUsage" | "decisions">;
@@ -305,7 +303,7 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
     if (bets.length === 0) return { lines, lessons };
 
     const byTag = statsBy(bets, (bet) => bet.tag);
-    if (byTag.size > 0) lines.push(`By reason: ${groupText(byTag, (tag) => TAG_LABELS[tag] ?? tag)}`);
+    if (byTag.size > 0) lines.push(`By reason: ${groupText(byTag, (tag) => TAG_LABELS.get(tag) ?? tag)}`);
     const bySport = statsBy(bets, (bet) => (bet.sport === "counter_strike" ? "Counter-Strike" : "Football"));
     if (bySport.size > 1) lines.push(`By sport: ${groupText(bySport, (sport) => sport)}`);
 
@@ -341,7 +339,7 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
         .sort((a, b) => (b[1].roi ?? 0) - (a[1].roi ?? 0));
     const [best, worst] = [ranked[0], ranked.at(-1)];
     if (ranked.length >= 2 && best && worst) {
-        const label = (tag: string) => TAG_LABELS[tag] ?? tag;
+        const label = (tag: string) => TAG_LABELS.get(tag) ?? tag;
         lessons.unshift(
             `${name}'s ${label(best[0])} bets return ${percent(best[1].roi)} over ${best[1].settled}, ` +
                 `${label(worst[0])} bets ${percent(worst[1].roi)} over ${worst[1].settled}. ` +

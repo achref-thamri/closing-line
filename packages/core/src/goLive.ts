@@ -104,8 +104,13 @@ export function goLiveCheck(input: {
     };
 }
 
+/** The same day `months` later, or the month's last day when it is shorter: 30 Nov + 3 months is 28 Feb. */
 function addMonths(date: Date, months: number): Date {
     const next = new Date(date);
+    const day = next.getUTCDate();
+    next.setUTCDate(1);
     next.setUTCMonth(next.getUTCMonth() + months);
+    const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+    next.setUTCDate(Math.min(day, lastDay));
     return next;
 }

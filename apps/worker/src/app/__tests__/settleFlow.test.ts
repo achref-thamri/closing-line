@@ -123,6 +123,8 @@ describe("settling with buttons", () => {
         const bet = await place();
         expect((await flow.tap(OWNER, `st:${bet.id}:w`)).text).toBe("That bet is not yours or no longer exists.");
         expect((await flow.tap(FRIEND, `st:${bet.id}:x`)).text).toBe("Unknown button.");
+        // A forged key that only an object prototype has.
+        expect((await flow.tap(FRIEND, `st:${bet.id}:constructor`)).text).toBe("Unknown button.");
         expect([flow.owns(`st:${bet.id}:w`), flow.owns(`hd:${bet.id}:w`), flow.owns("w:football")]).toEqual([
             true,
             true,
