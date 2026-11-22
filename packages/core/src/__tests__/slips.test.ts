@@ -1,7 +1,8 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { MetricsBet } from "../metrics.ts";
-import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout, priceMove, statsBy } from "../slips.ts";
+import { heldProfitOre } from "../settlement.ts";
+import { cashoutGainOre, impliedOddsFromCashout, priceMove, statsBy } from "../slips.ts";
 
 describe("heldProfitOre", () => {
     const bet = { stakeOre: 150_000, lockedOdds: 3.7 };

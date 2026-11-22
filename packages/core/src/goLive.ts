@@ -1,3 +1,4 @@
+import type { BetStatus } from "./settlement.ts";
 /** The spec's go-live rule: what a player needs before real money. */
 export const GO_LIVE = { bets: 300, months: 3, maxDrawdown: 0.3 } as const;
 
@@ -24,7 +25,7 @@ export function meanWithRange(values: readonly number[]): MeanWithRange | undefi
 }
 
 export interface GoLiveBet {
-    status: string;
+    status: BetStatus;
     stakeOre: number;
     profitOre: number | null;
     clv: number | null;
