@@ -37,7 +37,6 @@ afterEach(() => {
 });
 
 /** Composes the worker with Telegram answered locally; returns the chats each message went to. */
-
 function composeOffline(now?: () => Date): { worker: Worker; chats: number[] } {
     const worker = compose({ config, db: handle.db, logger: silentLogger, botInfo, ...(now ? { now } : {}) });
     const chats: number[] = [];

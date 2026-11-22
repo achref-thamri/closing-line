@@ -1,7 +1,7 @@
 import { bookName, brokenScannerRule, pickText, type BrokenScannerRule } from "@closing-line/core";
 import type { BetWithFixture, Player } from "@closing-line/db";
 import { odds, percent, shortDate, signedKroner, kroner } from "../lib/format.ts";
-import { groupBets } from "../lib/groups.ts";
+import { groupBets, startOf } from "../lib/groups.ts";
 import { SCANNER_RULES, TIME_ZONE } from "../lib/rules.ts";
 import { playerColour } from "./players.ts";
 
@@ -109,7 +109,7 @@ function betRow(bet: BetWithFixture, players: Map<string, Player>): BetRow {
         id: bet.id,
         player: player?.name ?? bet.playerId,
         colour: player ? playerColour(player) : undefined,
-        when: shortDate(bet.fixture?.kickoff ?? bet.receivedAt ?? bet.createdAt, TIME_ZONE),
+        when: shortDate(startOf(bet), TIME_ZONE),
         logged: bet.fixture === null,
         match: match(bet),
         pick: pick(bet),
@@ -123,6 +123,24 @@ function betRow(bet: BetWithFixture, players: Map<string, Player>): BetRow {
         resultStyle: STATUS_STYLE[bet.status],
     };
 }
+
+/** The desktop table's columns; the group headings span all of them. */
+const COLUMNS: { label: string; right?: true; title?: string }[] = [
+    { label: "Match time" },
+    { label: "Player" },
+    { label: "Match" },
+    { label: "Pick" },
+    { label: "Bookmaker" },
+    { label: "Reason" },
+    { label: "Odds", right: true },
+    { label: "Stake", right: true },
+    {
+        label: "CLV",
+        right: true,
+        title: "Closing line value: the odds taken against Pinnacle's fair price just before kickoff",
+    },
+    { label: "Result", right: true },
+];
 
 interface RowGroup {
     key: string;
@@ -151,28 +169,22 @@ export function BetsTable({
                 <table className="w-full text-sm" data-testid="bets-table">
                     <thead className="bg-zinc-50 text-left text-xs text-zinc-500 dark:bg-zinc-900">
                         <tr>
-                            <th className="px-3 py-2 font-medium">Match time</th>
-                            <th className="px-3 py-2 font-medium">Player</th>
-                            <th className="px-3 py-2 font-medium">Match</th>
-                            <th className="px-3 py-2 font-medium">Pick</th>
-                            <th className="px-3 py-2 font-medium">Bookmaker</th>
-                            <th className="px-3 py-2 font-medium">Reason</th>
-                            <th className="px-3 py-2 text-right font-medium">Odds</th>
-                            <th className="px-3 py-2 text-right font-medium">Stake</th>
-                            <th
-                                className="px-3 py-2 text-right font-medium"
-                                title="Closing line value: the odds taken against Pinnacle's fair price just before kickoff"
-                            >
-                                CLV
-                            </th>
-                            <th className="px-3 py-2 text-right font-medium">Result</th>
+                            {COLUMNS.map((column) => (
+                                <th
+                                    key={column.label}
+                                    className={`px-3 py-2 font-medium ${column.right ? "text-right" : ""}`}
+                                    title={column.title}
+                                >
+                                    {column.label}
+                                </th>
+                            ))}
                         </tr>
                     </thead>
                     {groups.map((group) => (
                         <tbody key={group.key} className="divide-y divide-zinc-100 dark:divide-zinc-900">
                             <tr className="bg-zinc-50/60 dark:bg-zinc-900/60">
                                 <th
-                                    colSpan={10}
+                                    colSpan={COLUMNS.length}
                                     scope="colgroup"
                                     className="px-3 pt-4 pb-1 text-left text-xs font-semibold text-zinc-600 dark:text-zinc-300"
                                 >
@@ -220,7 +232,13 @@ export function BetsTable({
 }
 
 function PlayerDot({ colour, className }: { colour: string | undefined; className: string }) {
-    return <span className={`${className} inline-block size-2 rounded-full`} style={{ background: colour }} />;
+    return (
+        <span
+            aria-hidden="true"
+            className={`${className} inline-block size-2 rounded-full`}
+            style={{ background: colour }}
+        />
+    );
 }
 
 /** Phones: one block per bet, match and pick first, so nothing important is off screen. */
