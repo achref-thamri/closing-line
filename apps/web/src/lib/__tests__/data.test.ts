@@ -9,8 +9,8 @@ describe("byClv", () => {
     });
 
     it("ranks players with enough closing prices by CLV, whatever their profit", () => {
-        const scanner = player("scanner", 0.013, 52, -0.05);
-        const favourite = player("favourite", -0.017, 70, 0.01);
+        const scanner = player("scanner", 0.013, MIN_CLV_BETS_TO_RANK + 22, -0.05);
+        const favourite = player("favourite", -0.017, MIN_CLV_BETS_TO_RANK + 40, 0.01);
         const lucky = player("friend", undefined, 0, 0.19);
         const fewClv = player("owner", 0.048, 1, 0.02);
         expect([lucky, favourite, fewClv, scanner].sort(byClv).map((entry) => entry.id)).toEqual([
@@ -24,11 +24,10 @@ describe("byClv", () => {
     });
 
     it("orders unranked players by how close they are to ranking, then by growth", () => {
-        const a = player("a", 0.1, 10, 0);
-        const b = player("b", 0.1, 10, 0.5);
-        const c = player("c", -0.1, 20, 0);
+        const a = player("a", 0.1, MIN_CLV_BETS_TO_RANK - 20, 0);
+        const b = player("b", 0.1, MIN_CLV_BETS_TO_RANK - 20, 0.5);
+        const c = player("c", -0.1, MIN_CLV_BETS_TO_RANK - 10, 0);
         expect([a, b, c].sort(byClv).map((entry) => entry.id)).toEqual(["c", "b", "a"]);
-        expect(MIN_CLV_BETS_TO_RANK).toBe(30);
     });
 });
 
