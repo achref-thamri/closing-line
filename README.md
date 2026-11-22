@@ -78,8 +78,8 @@ keys, how to pick bookmakers outside Denmark, and how to host it on your own ser
 
 ## Status
 
-Live since 1 November 2026 on the Premier League, Championship, Bundesliga, La Liga, Serie A and Ligue 1, and on
-Serie B and the Belgian Pro League since 15 November, on free data plans. A player qualifies for real money only
+Runs on paper on eight leagues (the Premier League, Championship, Bundesliga, La Liga, Serie A, Ligue 1, Serie B and
+the Belgian Pro League), on free data plans. A player qualifies for real money only
 after 300 settled bets over at least three months, with positive average CLV, a better ROI than the favourite
 benchmark, and a drawdown under 30%. For the scanner only bets its current rules would place count (ADR 0012); the
 dashboard shows where it stands.

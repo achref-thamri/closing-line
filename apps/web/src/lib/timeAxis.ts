@@ -1,17 +1,9 @@
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 /** Tick steps from fine to coarse; the finest that keeps the axis within `maxTicks` wins. */
-const STEPS_MS = [
-    HOUR_MS,
-    3 * HOUR_MS,
-    6 * HOUR_MS,
-    12 * HOUR_MS,
-    DAY_MS,
-    2 * DAY_MS,
-    7 * DAY_MS,
-    14 * DAY_MS,
-    28 * DAY_MS,
-];
+const STEPS_MS = [HOUR_MS, 3 * HOUR_MS, 6 * HOUR_MS, 12 * HOUR_MS, DAY_MS, 2 * DAY_MS, 7 * DAY_MS, 14 * DAY_MS];
+/** Used when even the coarsest step in `STEPS_MS` gives too many ticks. */
+const LONGEST_STEP_MS = 28 * DAY_MS;
 
 export interface TimeAxis {
     ticks: number[];
@@ -25,8 +17,7 @@ export interface TimeAxis {
  */
 export function timeAxis(from: number, to: number, timeZone: string, maxTicks = 7): TimeAxis {
     const span = to - from;
-    const step =
-        STEPS_MS.find((candidate) => span / candidate <= maxTicks - 1) ?? STEPS_MS[STEPS_MS.length - 1] ?? DAY_MS;
+    const step = STEPS_MS.find((candidate) => span / candidate <= maxTicks - 1) ?? LONGEST_STEP_MS;
     const withTime = step < DAY_MS;
     const label = (timestamp: number) =>
         new Date(timestamp).toLocaleString("en-GB", {
