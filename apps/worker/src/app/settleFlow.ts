@@ -1,4 +1,4 @@
-import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout } from "@closing-line/core";
+import { cashoutGainOre, heldProfitOre, impliedOddsFromCashout, toOre } from "@closing-line/core";
 import type { Bet, Repositories, Settlement } from "@closing-line/db";
 import * as zod from "zod";
 import type { Logger } from "../lib/logger.ts";
@@ -88,7 +88,7 @@ export class SettleFlow implements ButtonHandler {
         await this.deps.repos.chats.remove(chatId, "cashout");
         const bet = await this.ownBet(chatId, stored.data.betId);
         if (bet?.status !== "open") return { text: "That bet is already settled." };
-        return this.cashOut(chatId, bet, Math.round(amount * 100));
+        return this.cashOut(chatId, bet, toOre(amount));
     }
 
     private async cashOut(chatId: number, bet: Bet, offerOre: number): Promise<Reply> {

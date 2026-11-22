@@ -19,6 +19,9 @@ import type { Logger } from "./lib/logger.ts";
 import { createTextSender, type Notify } from "./lib/telegram.ts";
 import type { JobHandlers, JobOutcome, RunnerDeps } from "./scheduler/runner.ts";
 
+/** The Odds API charges 2 credits for a scores call that reaches back a few days (`daysFrom`). */
+const SCORES_CALL_CREDITS = 2;
+
 /** Everything the worker runs, wired once; `main.ts` only starts and stops it. */
 export interface Worker {
     repos: Repositories;
@@ -73,7 +76,7 @@ export function compose(options: {
     const pollDeps = { source: odds, guard, repos, config, now, notify, tip, priceGone };
     // Scores settle bets, so they spend at closing priority: past the daily allowance, never into the reserve.
     const scores = async (league: string) => {
-        const spent = await guard.spend(2, "closing", () => odds.scores(league));
+        const spent = await guard.spend(SCORES_CALL_CREDITS, "closing", () => odds.scores(league));
         if (!spent.ok) logger.warn({ league, reason: spent.reason }, "scores skipped");
         return spent.ok ? spent.data : undefined;
     };

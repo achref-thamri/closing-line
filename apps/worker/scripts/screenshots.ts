@@ -47,49 +47,52 @@ const tip: Tip = {
 /** A /log conversation as the real bet flow answers it. */
 async function logConversation(): Promise<Message[]> {
     const handle = await openDatabase({ kind: "pglite" });
-    const repos = createRepositories(handle.db);
-    const config = parseConfig({
-        ODDS_API_KEY: "demo",
-        FOOTBALL_DATA_TOKEN: "demo",
-        TELEGRAM_BOT_TOKEN: "1:demo",
-        TELEGRAM_OWNER_CHAT_ID: String(OWNER),
-    });
-    const messenger = { send: () => Promise.resolve() };
-    const now = () => new Date("2026-11-07T13:40:00Z");
-    const bettors = new Bettors({ repos, config, messenger, now });
-    const flow = new BetFlow({ repos, bettors, config, messenger, logger: silentLogger, now });
+    try {
+        const repos = createRepositories(handle.db);
+        const config = parseConfig({
+            ODDS_API_KEY: "demo",
+            FOOTBALL_DATA_TOKEN: "demo",
+            TELEGRAM_BOT_TOKEN: "1:demo",
+            TELEGRAM_OWNER_CHAT_ID: String(OWNER),
+        });
+        const messenger = { send: () => Promise.resolve() };
+        const now = () => new Date("2026-11-07T13:40:00Z");
+        const bettors = new Bettors({ repos, config, messenger, now });
+        const flow = new BetFlow({ repos, bettors, config, messenger, logger: silentLogger, now });
 
-    const messages: Message[] = [];
-    let last: Reply = { text: "" };
-    const bot = (reply: Reply) => {
-        last = reply;
-        messages.push({ from: "bot", text: reply.text, keyboard: reply.keyboard });
-    };
-    const tap = async (label: string) => {
-        const button = last.keyboard?.flat().find((each) => each.text.includes(label));
-        if (!button) throw new Error(`no ${label} button`);
-        messages.push({ from: "bettor", text: `[${button.text}]` });
-        bot(await flow.tap(OWNER, button.data));
-    };
-    const type = async (text: string) => {
-        messages.push({ from: "bettor", text });
-        const [reply] = await flow.text(OWNER, text);
-        if (reply) bot(reply);
-    };
+        const messages: Message[] = [];
+        let last: Reply = { text: "" };
+        const bot = (reply: Reply) => {
+            last = reply;
+            messages.push({ from: "bot", text: reply.text, keyboard: reply.keyboard });
+        };
+        const tap = async (label: string) => {
+            const button = last.keyboard?.flat().find((each) => each.text.includes(label));
+            if (!button) throw new Error(`no ${label} button`);
+            messages.push({ from: "bettor", text: `[${button.text}]` });
+            bot(await flow.tap(OWNER, button.data));
+        };
+        const type = async (text: string) => {
+            messages.push({ from: "bettor", text });
+            const [reply] = await flow.text(OWNER, text);
+            if (reply) bot(reply);
+        };
 
-    messages.push({ from: "bettor", text: "/log" });
-    bot(await flow.bet(OWNER));
-    await tap("Football");
-    await type("Arsenal v Chelsea");
-    await tap("Shots on target");
-    await type("Saka");
-    await tap("Over 0.5");
-    await tap("Bet25");
-    await type("1.85");
-    await type("500");
-    await tap("Lineup");
-    await handle.close();
-    return messages;
+        messages.push({ from: "bettor", text: "/log" });
+        bot(await flow.bet(OWNER));
+        await tap("Football");
+        await type("Arsenal v Chelsea");
+        await tap("Shots on target");
+        await type("Saka");
+        await tap("Over 0.5");
+        await tap("Bet25");
+        await type("1.85");
+        await type("500");
+        await tap("Lineup");
+        return messages;
+    } finally {
+        await handle.close();
+    }
 }
 
 function escape(text: string): string {
@@ -128,21 +131,29 @@ function chat(title: string, messages: Message[]): string {
 }
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ deviceScaleFactor: 2 });
+try {
+    const page = await browser.newPage({ deviceScaleFactor: 2 });
 
-// The top of the page: leaderboard, chart and the first bets. 1440 px shows every column of the table.
-await page.setViewportSize({ width: 1440, height: 1000 });
-await page.goto("http://localhost:3100");
-await page.getByTestId("bankroll-chart").locator("svg").first().waitFor();
-await page.screenshot({ path: join(images, "dashboard-demo.png") });
+    // The top of the page: leaderboard, chart and the first bets. 1440 px shows every column of the table.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("http://localhost:3100");
+    // Real bets must never end up in the README: stop unless the dashboard is running on demo data.
+    if ((await page.getByText("Demo data").count()) === 0) {
+        throw new Error("the dashboard on port 3100 isn't showing demo data; start it without DATABASE_URL");
+    }
+    await page.getByTestId("bankroll-chart").locator("svg").first().waitFor();
+    await page.screenshot({ path: join(images, "dashboard-demo.png") });
 
-await page.setViewportSize({ width: 452, height: 400 });
-const tipText = formatTip(tip, "Europe/Copenhagen") ?? "";
-await page.setContent(chat("Closing Line (example tip)", [{ from: "bot", text: tipText, keyboard: tipKeyboard(tip) }]));
-await page.locator("main").screenshot({ path: join(images, "telegram-tip.png") });
+    await page.setViewportSize({ width: 452, height: 400 });
+    const tipText = formatTip(tip, "Europe/Copenhagen") ?? "";
+    await page.setContent(
+        chat("Closing Line (example tip)", [{ from: "bot", text: tipText, keyboard: tipKeyboard(tip) }]),
+    );
+    await page.locator("main").screenshot({ path: join(images, "telegram-tip.png") });
 
-await page.setContent(chat("Closing Line (example /log)", await logConversation()));
-await page.locator("main").screenshot({ path: join(images, "telegram-log.png") });
-
-await browser.close();
+    await page.setContent(chat("Closing Line (example /log)", await logConversation()));
+    await page.locator("main").screenshot({ path: join(images, "telegram-log.png") });
+} finally {
+    await browser.close();
+}
 console.log("wrote dashboard-demo.png, telegram-tip.png and telegram-log.png");

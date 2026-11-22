@@ -1,5 +1,5 @@
 import type { Config } from "@closing-line/config";
-import { bookName, fixtureNamed, isOutcome, teamsOf } from "@closing-line/core";
+import { bookName, fixtureNamed, isOutcome, teamsOf, toOre } from "@closing-line/core";
 import type { Bet, NewBet, Repositories } from "@closing-line/db";
 import * as zod from "zod";
 import type { Logger } from "../lib/logger.ts";
@@ -193,7 +193,7 @@ export class BetFlow implements ButtonHandler {
             case "stake": {
                 const amount = parseKroner(answer);
                 if (amount === undefined) return { text: "The stake in kroner, e.g. 1500" };
-                draft.stakeOre = Math.round(amount * 100);
+                draft.stakeOre = toOre(amount);
                 return this.ask(pending, "reason");
             }
             case "sport":
@@ -454,6 +454,8 @@ export class BetFlow implements ButtonHandler {
             return INCOMPLETE;
         }
         const draft = complete.data;
+        // Only the owner can get here without a player row (anyone else got one, with their name, when approved),
+        // and the owner's row is always named "Owner", so no name is needed.
         const playerId = await this.deps.bettors.ensure(chatId, "");
         const bet = this.toBet(playerId, draft, TAGS[tagKey].tag);
         const card = describeBet(cardOf(draft));
@@ -480,7 +482,7 @@ export class BetFlow implements ButtonHandler {
                 text: `📝 ${name} logged:\n${card}\n${TAGS[tagKey].label}`,
             });
         }
-        const cap = this.deps.config.bettors.maxBankrollFraction * this.deps.config.bettors.startingBankroll * 100;
+        const cap = toOre(this.deps.config.bettors.maxBankrollFraction * this.deps.config.bettors.startingBankroll);
         const capNote = draft.stakeOre > cap ? `\nNote: the stake is above the ${kroner(cap)} cap.` : "";
         return { text: `${card}\n\n✅ Logged as ${TAGS[tagKey].label}.${capNote}\n/log logs another.` };
     }

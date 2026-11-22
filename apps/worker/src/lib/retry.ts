@@ -32,6 +32,8 @@ export async function retry<T>(fn: (attempt: number) => Promise<T>, options: Ret
             return await fn(attempt);
         } catch (error) {
             if (!(error instanceof TransientError) || attempt >= attempts) throw error;
+            // A wait longer than we'd ever back off (a daily quota, say) would stall every job behind this one.
+            if ((error.retryAfterMs ?? 0) > maxDelayMs) throw error;
             const backoff = random() * Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1));
             const delayMs = Math.round(Math.max(backoff, error.retryAfterMs ?? 0));
             onRetry?.(error, attempt, delayMs);
