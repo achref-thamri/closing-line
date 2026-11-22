@@ -130,6 +130,13 @@ describe("bet bot", () => {
         expect(sent("answerCallbackQuery")).toHaveLength(4);
     });
 
+    it("still answers the tap when the flow throws, so the button stops spinning", async () => {
+        const tap = vi.fn().mockRejectedValue(new Error("database down"));
+        const bot = setup({ bets: { tap } });
+        await expect(bot.handleUpdate(tapUpdate("w:football"))).rejects.toThrow("database down");
+        expect(sent("answerCallbackQuery")).toHaveLength(1);
+    });
+
     it("answers a tap with a new message when asked, leaving the tapped message (a tip) as it is", async () => {
         const tap = vi.fn().mockResolvedValue({ text: "Did you get 3.25?", newMessage: true });
         const bot = setup({ bets: { tap } });

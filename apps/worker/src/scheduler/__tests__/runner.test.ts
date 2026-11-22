@@ -78,6 +78,18 @@ describe("tick", () => {
         });
     });
 
+    it("doesn't call a job failed when only storing its result fails", async () => {
+        const finish = vi.fn(() => Promise.reject(new Error("connection reset")));
+        const failingStore = {
+            ...deps("2026-11-07T05:20:00Z", {}),
+            repos: { ...repos, runs: { ...repos.runs, finish } },
+        };
+        await tick(failingStore);
+        expect(finish).toHaveBeenCalled();
+        expect(messages.length).toBeGreaterThan(0);
+        expect(messages.every((message) => message.includes("couldn't be stored"))).toBe(true);
+    });
+
     it("records and reports a failed job, then carries on", async () => {
         const sync = vi.fn(() => Promise.reject(new Error("Odds API events: server error 503")));
         const settle = vi.fn(() => Promise.resolve({ status: "succeeded" as const }));
