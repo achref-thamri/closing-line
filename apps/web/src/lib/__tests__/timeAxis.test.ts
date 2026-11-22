@@ -6,7 +6,7 @@ const at = (iso: string) => new Date(iso).getTime();
 
 describe("timeAxis", () => {
     it("labels a span of under two days by hour, on round local times, each label once", () => {
-        // The live chart on 3 Nov 2026: first settled bet 1 Nov 19:30, latest 2 Nov 23:00 (Copenhagen).
+        // A real chart's span: first settled bet 1 Nov 19:30, latest 2 Nov 23:00 (Copenhagen).
         const axis = timeAxis(at("2026-11-01T18:30:00Z"), at("2026-11-02T22:00:00Z"), TZ);
         const labels = axis.ticks.map(axis.label);
         expect(labels).toEqual(["2 Nov, 00:00", "2 Nov, 06:00", "2 Nov, 12:00", "2 Nov, 18:00"]);

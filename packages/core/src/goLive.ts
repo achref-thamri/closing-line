@@ -1,6 +1,6 @@
 import type { BetStatus } from "./settlement.ts";
-/** The spec's go-live rule: what a player needs before real money. */
-/** The go-live rule. `bugFreeDays` is checked by hand; the rest by `goLiveCheck`. */
+
+/** The go-live rule: what a player needs before real money. `bugFreeDays` is checked by hand; the rest by `goLiveCheck`. */
 export const GO_LIVE = { bets: 300, months: 3, maxDrawdown: 0.3, bugFreeDays: 30 } as const;
 
 /** 1.96 standard errors either side of the mean: a 95% range under a normal approximation. */

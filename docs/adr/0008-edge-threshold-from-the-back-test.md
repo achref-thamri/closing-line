@@ -34,7 +34,7 @@ four leagues above; the Eredivisie, Primeira Liga, Scottish Premiership and Leag
   leagues; a lower threshold would give up the edge.
 - The samples are small and the soft books differ from the ones we poll, with one early snapshot instead of two
   polls a match day. It is evidence, but the live CLV has the final say.
-- 2025/26 can be added, but it says little. Its files have Pinnacle prices only until mid-January
+- 2025/26 can be added, but it says little. Its files have Pinnacle prices only until 8 January
   2026 (1,158 of 2,304 matches in the six live leagues), and the William Hill and 1xBet columns are empty, so only
   Bet365 and bwin are left as soft books. At 2% that gives 7 bets, +1.1% average CLV. Replaying 2023/24 and 2024/25
   with the same two books gives 21 bets in 4,608 matches, +5.5% CLV: about the same rate of bets per match, so the

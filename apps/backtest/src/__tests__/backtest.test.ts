@@ -5,7 +5,10 @@ import { backtest } from "../simulate.ts";
 const header =
     "Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,B365H,B365D,B365A,BWH,BWD,BWA,PSH,PSD,PSA,WHH,WHD,WHA,PSCH,PSCD,PSCA";
 // Pinnacle 2.00/3.60/4.00 has about 3% margin; fair away is about 4.2 (the power method takes more margin off long shots). Bet365's 4.60 is about 9% value.
-const valueMatch = "E1,08/11/2024,Hull,Watford,1,2,1.95,3.4,4.6,1.9,3.5,3.9,2.0,3.6,4.0,1.9,3.4,3.8,2.1,3.6,3.7";
+/** Hull v Watford with the prices below, ending `homeGoals`-`awayGoals`. */
+const valueMatchEnding = (homeGoals: number, awayGoals: number) =>
+    `E1,08/11/2024,Hull,Watford,${homeGoals},${awayGoals},1.95,3.4,4.6,1.9,3.5,3.9,2.0,3.6,4.0,1.9,3.4,3.8,2.1,3.6,3.7`;
+const valueMatch = valueMatchEnding(1, 2);
 const noValue = "E1,09/11/2024,Leeds,Derby,2,0,1.5,4.0,6.0,1.5,4.0,6.0,1.55,4.3,6.5,1.5,4.0,6.0,1.5,4.4,7.0";
 const missingPinnacle = "E1,10/11/2024,Luton,Stoke,0,0,2.0,3.3,3.8,2.0,3.3,3.8,,,,2.0,3.3,3.8,,,";
 const csv = [header, valueMatch, noValue, missingPinnacle, ""].join("\r\n");
@@ -60,7 +63,7 @@ describe("backtest", () => {
     });
 
     it("tracks the drawdown from the bankroll's peak", () => {
-        const losing = valueMatch.replace(",1,2,", ",2,0,");
+        const losing = valueMatchEnding(2, 0);
         const result = backtest(parseSeason([header, valueMatch, losing].join("\n")), { ...options, minEdge: 0.03 });
         expect(result).toMatchObject({ bets: 2, won: 1 });
         expect(result.maxDrawdown).toBeGreaterThan(0);
