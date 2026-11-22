@@ -21,13 +21,25 @@ export function describeBet(bet: BetCard): string {
     ].join("\n");
 }
 
-export function kroner(ore: number): string {
-    return `${(ore / 100).toLocaleString("en-GB", { maximumFractionDigits: 2 })} kr`;
+/** "1,500 kr", "897.17 kr"; `decimals` 0 rounds to whole kroner. */
+export function kroner(ore: number, decimals = 2): string {
+    return `${(ore / 100).toLocaleString("en-GB", { maximumFractionDigits: decimals })} kr`;
 }
 
 /** "+897.17 kr" or "−1,500 kr". */
-export function signedKroner(ore: number): string {
-    return `${ore >= 0 ? "+" : "−"}${kroner(Math.abs(ore))}`;
+export function signedKroner(ore: number, decimals = 2): string {
+    return `${ore >= 0 ? "+" : "−"}${kroner(Math.abs(ore), decimals)}`;
+}
+
+/** "9.7%" from 0.097. */
+export function percent(value: number, decimals = 1): string {
+    return `${(value * 100).toFixed(decimals)}%`;
+}
+
+/** "+9.7%" or "−2.1%"; "–" when there is no value. */
+export function signedPercent(value: number | undefined): string {
+    if (value === undefined) return "–";
+    return `${value >= 0 ? "+" : "−"}${percent(Math.abs(value))}`;
 }
 
 /** "3.70" or "3,70" as a number; undefined otherwise. */
