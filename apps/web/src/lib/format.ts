@@ -1,4 +1,4 @@
-import { TIME_ZONE } from "./rules.ts";
+// Plain formatters with no settings import, so browser components such as the chart can use them too.
 
 export function kroner(ore: number): string {
     return `${Math.round(ore / 100).toLocaleString("en-GB")} kr`;
@@ -13,7 +13,7 @@ export function percent(value: number | undefined): string {
     return `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value * 100).toFixed(1)}%`;
 }
 
-/** A share without a sign, for amounts that are never negative, like a drawdown. */
+/** A share with no + sign: 0.036 is "3.6%", -0.05 is "-5.0%". For a drawdown, or a chart axis. */
 export function share(value: number): string {
     return `${(value * 100).toFixed(1)}%`;
 }
@@ -22,7 +22,7 @@ export function odds(value: number): string {
     return value.toFixed(2);
 }
 
-export function shortDate(date: Date, timeZone = TIME_ZONE): string {
+export function shortDate(date: Date, timeZone: string): string {
     return date.toLocaleString("en-GB", {
         timeZone,
         day: "numeric",

@@ -97,6 +97,9 @@ describe("logging a bet step by step", () => {
         expect(player.text).toMatch(/^Which player\?/);
         const pick = await type("De Ketelaere");
         expect(pick.text).toMatch(/^De Ketelaere, shots on target: which line\?/);
+        // Forged buttons (a line that isn't offered, or no number) ask again instead of storing NaN.
+        expect((await flow.tap(FRIEND, "w:over|abc")).text).toMatch(/which line\?/);
+        expect((await flow.tap(FRIEND, "w:sideways|1.5")).text).toMatch(/which line\?/);
         const book = await tap(pick, "Over 1.5");
         expect(book.text).toMatch(/^Which bookmaker\?/);
         const odds = await tap(book, "Betano");

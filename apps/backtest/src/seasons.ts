@@ -2,6 +2,8 @@ import { OUTCOMES, type Outcome } from "@closing-line/core";
 
 /** Bookmakers in football-data.co.uk files that stand in for the soft books we poll (column prefix → name). */
 export const SOFT_BOOKS = { B365: "bet365", BW: "bwin", WH: "williamhill", "1XB": "1xbet" } as const;
+type SoftPrefix = keyof typeof SOFT_BOOKS;
+export const SOFT_PREFIXES: readonly SoftPrefix[] = ["B365", "BW", "WH", "1XB"];
 
 export type Prices = Record<Outcome, number>;
 
@@ -45,7 +47,7 @@ export function parseSeason(csv: string): PastMatch[] {
         const sharpClosing = prices("PSC");
         if (!result || !sharpEarly || !sharpClosing) continue;
         const soft: PastMatch["soft"] = {};
-        for (const prefix of Object.keys(SOFT_BOOKS) as (keyof typeof SOFT_BOOKS)[]) {
+        for (const prefix of SOFT_PREFIXES) {
             const quoted = prices(prefix);
             if (quoted) soft[prefix] = quoted;
         }
@@ -56,6 +58,7 @@ export function parseSeason(csv: string): PastMatch[] {
 
 type Cell = (column: string) => string;
 
+/** football-data.co.uk files quote nothing and have no commas inside a value, so splitting on commas is enough. */
 function rowsOf(csv: string): Cell[] {
     const [headerLine, ...rows] = csv.replace(BYTE_ORDER_MARK, "").split(/\r?\n/);
     const header = (headerLine ?? "").split(",");
