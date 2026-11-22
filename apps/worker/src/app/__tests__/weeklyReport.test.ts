@@ -327,18 +327,21 @@ describe("allTimeSection", () => {
         homeGoals: home,
         awayGoals: away,
     });
-    const scannerBet = (hoursBefore: number, profitOre: number) => {
+    const scannerBet = (hoursBefore: number, profitOre: number, overrides: Partial<Bet> = {}) => {
         const kickoff = new Date("2026-11-07T15:00:00Z");
         return {
-            stakeOre: 10_000,
-            status: profitOre > 0 ? "won" : "lost",
-            profitOre,
-            settledAt: kickoff,
-            clv: 0.02,
-            createdAt: new Date(kickoff.getTime() - hoursBefore * 3_600_000),
+            ...testBet({
+                stakeOre: 10_000,
+                status: profitOre > 0 ? "won" : "lost",
+                profitOre,
+                settledAt: kickoff,
+                clv: 0.02,
+                createdAt: new Date(kickoff.getTime() - hoursBefore * 3_600_000),
+                ...overrides,
+            }),
             league: "soccer_epl",
             kickoff,
-        } as Bet & { league: string; kickoff: Date };
+        };
     };
 
     it("waits for enough matches before showing calibration, and hides small groups", () => {
@@ -365,6 +368,21 @@ describe("allTimeSection", () => {
             "Premier League: 11 bets, ROI +81.8%, CLV +2.0%",
             "Scanner by time before kickoff:",
             "under 2 h: 10 bets, ROI +100.0%, CLV +2.0%",
+            "Scanner by outcomes backed per match:",
+            "one: 11 bets, ROI +81.8%, CLV +2.0%",
+        ]);
+    });
+
+    it("splits the scanner's bets by how many outcomes of the match it backed", () => {
+        const single = Array.from({ length: 10 }, (_, i) => scannerBet(20, 10_000, { fixtureId: `s${i}` }));
+        const pairs = Array.from({ length: 5 }, (_, i) => [
+            scannerBet(20, 15_000, { fixtureId: `p${i}`, selection: "home", clv: -0.04 }),
+            scannerBet(20, -10_000, { fixtureId: `p${i}`, selection: "away", clv: 0.06 }),
+        ]).flat();
+        expect(allTimeSection([], [...single, ...pairs], names).slice(-3)).toEqual([
+            "Scanner by outcomes backed per match:",
+            "one: 10 bets, ROI +100.0%, CLV +2.0%",
+            "two or more: 10 bets, ROI +25.0%, CLV +1.0%",
         ]);
     });
 });
