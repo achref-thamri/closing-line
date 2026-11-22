@@ -49,6 +49,19 @@ describe("goLiveCheck", () => {
         expect(check.roi).toBe(0);
     });
 
+    it("counts three months to the last day of a shorter month", () => {
+        // First bet 30 Nov: three months later is 28 Feb, not 2 March.
+        const months = (now: Date) =>
+            goLiveCheck({
+                bets: [bet(29, 10_000, 0.02)],
+                benchmarkRoi: 0,
+                startingBankrollOre: 1_000_000,
+                now,
+            }).items.find((item) => item.key === "months")?.passed;
+        expect(months(new Date("2027-02-28T11:59:00Z"))).toBe(false);
+        expect(months(new Date("2027-02-28T12:00:00Z"))).toBe(true);
+    });
+
     it("measures drawdown from the starting bankroll and passes once every rule holds", () => {
         const losing = Array.from({ length: 31 }, (_, i) => bet(i, -10_000, -0.01));
         expect(

@@ -6,6 +6,8 @@ import {
     followerFill,
     minimumOdds,
     forecastScores,
+    GO_LIVE,
+    isOutcome,
     OUTCOMES,
     outcomeOf,
     priceMove,
@@ -17,19 +19,16 @@ import {
     type MatchForecast,
     type PlayerStats,
 } from "@closing-line/core";
-import type { Bet, DecisionWithResult, Repositories } from "@closing-line/db";
+import type { Bet, DecisionReason, DecisionWithResult, Repositories } from "@closing-line/db";
+import { kroner, percent, signedKroner, signedPercent } from "./format.ts";
 import { TAGS } from "./tags.ts";
 import { SCANNER } from "./players.ts";
 
 const WEEK_MS = 7 * 86_400_000;
-/** Settled bets a player needs before its results mean much (the spec's go-live rule). */
-const BETS_TO_JUDGE = 300;
 /** Settled bets per reason before comparing reasons is worth a lesson. */
 const LESSON_MIN_BETS = 5;
 
-const TAG_LABELS: Record<string, string> = Object.fromEntries(
-    Object.values(TAGS).map(({ tag, label }) => [tag, label]),
-);
+const TAG_LABELS: ReadonlyMap<string, string> = new Map(Object.values(TAGS).map(({ tag, label }) => [tag, label]));
 
 export interface WeeklyReportDeps {
     repos: Pick<Repositories, "players" | "bets" | "apiUsage" | "decisions">;
@@ -57,9 +56,9 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         lines.push(
             "",
             player.name,
-            `This week: ${week.settled} settled, ${money(week.profitOre)}`,
-            `All time: ${all.settled} settled (${all.won} won), ROI ${percent(all.roi)}, CLV ${percent(all.averageClv)}, ` +
-                `bankroll ${kroner(player.startingBankrollOre + all.profitOre)}, ${all.open} open`,
+            `This week: ${week.settled} settled, ${signedKroner(week.profitOre, 0)}`,
+            `All time: ${all.settled} settled (${all.won} won), ROI ${signedPercent(all.roi)}, CLV ${signedPercent(all.averageClv)}, ` +
+                `bankroll ${kroner(player.startingBankrollOre + all.profitOre, 0)}, ${all.open} open`,
         );
         if (player.kind === "bettor") {
             const breakdown = bettorBreakdown(player.name, await deps.repos.bets.forPlayer(player.id));
@@ -84,8 +83,8 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
 
     const usage = await deps.repos.apiUsage.latest("odds-api");
     if (usage) lines.push("", `Odds API: ${usage.used} credits used this month, ${usage.remaining} left.`);
-    if (mostSettled < BETS_TO_JUDGE) {
-        lines.push(`Too early to judge: ${mostSettled} of ${BETS_TO_JUDGE} settled bets so far.`);
+    if (mostSettled < GO_LIVE.bets) {
+        lines.push(`Too early to judge: ${mostSettled} of ${GO_LIVE.bets} settled bets so far.`);
     }
     return lines.join("\n");
 }
@@ -112,7 +111,7 @@ export function tipsSection(
     if (closing.seen > 0) lines.push(`Price still there just before kickoff: ${closing.kept} of ${closing.seen}`);
     if (clvs.length > 0) {
         const average = clvs.reduce((sum, clv) => sum + clv, 0) / clvs.length;
-        lines.push(`Average CLV: ${percent(average)} over ${clvs.length} with a closing price`);
+        lines.push(`Average CLV: ${signedPercent(average)} over ${clvs.length} with a closing price`);
     }
     lines.push(...followerLines(tips, scanner));
     // Advice once there is enough to go on; a handful of tips says little either way.
@@ -138,8 +137,8 @@ function followerLines(
     const counts = { next_poll: 0, closing: 0, missed: 0 };
     const scored: { follower: number; tip: number }[] = [];
     for (const { bet, later } of tips) {
-        const selection = OUTCOMES.find((outcome) => outcome === bet.selection);
-        if (!selection || bet.sharpFairOddsAtBet === null) continue;
+        if (!isOutcome(bet.selection) || bet.sharpFairOddsAtBet === null) continue;
+        const selection = bet.selection;
         const minOdds = minimumOdds(bet.sharpFairOddsAtBet, scanner.minEdge, scanner.minKellyFraction[selection]);
         const fill = followerFill({ sentAt: bet.createdAt, minOdds }, later);
         if (!fill) continue;
@@ -158,14 +157,14 @@ function followerLines(
     if (scored.length > 0) {
         const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
         lines.push(
-            `CLV on those: ${percent(mean(scored.map((clv) => clv.follower)))} at the next poll's price, ` +
-                `${percent(mean(scored.map((clv) => clv.tip)))} at the tip's`,
+            `CLV on those: ${signedPercent(mean(scored.map((clv) => clv.follower)))} at the next poll's price, ` +
+                `${signedPercent(mean(scored.map((clv) => clv.tip)))} at the tip's`,
         );
     }
     return lines;
 }
 
-const PASS_REASONS: Record<string, string> = {
+const PASS_REASONS: Record<Exclude<DecisionReason, "value">, string> = {
     no_edge: "no edge",
     no_fresh_sharp: "no fresh Pinnacle price",
     stake_too_small: "stake below the minimum",
@@ -187,7 +186,7 @@ export function decisionsSection(decisions: readonly DecisionWithResult[]): stri
     const lines = [
         "",
         `🧭 Decisions this week: ${matches} matches looked at ${decisions.length} times, ${bets} bet, ${passes} passed ` +
-            `(${percentPlain(bets / decisions.length)} bet rate)`,
+            `(${percent(bets / decisions.length, 0)} bet rate)`,
     ];
     const reasons = Object.entries(PASS_REASONS).flatMap(([reason, label]) => {
         const count = decisions.filter((decision) => decision.reason === reason).length;
@@ -211,7 +210,7 @@ export function decisionsSection(decisions: readonly DecisionWithResult[]): stri
     if (settled.length > 0) {
         const roi = settled.reduce((sum, result) => sum + result, 0) / settled.length;
         lines.push(
-            `Backing the best price on each settled no-edge pass would have returned ${percent(roi)} over ${settled.length}.`,
+            `Backing the best price on each settled no-edge pass would have returned ${signedPercent(roi)} over ${settled.length}.`,
         );
     }
     return lines;
@@ -267,8 +266,8 @@ export function allTimeSection(
         lines.push(`Calibration of Pinnacle's fair prices over ${matches} matches:`);
         for (const band of calibration(forecasts, 0.2, CALIBRATION_BAND_MIN)) {
             lines.push(
-                `${Math.round(band.from * 100)}–${percentPlain(band.to)}: said ${percentPlain(band.averageProbability)}, ` +
-                    `happened ${percentPlain(band.observedRate)} (${band.count})`,
+                `${Math.round(band.from * 100)}–${percent(band.to, 0)}: said ${percent(band.averageProbability, 0)}, ` +
+                    `happened ${percent(band.observedRate, 0)} (${band.count})`,
             );
         }
         const scores = forecastScores(matchForecasts);
@@ -285,7 +284,9 @@ export function allTimeSection(
         if (shown.length === 0) return;
         lines.push(title);
         for (const [key, stats] of shown) {
-            lines.push(`${key}: ${stats.settled} bets, ROI ${percent(stats.roi)}, CLV ${percent(stats.averageClv)}`);
+            lines.push(
+                `${key}: ${stats.settled} bets, ROI ${signedPercent(stats.roi)}, CLV ${signedPercent(stats.averageClv)}`,
+            );
         }
     };
     groups("Scanner by league:", (bet) => leagueNames.get(bet.league) ?? bet.league);
@@ -305,7 +306,7 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
     if (bets.length === 0) return { lines, lessons };
 
     const byTag = statsBy(bets, (bet) => bet.tag);
-    if (byTag.size > 0) lines.push(`By reason: ${groupText(byTag, (tag) => TAG_LABELS[tag] ?? tag)}`);
+    if (byTag.size > 0) lines.push(`By reason: ${groupText(byTag, (tag) => TAG_LABELS.get(tag) ?? tag)}`);
     const bySport = statsBy(bets, (bet) => (bet.sport === "counter_strike" ? "Counter-Strike" : "Football"));
     if (bySport.size > 1) lines.push(`By sport: ${groupText(bySport, (sport) => sport)}`);
 
@@ -324,14 +325,14 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
                 total + cashoutGainOre({ ...bet, cashoutOfferOre: bet.cashoutOfferOre ?? 0 }, held),
             0,
         );
-        const move = moves.length > 0 ? `, price moved ${percent(average(moves))} on average` : "";
-        const versus = answered.length > 0 ? `; against holding: ${money(gain)} over ${answered.length}` : "";
+        const move = moves.length > 0 ? `, price moved ${signedPercent(average(moves))} on average` : "";
+        const versus = answered.length > 0 ? `; against holding: ${signedKroner(gain, 0)} over ${answered.length}` : "";
         lines.push(`Cash-outs: ${cashed.length}${move}${versus}`);
         if (answered.length >= 3) {
             lessons.push(
                 gain >= 0
-                    ? `${name}'s cash-outs paid ${kroner(gain)} more than holding over ${answered.length} bets: so far cashing out has protected money.`
-                    : `${name}'s cash-outs cost ${kroner(-gain)} compared with holding over ${answered.length} bets: the bets kept going their way after the cash-out.`,
+                    ? `${name}'s cash-outs paid ${kroner(gain, 0)} more than holding over ${answered.length} bets: so far cashing out has protected money.`
+                    : `${name}'s cash-outs cost ${kroner(-gain, 0)} compared with holding over ${answered.length} bets: the bets kept going their way after the cash-out.`,
             );
         }
     }
@@ -341,10 +342,10 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
         .sort((a, b) => (b[1].roi ?? 0) - (a[1].roi ?? 0));
     const [best, worst] = [ranked[0], ranked.at(-1)];
     if (ranked.length >= 2 && best && worst) {
-        const label = (tag: string) => TAG_LABELS[tag] ?? tag;
+        const label = (tag: string) => TAG_LABELS.get(tag) ?? tag;
         lessons.unshift(
-            `${name}'s ${label(best[0])} bets return ${percent(best[1].roi)} over ${best[1].settled}, ` +
-                `${label(worst[0])} bets ${percent(worst[1].roi)} over ${worst[1].settled}. ` +
+            `${name}'s ${label(best[0])} bets return ${signedPercent(best[1].roi)} over ${best[1].settled}, ` +
+                `${label(worst[0])} bets ${signedPercent(worst[1].roi)} over ${worst[1].settled}. ` +
                 "Lean towards what works, but small samples can still be luck.",
         );
     }
@@ -353,7 +354,7 @@ export function bettorBreakdown(name: string, bets: readonly Bet[]): { lines: st
 
 function groupText(groups: Map<string, PlayerStats>, label: (key: string) => string): string {
     return [...groups]
-        .map(([key, stats]) => `${label(key)} ${stats.settled} settled, ROI ${percent(stats.roi)}`)
+        .map(([key, stats]) => `${label(key)} ${stats.settled} settled, ROI ${signedPercent(stats.roi)}`)
         .join(" · ");
 }
 
@@ -361,23 +362,6 @@ function average(values: number[]): number {
     return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
-function money(ore: number): string {
-    return `${ore >= 0 ? "+" : "−"}${kroner(Math.abs(ore))}`;
-}
-
-function kroner(ore: number): string {
-    return `${Math.round(ore / 100).toLocaleString("en-GB")} kr`;
-}
-
-function percent(value: number | undefined): string {
-    if (value === undefined) return "–";
-    return `${value >= 0 ? "+" : "−"}${Math.abs(value * 100).toFixed(1)}%`;
-}
-
 function dateText(date: Date, timeZone: string): string {
     return date.toLocaleDateString("en-GB", { timeZone, day: "numeric", month: "short" });
-}
-
-function percentPlain(value: number): string {
-    return `${(value * 100).toFixed(0)}%`;
 }

@@ -3,6 +3,7 @@ import type { Player } from "@closing-line/db";
 import { messageOf } from "../lib/errors.ts";
 import type { Logger } from "../lib/logger.ts";
 import type { Keyboard, Reply } from "./chat.ts";
+import { percent } from "./format.ts";
 
 /** "I bet this" buttons under a tip, one per bookmaker that pays enough, best first. */
 const TIP_BUTTONS = 3;
@@ -32,7 +33,6 @@ export function formatTip(tip: Tip, timeZone: string): string | undefined {
     const offers = tip.offers;
     const [best] = offers;
     if (!best) return undefined;
-    const percent = (edge: number) => `${(edge * 100).toFixed(1)}%`;
     const time = (date: Date, options: Intl.DateTimeFormatOptions) =>
         date.toLocaleString("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", ...options });
     const others = offers

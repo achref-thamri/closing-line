@@ -145,7 +145,7 @@ describe("settleBets", () => {
         expect(messages).toEqual([
             "📒 Settled 2 paper bet(s):\n" +
                 "Value scanner: won +165 kr on Brentford v Nottingham Forest\n" +
-                "Always the favourite: lost -100 kr on Manchester City v Brighton and Hove Albion",
+                "Always the favourite: lost −100 kr on Manchester City v Brighton and Hove Albion",
         ]);
     });
 

@@ -75,10 +75,13 @@ export class CreditGuard {
         const dayStart = startOfUtcDay(now);
         const before = await this.deps.usage.latestBefore(PROVIDER, dayStart);
 
+        // What was left when today began: the last balance before today if it's from this month; on the 1st, the
+        // whole new quota; otherwise (no balance yet before today) the latest one.
+        const monthStart = startOfUtcMonth(now);
+        const firstOfMonth = dayStart.getTime() === monthStart.getTime();
         let remainingAtDayStart = latest.remaining;
-        if (before && before.takenAt >= startOfUtcMonth(now)) remainingAtDayStart = before.remaining;
-        else if (dayStart.getTime() === startOfUtcMonth(now).getTime())
-            remainingAtDayStart = latest.used + latest.remaining;
+        if (before && before.takenAt >= monthStart) remainingAtDayStart = before.remaining;
+        else if (firstOfMonth) remainingAtDayStart = latest.used + latest.remaining;
 
         return { remaining: latest.remaining, remainingAtDayStart, daysLeft: daysLeftInMonth(now) };
     }

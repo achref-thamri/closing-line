@@ -1,8 +1,9 @@
 import type { Config } from "@closing-line/config";
-import { matchFixture, settle1x2, toOutcome } from "@closing-line/core";
+import { matchFixture, settle1x2, settlesFromScore, toOutcome } from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
 import { messageOf } from "../lib/errors.ts";
 import type { MatchResultInfo, ResultsSource } from "../ports/results.ts";
+import { signedKroner } from "./format.ts";
 
 const HOUR_MS = 3_600_000;
 /** A match is over (with stoppage time and a margin) this long after kickoff. */
@@ -152,16 +153,14 @@ async function settleFixtureBets(
     const result = resultOf(fixture);
     const lines: string[] = [];
     for (const bet of await deps.repos.bets.open([fixtureId])) {
-        // Other markets on the fixture (a bettor's player props) are settled by the bettor with /open.
-        if (bet.market !== "h2h") continue;
+        if (!settlesFromScore(bet)) continue;
         const settlement = settle1x2(
             { selection: toOutcome(bet.selection), stakeOre: bet.stakeOre, decimalOdds: bet.lockedOdds },
             result,
         );
         if (!(await deps.repos.bets.settle(bet.id, { ...settlement, settledAt: now }))) continue;
-        const profit = (settlement.profitOre / 100).toFixed(0);
         lines.push(
-            `${names.get(bet.playerId) ?? bet.playerId}: ${settlement.status} ${settlement.profitOre >= 0 ? "+" : ""}${profit} kr`,
+            `${names.get(bet.playerId) ?? bet.playerId}: ${settlement.status} ${signedKroner(settlement.profitOre, 0)}`,
         );
     }
     return lines;
