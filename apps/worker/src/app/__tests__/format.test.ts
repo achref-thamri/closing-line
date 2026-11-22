@@ -36,6 +36,12 @@ describe("parseDecimal", () => {
 });
 
 describe("parseKroner", () => {
+    it("refuses an amount too big to be a real bet, which the øre column couldn't hold either", () => {
+        expect(parseKroner("1000000")).toBe(1_000_000);
+        expect(parseKroner("1000001")).toBeUndefined();
+        expect(parseKroner("99999999999")).toBeUndefined();
+    });
+
     it("reads Danish and English amounts", () => {
         expect(parseKroner("2557")).toBe(2557);
         expect(parseKroner("2.557,17 kr.")).toBe(2557.17);

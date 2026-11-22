@@ -48,7 +48,13 @@ export function parseDecimal(text: string): number | undefined {
     return Number(text.trim().replace(",", "."));
 }
 
-/** Reads "2557", "2557 kr", "2.557,17" (Danish) or "2,557.17" as kroner; undefined when it is not one amount. */
+/** The largest stake or cash-out a bettor can type; far above any real bet and well inside the øre column. */
+const MAX_AMOUNT_KR = 1_000_000;
+
+/**
+ * Reads "2557", "2557 kr", "2.557,17" (Danish) or "2,557.17" as kroner; undefined when it is not one amount or is
+ * above `MAX_AMOUNT_KR`.
+ */
 export function parseKroner(text: string): number | undefined {
     const cleaned = text.replace(/kr\.?|dkk/gi, "").replace(/\s/g, "");
     if (!/^\d[\d.,]*$/.test(cleaned)) return undefined;
@@ -57,5 +63,5 @@ export function parseKroner(text: string): number | undefined {
     const whole = (decimals >= 0 ? cleaned.slice(0, decimals) : cleaned).replace(/[.,]/g, "");
     const fraction = decimals >= 0 ? cleaned.slice(decimals + 1) : "";
     const value = Number(`${whole}.${fraction || "0"}`);
-    return Number.isFinite(value) && value > 0 ? value : undefined;
+    return Number.isFinite(value) && value > 0 && value <= MAX_AMOUNT_KR ? value : undefined;
 }
