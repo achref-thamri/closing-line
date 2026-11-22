@@ -148,13 +148,23 @@ describe("settleBets", () => {
         await bet(SCANNER, id("a"), "home", 2.1);
         const results = [finished(["Brentford FC"], ["Nottingham Forest FC"], 2, 0)];
         const dying = deps(results);
-        dying.repos = { ...repos, bets: { ...repos.bets, settle: () => Promise.reject(new Error("worker stopped")) } };
+        dying.repos = {
+            ...repos,
+            bets: { ...repos.bets, settleFixture: () => Promise.reject(new Error("worker stopped")) },
+        };
         await expect(settleBets(dying)).rejects.toThrow("worker stopped");
         expect(await repos.fixtures.get(id("a"))).toMatchObject({ status: "scheduled" });
 
         await settleBets(deps(results));
         expect(await repos.bets.forPlayer(SCANNER)).toMatchObject([{ status: "won" }]);
         expect(await repos.fixtures.get(id("a"))).toMatchObject({ status: "finished", homeGoals: 2, awayGoals: 0 });
+    });
+
+    it("settles a match-result bet logged after its fixture was settled", async () => {
+        await repos.fixtures.setResult(id("a"), { status: "finished", homeGoals: 0, awayGoals: 1 });
+        await bet(SCANNER, id("a"), "away", 3.1);
+        expect(await settleBets(deps([]))).toMatchObject({ fixtures: 1, settledBets: 1 });
+        expect(await repos.bets.forPlayer(SCANNER)).toMatchObject([{ status: "won" }]);
     });
 
     it("settles bets by the real score and reports them", async () => {

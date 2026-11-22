@@ -66,6 +66,17 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     const stored = zod.array(zod.string()).safeParse(await deps.repos.state.get(ALERTED_KEY));
     const alerted = new Set(stored.success ? stored.data : []);
     const alerts: string[] = [];
+    const settleFixture = async (fixture: Fixture, result: MatchResult) => {
+        report.fixtures++;
+        const settled = await settleFixtureBets(deps, fixture.id, result, now, names);
+        report.settledBets += settled.length;
+        lines.push(...settled.map((line) => `${line} on ${fixture.homeTeam} v ${fixture.awayTeam}`));
+    };
+
+    // A match-result bet logged after its fixture was settled would otherwise stay open for good.
+    for (const fixture of await deps.repos.fixtures.settledWithOpenBets()) {
+        await settleFixture(fixture, storedResult(fixture));
+    }
 
     for (const league of deps.config.leagues) {
         const fixtures = due.filter((fixture) => fixture.league === league.oddsApiKey);
@@ -80,15 +91,6 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
         }
         if (!results) continue;
 
-        // Bets first, the fixture last: if the run dies in between, the fixture is still scheduled, so the next run
-        // settles what's left (settled bets are skipped).
-        const settle = async (fixture: Fixture, result: MatchResult) => {
-            report.fixtures++;
-            const settled = await settleFixtureBets(deps, fixture.id, result, now, names);
-            report.settledBets += settled.length;
-            lines.push(...settled.map((line) => `${line} on ${fixture.homeTeam} v ${fixture.awayTeam}`));
-            await deps.repos.fixtures.setResult(fixture.id, result);
-        };
         // Listed but still not finished well after full time: the feed is stuck on the match.
         const stuck: Fixture[] = [];
 
@@ -97,9 +99,9 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
             const sinceKickoff = now.getTime() - fixture.kickoff.getTime();
             const final = finalScore(result);
             if (final) {
-                await settle(fixture, final);
+                await settleFixture(fixture, final);
             } else if (sinceKickoff > VOID_AFTER_MS && (result?.status === "called_off" || !result)) {
-                await settle(fixture, { status: "void" });
+                await settleFixture(fixture, { status: "void" });
             } else if (!result) {
                 report.unmatched.push(`${fixture.homeTeam} v ${fixture.awayTeam}`);
                 if (sinceKickoff >= ALERT_UNMATCHED_AFTER_MS && !alerted.has(fixture.id)) {
@@ -117,7 +119,7 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
             const backup = (await deps.scores(league.oddsApiKey)) ?? [];
             for (const fixture of stuck) {
                 const final = finalScore(matchFixture(fixture, backup, KICKOFF_TOLERANCE_MS));
-                if (final) await settle(fixture, final);
+                if (final) await settleFixture(fixture, final);
             }
         }
     }
@@ -172,17 +174,35 @@ async function settleFixtureBets(
     now: Date,
     names: ReadonlyMap<string, string>,
 ): Promise<string[]> {
-    const lines: string[] = [];
-    for (const bet of await deps.repos.bets.open([fixtureId])) {
-        if (!settlesFromScore(bet)) continue;
-        const settlement = settle1x2(
+    const open = (await deps.repos.bets.open([fixtureId])).filter((bet) => settlesFromScore(bet));
+    const settlements = open.map((bet) => ({
+        bet,
+        settlement: settle1x2(
             { selection: toOutcome(bet.selection), stakeOre: bet.stakeOre, decimalOdds: bet.lockedOdds },
             result,
+        ),
+    }));
+    const settled = new Set(
+        await deps.repos.bets.settleFixture(
+            fixtureId,
+            result,
+            settlements.map(({ bet, settlement }) => ({
+                betId: bet.id,
+                settlement: { ...settlement, settledAt: now },
+            })),
+        ),
+    );
+    return settlements
+        .filter(({ bet }) => settled.has(bet.id))
+        .map(
+            ({ bet, settlement }) =>
+                `${names.get(bet.playerId) ?? bet.playerId}: ${settlement.status} ${signedKroner(settlement.profitOre, 0)}`,
         );
-        if (!(await deps.repos.bets.settle(bet.id, { ...settlement, settledAt: now }))) continue;
-        lines.push(
-            `${names.get(bet.playerId) ?? bet.playerId}: ${settlement.status} ${signedKroner(settlement.profitOre, 0)}`,
-        );
-    }
-    return lines;
+}
+
+/** The result stored on a fixture that has one. */
+function storedResult(fixture: Fixture): MatchResult {
+    return fixture.status === "finished" && fixture.homeGoals !== null && fixture.awayGoals !== null
+        ? { status: "finished", homeGoals: fixture.homeGoals, awayGoals: fixture.awayGoals }
+        : { status: "void" };
 }

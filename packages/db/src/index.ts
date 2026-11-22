@@ -10,7 +10,6 @@ export type {
     DecisionReason,
     DecisionWithResult,
     Fixture,
-    FixtureResult,
     JobRun,
     NewDecision,
     NewFixture,

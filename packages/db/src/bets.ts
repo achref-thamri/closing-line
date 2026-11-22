@@ -1,4 +1,4 @@
-import type { LaterPrice, PlayerTotals, SlipStatus } from "@closing-line/core";
+import type { LaterPrice, MatchResult, PlayerTotals, SlipStatus } from "@closing-line/core";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { Database } from "./client.ts";
@@ -240,6 +240,36 @@ export function betRepository(db: Database) {
          * Settles an open bet once; false when it was already settled. A cash-out also records the offer and the
          * price it implies; its price move comes from `impliedCurrentOdds`, not `clv`.
          */
+        /**
+         * Settles a fixture in one transaction: each listed bet that is still open, then the fixture's result, so a
+         * failure leaves both as they were. Returns the ids of the bets it settled.
+         */
+        async settleFixture(
+            fixtureId: string,
+            result: MatchResult,
+            settlements: readonly { betId: string; settlement: Settlement }[],
+        ): Promise<string[]> {
+            return db.transaction(async (tx) => {
+                const settled: string[] = [];
+                for (const { betId, settlement } of settlements) {
+                    const rows = await tx
+                        .update(bets)
+                        .set(settlement)
+                        .where(and(eq(bets.id, betId), eq(bets.status, "open")))
+                        .returning({ id: bets.id });
+                    if (rows.length > 0) settled.push(betId);
+                }
+                await tx
+                    .update(fixtures)
+                    .set(
+                        result.status === "finished"
+                            ? { status: "finished", homeGoals: result.homeGoals, awayGoals: result.awayGoals }
+                            : { status: "void", homeGoals: null, awayGoals: null },
+                    )
+                    .where(eq(fixtures.id, fixtureId));
+                return settled;
+            });
+        },
         async settle(id: string, settlement: Settlement): Promise<boolean> {
             const rows = await db
                 .update(bets)

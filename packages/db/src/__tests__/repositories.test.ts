@@ -293,6 +293,30 @@ describe("bets", () => {
         expect(await repos.bets.get(placed.id)).toMatchObject({ stakeOre: 100_000_000, profitOre });
     });
 
+    it("settles a fixture's bets and result together, or not at all", async () => {
+        const first = await repos.bets.place(bet({ selection: "home" }));
+        const second = await repos.bets.place(bet({ selection: "away" }));
+        if (!first || !second) throw new Error("the bets weren't placed");
+        const settledAt = new Date();
+        // The second settlement breaks a check (a cash-out needs its offer), so the whole fixture must roll back.
+        await expect(
+            repos.bets.settleFixture("evt1", { status: "finished", homeGoals: 1, awayGoals: 0 }, [
+                { betId: first.id, settlement: { status: "won", profitOre: 10_000, settledAt } },
+                { betId: second.id, settlement: { status: "cashed_out", profitOre: 0, settledAt } },
+            ]),
+        ).rejects.toThrow();
+        expect((await repos.bets.open()).map((open) => open.id).sort()).toEqual([first.id, second.id].sort());
+        expect(await repos.fixtures.get("evt1")).toMatchObject({ status: "scheduled" });
+
+        const settled = await repos.bets.settleFixture("evt1", { status: "finished", homeGoals: 1, awayGoals: 0 }, [
+            { betId: first.id, settlement: { status: "won", profitOre: 10_000, settledAt } },
+            { betId: second.id, settlement: { status: "lost", profitOre: -10_000, settledAt } },
+        ]);
+        expect(settled.sort()).toEqual([first.id, second.id].sort());
+        expect(await repos.fixtures.get("evt1")).toMatchObject({ status: "finished", homeGoals: 1, awayGoals: 0 });
+        expect(await repos.fixtures.settledWithOpenBets()).toEqual([]);
+    });
+
     it("rejects a bet on an unknown fixture, with no stake, or on a team name instead of a 1X2 outcome", async () => {
         await expect(repos.bets.place(bet({ fixtureId: "nope" }))).rejects.toThrow();
         await expect(repos.bets.place(bet({ stakeOre: 0 }))).rejects.toThrow();

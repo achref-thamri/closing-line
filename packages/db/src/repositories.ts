@@ -1,7 +1,18 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import type { MatchResult } from "@closing-line/core";
+import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { betRepository } from "./bets.ts";
 import type { Database } from "./client.ts";
-import { apiUsage, chatSessions, decisions, fixtures, jobRuns, oddsSnapshots, players, workerState } from "./schema.ts";
+import {
+    apiUsage,
+    bets,
+    chatSessions,
+    decisions,
+    fixtures,
+    jobRuns,
+    oddsSnapshots,
+    players,
+    workerState,
+} from "./schema.ts";
 
 export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
@@ -28,8 +39,6 @@ export interface ChatSession {
     value: unknown;
     updatedAt: Date;
 }
-
-export type FixtureResult = { status: "finished"; homeGoals: number; awayGoals: number } | { status: "void" };
 
 export function createRepositories(db: Database) {
     return {
@@ -77,6 +86,21 @@ export function createRepositories(db: Database) {
                 return row;
             },
             /** Fixtures kicking off in [from, to), earliest first. */
+            /** Fixtures with a result that still have an open match-result bet, e.g. one logged after settling. */
+            settledWithOpenBets(): Promise<Fixture[]> {
+                return db
+                    .selectDistinct({ fixture: fixtures })
+                    .from(fixtures)
+                    .innerJoin(bets, eq(bets.fixtureId, fixtures.id))
+                    .where(
+                        and(
+                            inArray(fixtures.status, ["finished", "void"]),
+                            eq(bets.status, "open"),
+                            eq(bets.market, "h2h"),
+                        ),
+                    )
+                    .then((rows) => rows.map((row) => row.fixture));
+            },
             between(from: Date, to: Date, status?: Fixture["status"]): Promise<Fixture[]> {
                 return db
                     .select()
@@ -90,7 +114,7 @@ export function createRepositories(db: Database) {
                     )
                     .orderBy(fixtures.kickoff);
             },
-            async setResult(id: string, result: FixtureResult): Promise<void> {
+            async setResult(id: string, result: MatchResult): Promise<void> {
                 await db
                     .update(fixtures)
                     .set(
