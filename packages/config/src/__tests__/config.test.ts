@@ -126,6 +126,9 @@ describe("parseConfig", () => {
         expect(problemsOf(() => parseConfig(env, { scanner: { stake: { minStake: 55 } } }))).toContain(
             "minStake must be a multiple of step",
         );
+        expect(problemsOf(() => parseConfig(env, { scanner: { stake: { maxStake: 505 } } }))).toContain(
+            "maxStake must be a multiple of step",
+        );
     });
 });
 
