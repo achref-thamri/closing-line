@@ -99,6 +99,8 @@ export class SettleFlow implements ButtonHandler {
             cashoutOfferOre: offerOre,
             ...(implied === undefined ? {} : { impliedCurrentOdds: implied }),
         });
+        // Settled meanwhile (another tap): no price move or hold-or-not question for a cash-out that didn't happen.
+        if (!settled.settled) return { text: settled.text };
         const move =
             implied === undefined
                 ? ""
@@ -115,9 +117,9 @@ export class SettleFlow implements ButtonHandler {
         };
     }
 
-    private async settle(chatId: number, bet: Bet, settlement: SlipSettlement): Promise<Reply> {
+    private async settle(chatId: number, bet: Bet, settlement: SlipSettlement): Promise<Reply & { settled: boolean }> {
         const done = await this.deps.repos.bets.settle(bet.id, { ...settlement, settledAt: this.now() });
-        if (!done) return { text: `${describeBet(bet)}\n\nAlready settled.` };
+        if (!done) return { text: `${describeBet(bet)}\n\nAlready settled.`, settled: false };
         const result = `${statusIcon(settlement.status)} ${settlement.status.replace("_", " ")} ${signedKroner(settlement.profitOre)}`;
         if (chatId !== this.deps.ownerChatId) {
             const name = (await this.deps.repos.players.byChat(chatId))?.name ?? bet.playerId;
@@ -126,7 +128,7 @@ export class SettleFlow implements ButtonHandler {
             });
         }
         this.deps.logger.info({ playerId: bet.playerId, status: settlement.status }, "bet settled");
-        return { text: `${describeBet(bet)}\n\n${result}` };
+        return { text: `${describeBet(bet)}\n\n${result}`, settled: true };
     }
 
     private async ownBet(chatId: number, betId: string): Promise<Bet | undefined> {

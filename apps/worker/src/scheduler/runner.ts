@@ -38,15 +38,24 @@ export async function tick(deps: RunnerDeps): Promise<void> {
     for (const job of jobs) {
         if (!(await deps.repos.runs.start(job.key, job.kind, deps.now()))) continue;
         deps.logger.info({ job: job.key }, "job started");
+        let outcome: JobOutcome;
         try {
-            const outcome = await deps.handlers[job.kind](job);
-            await deps.repos.runs.finish(job.key, { ...outcome, finishedAt: deps.now() });
-            deps.logger.info({ job: job.key, ...outcome }, "job finished");
+            outcome = await deps.handlers[job.kind](job);
         } catch (error) {
             const message = messageOf(error);
             await deps.repos.runs.finish(job.key, { status: "failed", message, finishedAt: deps.now() });
             deps.logger.error({ job: job.key, error: message }, "job failed");
             await deps.notify(`❌ Job ${job.key} failed: ${message}`);
+            continue;
+        }
+        // Outside the try: a job that did its work isn't marked failed because its result couldn't be stored.
+        try {
+            await deps.repos.runs.finish(job.key, { ...outcome, finishedAt: deps.now() });
+            deps.logger.info({ job: job.key, ...outcome }, "job finished");
+        } catch (error) {
+            const message = messageOf(error);
+            deps.logger.error({ job: job.key, error: message }, "job result not stored");
+            await deps.notify(`⚠️ Job ${job.key} ran, but its result couldn't be stored: ${message}`);
         }
     }
 }
