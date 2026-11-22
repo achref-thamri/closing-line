@@ -8,6 +8,7 @@ import { compose } from "./compose.ts";
 import { messageOf } from "./lib/errors.ts";
 import { keepPolling } from "./lib/keepPolling.ts";
 import { createLogger } from "./lib/logger.ts";
+import { createBackupCheck } from "./lib/backupCheck.ts";
 import { createPinger } from "./lib/ping.ts";
 import { tick } from "./scheduler/runner.ts";
 
@@ -16,6 +17,9 @@ const logger = createLogger(config.logLevel);
 const database = await openDatabase(config.database);
 const worker = compose({ config, db: database.db, logger });
 const ping = config.healthcheckPingUrl ? createPinger({ url: config.healthcheckPingUrl, logger }) : undefined;
+const backupCheck = config.backupPingUrl
+    ? createBackupCheck({ url: config.backupPingUrl, dir: "/backups", logger })
+    : undefined;
 
 await ensurePlayers(worker.repos, config);
 mkdirSync(dirname(config.heartbeatPath), { recursive: true });
@@ -37,6 +41,7 @@ function schedule(): void {
             // No ping while Telegram polling is down: nobody can log bets, so healthchecks.io should raise its
             // missing-ping alert even though the scheduler still runs.
             if (polling.isUp()) ping?.(now);
+            backupCheck?.(now);
             running ??= tick(worker.runner)
                 .catch((error: unknown) => {
                     logger.error({ error: messageOf(error) }, "tick failed");
