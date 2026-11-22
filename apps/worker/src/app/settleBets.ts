@@ -1,6 +1,7 @@
 import type { Config } from "@closing-line/config";
 import { matchFixture, settle1x2, settlesFromScore, toOutcome } from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
+import * as zod from "zod";
 import { messageOf } from "../lib/errors.ts";
 import type { MatchResultInfo, ResultsSource } from "../ports/results.ts";
 import { signedKroner } from "./format.ts";
@@ -60,7 +61,8 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
     const lines: string[] = [];
     const failures: string[] = [];
     const names = new Map((await deps.repos.players.list()).map((player) => [player.id, player.name]));
-    const alerted = new Set((await deps.repos.state.get<string[]>(ALERTED_KEY)) ?? []);
+    const stored = zod.array(zod.string()).safeParse(await deps.repos.state.get(ALERTED_KEY));
+    const alerted = new Set(stored.success ? stored.data : []);
     const alerts: string[] = [];
 
     for (const league of deps.config.leagues) {

@@ -125,9 +125,10 @@ export function createRepositories(db: Database) {
         bets: betRepository(db),
 
         state: {
-            async get<T>(key: string): Promise<T | undefined> {
+            /** The stored JSON as it is; callers check its shape, as the chat flows do. */
+            async get(key: string): Promise<unknown> {
                 const [row] = await db.select().from(workerState).where(eq(workerState.key, key));
-                return row?.value as T | undefined;
+                return row?.value;
             },
             async set(key: string, value: unknown): Promise<void> {
                 await db

@@ -281,6 +281,8 @@ describe("bets", () => {
         await repos.bets.place(bet());
         await repos.bets.place(bet({ fixtureId: "evt2" }));
         expect((await repos.bets.open(["evt2"])).map((row) => row.fixtureId)).toEqual(["evt2"]);
+        // A poll with no events asks with an empty list: that means no bets, not every open bet.
+        expect(await repos.bets.open([])).toEqual([]);
     });
 
     it("rejects a bet on an unknown fixture, with no stake, or on a team name instead of a 1X2 outcome", async () => {
