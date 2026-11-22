@@ -78,7 +78,7 @@ export async function weeklyReport(deps: WeeklyReportDeps): Promise<string> {
         ),
     );
 
-    // Only a lesson a bettor's own numbers support; there are no stock lessons.
+    // A lesson only when the bettor's own numbers support one.
     if (lessons[0]) lines.push("", "📚 Lesson of the week", lessons[0]);
 
     const usage = await deps.repos.apiUsage.latest("odds-api");
