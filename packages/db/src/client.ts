@@ -37,13 +37,31 @@ export async function openDatabase(
     if (target.kind === "postgres") {
         const client = postgres(target.url, { max: 5, onnotice: () => undefined });
         const db = drizzlePostgres(client, { schema });
-        if (migrate) await migratePostgres(db, { migrationsFolder });
+        if (migrate)
+            await closeOnError(
+                () => migratePostgres(db, { migrationsFolder }),
+                () => client.end(),
+            );
         return { db, close: () => client.end() };
     }
 
     if (target.dir) mkdirSync(target.dir, { recursive: true });
     const client = new PGlite(target.dir);
     const db = drizzlePglite(client, { schema });
-    if (migrate) await migratePglite(db, { migrationsFolder });
+    if (migrate)
+        await closeOnError(
+            () => migratePglite(db, { migrationsFolder }),
+            () => client.close(),
+        );
     return { db, close: () => client.close() };
+}
+
+/** Runs `step`; if it throws, closes the connection before passing the error on, so a failed migration leaks nothing. */
+async function closeOnError(step: () => Promise<unknown>, close: () => Promise<void>): Promise<void> {
+    try {
+        await step();
+    } catch (error) {
+        await close();
+        throw error;
+    }
 }

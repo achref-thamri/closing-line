@@ -41,6 +41,13 @@ describe("lifecycle", () => {
         expect(messages).toEqual([]);
     });
 
+    it("treats a stored value of the wrong shape as a clean start", async () => {
+        await repos.state.set("lifecycle", "not an object");
+        await markStarted(deps("2026-11-01T10:00:00Z"));
+        expect(messages).toEqual([]);
+        expect(await repos.state.get("lifecycle")).toEqual({ running: true });
+    });
+
     it("reports a start after a crash, at most once an hour", async () => {
         await markStarted(deps("2026-11-01T10:00:00Z"));
         await markStarted(deps("2026-11-01T10:05:00Z"));

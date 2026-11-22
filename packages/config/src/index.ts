@@ -63,7 +63,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
         try {
             settings = JSON.parse(readFileSync(path, "utf8"));
         } catch (error) {
-            throw new ConfigError(`Cannot read settings file ${path}: ${(error as Error).message}`);
+            throw new ConfigError(
+                `Cannot read settings file ${path}: ${error instanceof Error ? error.message : String(error)}`,
+            );
         }
     }
     return parseConfig(env, settings);
