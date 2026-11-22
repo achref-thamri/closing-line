@@ -1,5 +1,5 @@
 import type { Config } from "@closing-line/config";
-import { matchFixture, settle1x2, settlesFromScore, toOutcome } from "@closing-line/core";
+import { matchFixture, settle1x2, settlesFromScore, toOutcome, type MatchResult } from "@closing-line/core";
 import type { Fixture, Repositories } from "@closing-line/db";
 import * as zod from "zod";
 import { messageOf } from "../lib/errors.ts";
@@ -80,11 +80,14 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
         }
         if (!results) continue;
 
-        const settle = async (fixture: Fixture) => {
+        // Bets first, the fixture last: if the run dies in between, the fixture is still scheduled, so the next run
+        // settles what's left (settled bets are skipped).
+        const settle = async (fixture: Fixture, result: MatchResult) => {
             report.fixtures++;
-            const settled = await settleFixtureBets(deps, fixture.id, now, names);
+            const settled = await settleFixtureBets(deps, fixture.id, result, now, names);
             report.settledBets += settled.length;
             lines.push(...settled.map((line) => `${line} on ${fixture.homeTeam} v ${fixture.awayTeam}`));
+            await deps.repos.fixtures.setResult(fixture.id, result);
         };
         // Listed but still not finished well after full time: the feed is stuck on the match.
         const stuck: Fixture[] = [];
@@ -92,11 +95,11 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
         for (const fixture of fixtures) {
             const result = matchFixture(fixture, results, KICKOFF_TOLERANCE_MS);
             const sinceKickoff = now.getTime() - fixture.kickoff.getTime();
-            if (await recordFinished(deps, fixture, result)) {
-                await settle(fixture);
+            const final = finalScore(result);
+            if (final) {
+                await settle(fixture, final);
             } else if (sinceKickoff > VOID_AFTER_MS && (result?.status === "called_off" || !result)) {
-                await deps.repos.fixtures.setResult(fixture.id, { status: "void" });
-                await settle(fixture);
+                await settle(fixture, { status: "void" });
             } else if (!result) {
                 report.unmatched.push(`${fixture.homeTeam} v ${fixture.awayTeam}`);
                 if (sinceKickoff >= ALERT_UNMATCHED_AFTER_MS && !alerted.has(fixture.id)) {
@@ -113,9 +116,8 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
         if (stuck.length > 0 && league.footballDataCode && now.getUTCHours() === SCORES_HOUR_UTC) {
             const backup = (await deps.scores(league.oddsApiKey)) ?? [];
             for (const fixture of stuck) {
-                if (await recordFinished(deps, fixture, matchFixture(fixture, backup, KICKOFF_TOLERANCE_MS))) {
-                    await settle(fixture);
-                }
+                const final = finalScore(matchFixture(fixture, backup, KICKOFF_TOLERANCE_MS));
+                if (final) await settle(fixture, final);
             }
         }
     }
@@ -157,30 +159,19 @@ async function resultsFor(
     return deps.scores(league.oddsApiKey);
 }
 
-/** Stores a finished result on the fixture; false when `result` isn't a finished match with a score. */
-async function recordFinished(
-    deps: SettleBetsDeps,
-    fixture: Fixture,
-    result: MatchResultInfo | undefined,
-): Promise<boolean> {
-    if (result?.status !== "finished" || result.homeGoals === null || result.awayGoals === null) return false;
-    await deps.repos.fixtures.setResult(fixture.id, {
-        status: "finished",
-        homeGoals: result.homeGoals,
-        awayGoals: result.awayGoals,
-    });
-    return true;
+/** The final score of a finished match with goals; undefined otherwise. */
+function finalScore(result: MatchResultInfo | undefined): MatchResult | undefined {
+    if (result?.status !== "finished" || result.homeGoals === null || result.awayGoals === null) return undefined;
+    return { status: "finished", homeGoals: result.homeGoals, awayGoals: result.awayGoals };
 }
 
 async function settleFixtureBets(
     deps: SettleBetsDeps,
     fixtureId: string,
+    result: MatchResult,
     now: Date,
     names: ReadonlyMap<string, string>,
 ): Promise<string[]> {
-    const fixture = await deps.repos.fixtures.get(fixtureId);
-    if (!fixture) return [];
-    const result = resultOf(fixture);
     const lines: string[] = [];
     for (const bet of await deps.repos.bets.open([fixtureId])) {
         if (!settlesFromScore(bet)) continue;
@@ -194,10 +185,4 @@ async function settleFixtureBets(
         );
     }
     return lines;
-}
-
-function resultOf(fixture: Fixture) {
-    return fixture.status === "finished" && fixture.homeGoals !== null && fixture.awayGoals !== null
-        ? { status: "finished" as const, homeGoals: fixture.homeGoals, awayGoals: fixture.awayGoals }
-        : { status: "void" as const };
 }
