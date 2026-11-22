@@ -1,18 +1,9 @@
 import { playerStats, type MetricsBet, type PlayerStats } from "./metrics.ts";
+import { heldProfitOre, type BetStatus } from "./settlement.ts";
 import { closingLineValue } from "./value.ts";
 
 /** How a bettor's bet from a slip ended: the selection's own result, or cashed out early. */
-export type SlipStatus = "won" | "lost" | "void" | "cashed_out";
-
-/** Profit of a bet that ran to the end. Money is in øre so totals add up exactly. */
-export function heldProfitOre(
-    bet: { stakeOre: number; lockedOdds: number },
-    status: Exclude<SlipStatus, "cashed_out">,
-): number {
-    if (status === "won") return Math.round(bet.stakeOre * (bet.lockedOdds - 1));
-    if (status === "lost") return -bet.stakeOre;
-    return 0;
-}
+export type SlipStatus = Exclude<BetStatus, "open">;
 
 /**
  * The bookmaker's current price implied by a cash-out offer: a fair cash-out pays stake × locked / current.
