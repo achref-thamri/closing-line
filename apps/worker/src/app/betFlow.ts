@@ -54,6 +54,15 @@ const BOOKS = [
 ];
 const LINES = [0.5, 1.5, 2.5, 3.5];
 
+/** A pick button's value: a side or team (`home`, `Bayern`), or over/under with one of `LINES` (`over|1.5`). */
+function pickOf(value: string): { selection: string; line: number | null } | undefined {
+    const [selection = "", lineText] = value.split("|");
+    if (selection === "") return undefined;
+    if (lineText === undefined) return { selection, line: null };
+    const line = Number(lineText);
+    return (selection === "over" || selection === "under") && LINES.includes(line) ? { selection, line } : undefined;
+}
+
 /** A typed match is looked up among fixtures from this long ago (bets placed live) to a week ahead. */
 const LIVE_MS = 3 * 3_600_000;
 const WEEK_MS = 7 * 86_400_000;
@@ -256,10 +265,10 @@ export class BetFlow implements ButtonHandler {
             draft.playerName = null;
             return this.ask(pending, MARKETS[value].player ? "player" : "pick");
         }
-        if (pending.step === "pick" && value !== "") {
-            const [selection = "", line] = value.split("|");
-            draft.selection = selection;
-            draft.line = line === undefined ? null : Number(line);
+        const picked = pending.step === "pick" ? pickOf(value) : undefined;
+        if (picked) {
+            draft.selection = picked.selection;
+            draft.line = picked.line;
             return this.ask(pending, "book");
         }
         if (pending.step === "book" && BOOKS.includes(value)) {
