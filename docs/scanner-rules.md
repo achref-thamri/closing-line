@@ -14,10 +14,10 @@ useful number of bets. The table is in ADR 0008.
 ## At most a week before kickoff (`scanner.maxHoursToKickoff`)
 
 The back-test's prices were taken a day or two before kickoff, so it says nothing about prices further out. After
-a refresh on 4 Nov produced 22 tips in one minute, most of them 14-18 days out with edges up to 16%, the limit was
+one refresh produced 22 tips in one minute, most of them 14-18 days out with edges up to 16%, the limit was
 set to 72 hours in case those early soft prices were stale.
 
-They weren't. By 21 Nov the 24 scanner bets placed more than 72 hours out averaged +5.1% CLV (18 beat the close),
+They weren't. Once they had closed, the 24 scanner bets placed more than 72 hours out averaged +5.1% CLV (18 beat the close),
 against +0.3% for the 48 placed later. The `too_early` passes say the same with more matches: 2%+ prices at fair
 odds under 5 closed at about +6.0% CLV when taken 3-7 days out (15 prices, 80% beat the close) and +1.2% past a week
 (40 prices on 13 matches), next to about +3% inside 72 hours. So the limit is a week. The match-day morning poll

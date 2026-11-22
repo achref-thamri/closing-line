@@ -106,6 +106,7 @@ export const settingsSchema = zod
         benchmarkStake: zod.number().positive().default(100),
         /** Polls this close to kickoff record closing prices and place the benchmark bet. */
         closingWindowMinutes: zod.int().positive().max(180).default(45),
+        // Bettors who log their own bets in Telegram; each gets this paper bankroll.
         bettors: zod
             .strictObject({
                 maxBankrollFraction: fraction.default(0.05),
@@ -113,6 +114,7 @@ export const settingsSchema = zod
                 startingBankroll: zod.number().positive().default(60_000),
             })
             .prefault({}),
+        /** Paper bankroll of the scanner and the favourite benchmark, in kroner. */
         startingBankroll: zod.number().positive().default(10_000),
         /** The scanner stops betting while its losses over the last seven days are above this share of its bankroll. */
         weeklyLossPause: fraction.default(0.15),
