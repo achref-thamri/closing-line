@@ -43,18 +43,20 @@ test("pages through the bets, 50 at a time", async ({ page }) => {
 
 test("shows one player's bets and keeps the choice when paging", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("navigation", { name: "Show bets of" }).getByRole("link", { name: "Value scanner" }).click();
-    await expect(page).toHaveURL(/\?player=scanner#bets$/);
+    // The favourite has more than one page of demo bets (110), so the pager is always there.
+    await page
+        .getByRole("navigation", { name: "Show bets of" })
+        .getByRole("link", { name: "Always the favourite" })
+        .click();
+    await expect(page).toHaveURL(/\?player=favourite#bets$/);
 
     const players = page.getByTestId("bet-row").locator("td:nth-child(2)");
-    await expect(players.first()).toHaveText("Value scanner");
-    expect(new Set(await players.allTextContents())).toEqual(new Set(["Value scanner"]));
+    await expect(players.first()).toHaveText("Always the favourite");
+    expect(new Set(await players.allTextContents())).toEqual(new Set(["Always the favourite"]));
 
-    const next = page.getByRole("navigation", { name: "Bet pages" }).getByRole("link", { name: "Next →" });
-    if ((await next.count()) > 0) {
-        await next.click();
-        await expect(page).toHaveURL(/\?player=scanner&page=2#bets$/);
-    }
+    await page.getByRole("navigation", { name: "Bet pages" }).getByRole("link", { name: "Next →" }).click();
+    await expect(page).toHaveURL(/\?player=favourite&page=2#bets$/);
+    expect(new Set(await players.allTextContents())).toEqual(new Set(["Always the favourite"]));
 });
 
 test("has no horizontal scroll on the page itself", async ({ page }) => {
