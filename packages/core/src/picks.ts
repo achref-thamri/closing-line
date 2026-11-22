@@ -1,34 +1,34 @@
 import type { Outcome } from "./settlement.ts";
 
 /** Display names for bookmaker keys: The Odds API's (tips) and the Danish sites bettors pick in Telegram. */
-const BOOK_NAMES: Readonly<Record<string, string>> = {
-    pinnacle: "Pinnacle",
-    nordicbet: "NordicBet",
-    marathonbet: "Marathonbet",
-    betsson: "Betsson",
-    unibet_se: "Unibet",
-    unibet: "Unibet",
-    leovegas_se: "LeoVegas",
-    leovegas: "LeoVegas",
-    sport888: "888sport",
-    casumo: "Casumo",
-    coolbet: "Coolbet",
-    betfair_ex_eu: "Betfair Exchange",
-    matchbook: "Matchbook",
-    williamhill: "William Hill",
-    bet25: "Bet25",
-    danske_spil: "Danske Spil",
-    comeon: "ComeOn",
-    betano: "Betano",
-    campobet: "Campobet",
-    merkurbets: "MerkurBets",
-    bet365: "bet365",
-};
+const BOOK_NAMES: ReadonlyMap<string, string> = new Map([
+    ["pinnacle", "Pinnacle"],
+    ["nordicbet", "NordicBet"],
+    ["marathonbet", "Marathonbet"],
+    ["betsson", "Betsson"],
+    ["unibet_se", "Unibet"],
+    ["unibet", "Unibet"],
+    ["leovegas_se", "LeoVegas"],
+    ["leovegas", "LeoVegas"],
+    ["sport888", "888sport"],
+    ["casumo", "Casumo"],
+    ["coolbet", "Coolbet"],
+    ["betfair_ex_eu", "Betfair Exchange"],
+    ["matchbook", "Matchbook"],
+    ["williamhill", "William Hill"],
+    ["bet25", "Bet25"],
+    ["danske_spil", "Danske Spil"],
+    ["comeon", "ComeOn"],
+    ["betano", "Betano"],
+    ["campobet", "Campobet"],
+    ["merkurbets", "MerkurBets"],
+    ["bet365", "bet365"],
+]);
 
 /** A bookmaker's display name; unknown keys are title-cased ("expekt" → "Expekt"). */
 export function bookName(book: string): string {
     return (
-        BOOK_NAMES[book] ??
+        BOOK_NAMES.get(book) ??
         book
             .split("_")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -56,16 +56,16 @@ export function sideName(match: { homeTeam: string; awayTeam: string }, selectio
     return "Draw";
 }
 
-const MARKET_LABELS: Readonly<Record<string, string>> = {
-    player_shots_on_target: "shots on target",
-    player_shots: "shots",
-    player_fouls: "fouls",
-    player_cards: "cards",
-    player_goal: "to score",
-    corners: "corners",
-    cards: "cards",
-    match_winner: "to win",
-};
+const MARKET_LABELS: ReadonlyMap<string, string> = new Map([
+    ["player_shots_on_target", "shots on target"],
+    ["player_shots", "shots"],
+    ["player_fouls", "fouls"],
+    ["player_cards", "cards"],
+    ["player_goal", "to score"],
+    ["corners", "corners"],
+    ["cards", "cards"],
+    ["match_winner", "to win"],
+]);
 
 /**
  * What a bet backed, in words: "Davies shots on target over 0.5", "Bayern to win", "Draw". Match results are
@@ -80,7 +80,7 @@ export function pickText(bet: {
     teams?: readonly [string, string];
 }): string {
     if (bet.selection === "over" || bet.selection === "under") {
-        const market = MARKET_LABELS[bet.market] ?? bet.market;
+        const market = MARKET_LABELS.get(bet.market) ?? bet.market;
         return `${bet.playerName ?? ""} ${market} ${bet.selection}${bet.line === null ? "" : ` ${bet.line}`}`.trim();
     }
     if (bet.market === "match_result" || bet.market === "h2h") {
@@ -90,6 +90,6 @@ export function pickText(bet: {
         if (bet.selection === "away" && away) return `${away} to win`;
         return bet.selection;
     }
-    const market = MARKET_LABELS[bet.market];
+    const market = MARKET_LABELS.get(bet.market);
     return market ? `${bet.selection} ${market}` : bet.selection;
 }

@@ -21,13 +21,13 @@ export function normalizeTeam(name: string): string[] {
  * unsettled on 2026-11-08), and the others are contained in a second club's name: "Barcelona" in "RCD Espanyol de
  * Barcelona", "Paris FC" in "Paris Saint-Germain FC", "Inter Milan" holds "AC Milan".
  */
-const PINNED_NAMES: Readonly<Record<string, readonly string[]>> = {
-    rennes: ["Stade Rennais FC 1901", "Stade Rennais"],
-    barcelona: ["FC Barcelona", "Barça"],
-    paris: ["Paris FC"],
-    "paris saint germain": ["Paris Saint-Germain FC", "PSG"],
-    "inter milan": ["FC Internazionale Milano", "Inter"],
-};
+const PINNED_NAMES: ReadonlyMap<string, readonly string[]> = new Map([
+    ["rennes", ["Stade Rennais FC 1901", "Stade Rennais"]],
+    ["barcelona", ["FC Barcelona", "Barça"]],
+    ["paris", ["Paris FC"]],
+    ["paris saint germain", ["Paris Saint-Germain FC", "PSG"]],
+    ["inter milan", ["FC Internazionale Milano", "Inter"]],
+]);
 
 const sameWords = (a: readonly string[], b: readonly string[]) =>
     a.length === b.length && a.every((word, i) => word === b[i]);
@@ -39,7 +39,7 @@ const sameWords = (a: readonly string[], b: readonly string[]) =>
  */
 export function sameTeam(name: string, aliases: readonly string[]): boolean {
     const words = normalizeTeam(name);
-    const pinned = PINNED_NAMES[words.join(" ")];
+    const pinned = PINNED_NAMES.get(words.join(" "));
     if (pinned) {
         const allowed = [words, ...pinned.map(normalizeTeam)];
         return aliases.some((alias) => allowed.some((option) => sameWords(normalizeTeam(alias), option)));
