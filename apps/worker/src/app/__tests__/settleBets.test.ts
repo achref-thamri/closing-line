@@ -128,6 +128,22 @@ describe("settleBets for a league without football-data.org results", () => {
 });
 
 describe("settleBets", () => {
+    it("settles a match the results feed leaves in play from The Odds API's scores, in the 22:00 UTC run", async () => {
+        await bet(SCANNER, id("a"), "home", 2.1);
+        const stuck = { ...finished(["Brentford FC"], ["Nottingham Forest FC"], 0, 0), status: "pending" as const };
+        const backup = [finished(["Brentford"], ["Nottingham Forest"], 0, 1)];
+        now = new Date("2026-10-31T21:15:00Z");
+        const early = deps([stuck], backup);
+        await settleBets(early);
+        expect(early.fetchScores).not.toHaveBeenCalled();
+
+        now = new Date("2026-10-31T22:15:00Z");
+        const run = deps([stuck], backup);
+        await settleBets(run);
+        expect(run.fetchScores).toHaveBeenCalledExactlyOnceWith("soccer_epl");
+        expect(await repos.bets.forPlayer(SCANNER)).toMatchObject([{ status: "lost" }]);
+    });
+
     it("settles bets by the real score and reports them", async () => {
         await bet(SCANNER, id("a"), "home", 2.1, 15_000);
         await bet(FAVOURITE, id("b"), "home", 1.4);

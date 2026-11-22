@@ -17,6 +17,8 @@ const VOID_AFTER_MS = 48 * HOUR_MS;
  */
 const ALERT_UNMATCHED_AFTER_MS = 6 * HOUR_MS;
 const ALERTED_KEY = "unmatched_alerted";
+/** A match the results feed still shows as not finished this long after kickoff is stuck there. */
+const STUCK_AFTER_MS = 6 * HOUR_MS;
 /** Look back this far for fixtures still waiting for a result. */
 const LOOKBACK_MS = 7 * 24 * HOUR_MS;
 const KICKOFF_TOLERANCE_MS = 3 * HOUR_MS;
@@ -78,32 +80,43 @@ export async function settleBets(deps: SettleBetsDeps): Promise<SettleReport> {
         }
         if (!results) continue;
 
-        for (const fixture of fixtures) {
-            const result = matchFixture(fixture, results, KICKOFF_TOLERANCE_MS);
-            const overdue = now.getTime() - fixture.kickoff.getTime() > VOID_AFTER_MS;
-            if (result?.status === "finished" && result.homeGoals !== null && result.awayGoals !== null) {
-                await deps.repos.fixtures.setResult(fixture.id, {
-                    status: "finished",
-                    homeGoals: result.homeGoals,
-                    awayGoals: result.awayGoals,
-                });
-            } else if (overdue && (result?.status === "called_off" || !result)) {
-                await deps.repos.fixtures.setResult(fixture.id, { status: "void" });
-            } else {
-                if (!result) {
-                    report.unmatched.push(`${fixture.homeTeam} v ${fixture.awayTeam}`);
-                    const late = now.getTime() - fixture.kickoff.getTime() >= ALERT_UNMATCHED_AFTER_MS;
-                    if (late && !alerted.has(fixture.id)) {
-                        alerted.add(fixture.id);
-                        alerts.push(`${fixture.homeTeam} v ${fixture.awayTeam} (${league.name})`);
-                    }
-                }
-                continue;
-            }
+        const settle = async (fixture: Fixture) => {
             report.fixtures++;
             const settled = await settleFixtureBets(deps, fixture.id, now, names);
             report.settledBets += settled.length;
             lines.push(...settled.map((line) => `${line} on ${fixture.homeTeam} v ${fixture.awayTeam}`));
+        };
+        // Listed but still not finished well after full time: the feed is stuck on the match.
+        const stuck: Fixture[] = [];
+
+        for (const fixture of fixtures) {
+            const result = matchFixture(fixture, results, KICKOFF_TOLERANCE_MS);
+            const sinceKickoff = now.getTime() - fixture.kickoff.getTime();
+            if (await recordFinished(deps, fixture, result)) {
+                await settle(fixture);
+            } else if (sinceKickoff > VOID_AFTER_MS && (result?.status === "called_off" || !result)) {
+                await deps.repos.fixtures.setResult(fixture.id, { status: "void" });
+                await settle(fixture);
+            } else if (!result) {
+                report.unmatched.push(`${fixture.homeTeam} v ${fixture.awayTeam}`);
+                if (sinceKickoff >= ALERT_UNMATCHED_AFTER_MS && !alerted.has(fixture.id)) {
+                    alerted.add(fixture.id);
+                    alerts.push(`${fixture.homeTeam} v ${fixture.awayTeam} (${league.name})`);
+                }
+            } else if (result.status === "pending" && sinceKickoff >= STUCK_AFTER_MS) {
+                stuck.push(fixture);
+            }
+        }
+
+        // football-data.org sometimes leaves a played match "in play" for days. The Odds API's scores are the
+        // backup: asked only in the daily scores run and only for a league with a stuck match, so 2 credits at most.
+        if (stuck.length > 0 && league.footballDataCode && now.getUTCHours() === SCORES_HOUR_UTC) {
+            const backup = (await deps.scores(league.oddsApiKey)) ?? [];
+            for (const fixture of stuck) {
+                if (await recordFinished(deps, fixture, matchFixture(fixture, backup, KICKOFF_TOLERANCE_MS))) {
+                    await settle(fixture);
+                }
+            }
         }
     }
 
@@ -142,6 +155,21 @@ async function resultsFor(
     if (now.getUTCHours() !== SCORES_HOUR_UTC) return undefined;
     // Undefined means no credits: try again tomorrow rather than voiding bets for want of a result.
     return deps.scores(league.oddsApiKey);
+}
+
+/** Stores a finished result on the fixture; false when `result` isn't a finished match with a score. */
+async function recordFinished(
+    deps: SettleBetsDeps,
+    fixture: Fixture,
+    result: MatchResultInfo | undefined,
+): Promise<boolean> {
+    if (result?.status !== "finished" || result.homeGoals === null || result.awayGoals === null) return false;
+    await deps.repos.fixtures.setResult(fixture.id, {
+        status: "finished",
+        homeGoals: result.homeGoals,
+        awayGoals: result.awayGoals,
+    });
+    return true;
 }
 
 async function settleFixtureBets(
