@@ -26,5 +26,27 @@ CONFIG
 fi
 
 ssh hetzner "bash -s -- '$(cat "$key.pub")'" <"$here/server-setup.sh"
+
+# A weekly copy of the newest backup on this Mac (Sundays 12:00, or at the next wake if asleep then).
+label=local.closing-line.pull-backup
+plist="$HOME/Library/LaunchAgents/$label.plist"
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Backups/closing-line"
+cat >"$plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>$label</string>
+    <key>ProgramArguments</key><array><string>/bin/bash</string><string>$here/pull-backup.sh</string></array>
+    <key>StartCalendarInterval</key><dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>12</integer></dict>
+    <key>StandardOutPath</key><string>$HOME/Backups/closing-line/pull.log</string>
+    <key>StandardErrorPath</key><string>$HOME/Backups/closing-line/pull.log</string>
+</dict>
+</plist>
+PLIST
+launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$plist"
+
 echo
 echo "Done. Test: echo 'select count(*) from bets' | ssh hetzner-read db-read"
+echo "Backups: bash $here/pull-backup.sh now, then weekly into ~/Backups/closing-line"

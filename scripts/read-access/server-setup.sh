@@ -4,7 +4,8 @@
 # - Postgres role `reader`: can only SELECT, every transaction read-only, queries stop after 30 seconds.
 # - ~/bin/db-read: SQL on stdin, run as `reader`.
 # - ~/bin/cl-logs [worker|web|postgres|backup] [30m|2h]: recent container logs.
-# - ~/bin/read-gate: forced command for the read-only key, which may run those two and nothing else.
+# - ~/bin/cl-backup: the newest nightly dump, streamed to stdout.
+# - ~/bin/read-gate: forced command for the read-only key, which may run those three and nothing else.
 # Safe to run again.
 set -euo pipefail
 public_key=${1:?public key required}
@@ -50,9 +51,16 @@ since=${2:-1h}
 cd "$HOME/closing-line"
 exec docker compose logs --no-color --since "$since" "$service"
 SCRIPT
+cat >"$HOME/bin/cl-backup" <<'SCRIPT'
+#!/usr/bin/env bash
+# The newest nightly dump (gzipped SQL) on stdout.
+set -euo pipefail
+cd "$HOME/closing-line"
+exec docker compose exec -T backup sh -c 'latest=$(ls -t /backups/closing-line-*.sql.gz | head -n 1) && cat "$latest"'
+SCRIPT
 cat >"$HOME/bin/read-gate" <<'SCRIPT'
 #!/usr/bin/env bash
-# Forced command for the read-only SSH key: whatever the client asks for, only db-read and cl-logs run. The request
+# Forced command for the read-only SSH key: whatever the client asks for, only db-read, cl-logs and cl-backup run. The request
 # is split into words, never passed to a shell.
 set -euo pipefail
 read -r -a words <<<"${SSH_ORIGINAL_COMMAND:-}"
@@ -65,13 +73,17 @@ case "${words[0]:-}" in
         ((${#words[@]} <= 3)) || { echo "cl-logs [service] [since]" >&2; exit 64; }
         exec "$HOME/bin/cl-logs" "${words[@]:1}"
         ;;
+    cl-backup)
+        ((${#words[@]} == 1)) || { echo "cl-backup takes no arguments" >&2; exit 64; }
+        exec "$HOME/bin/cl-backup"
+        ;;
     *)
-        echo "this key may only run db-read or cl-logs" >&2
+        echo "this key may only run db-read, cl-logs or cl-backup" >&2
         exit 64
         ;;
 esac
 SCRIPT
-chmod 755 "$HOME/bin/db-read" "$HOME/bin/cl-logs" "$HOME/bin/read-gate"
+chmod 755 "$HOME/bin/db-read" "$HOME/bin/cl-logs" "$HOME/bin/cl-backup" "$HOME/bin/read-gate"
 
 entry="command=\"$HOME/bin/read-gate\",restrict $public_key"
 touch "$HOME/.ssh/authorized_keys"
