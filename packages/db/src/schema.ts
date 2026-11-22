@@ -124,7 +124,7 @@ export const bets = pgTable(
         /** Player props: the player and the line, e.g. "Jobe Bellingham" and 1.5 shots on target. */
         playerName: text("player_name"),
         line: doublePrecision(),
-        stakeOre: integer("stake_ore").notNull(),
+        stakeOre: bigint("stake_ore", { mode: "number" }).notNull(),
         lockedOdds: doublePrecision("locked_odds").notNull(),
         bookmaker: text().notNull(),
         sharpFairOddsAtBet: doublePrecision("sharp_fair_odds_at_bet"),
@@ -134,7 +134,7 @@ export const bets = pgTable(
         /** When the bettor logged the bet. */
         receivedAt: timestamp("received_at", { withTimezone: true }),
         /** The latest cash-out offer seen; for a cashed-out bet, what it paid. */
-        cashoutOfferOre: integer("cashout_offer_ore"),
+        cashoutOfferOre: bigint("cashout_offer_ore", { mode: "number" }),
         /** The bookmaker's price implied by the cash-out offer: the props version of closing odds. */
         impliedCurrentOdds: doublePrecision("implied_current_odds"),
         /** For a cashed-out bet: how the selection itself ended, to compare cashing out with holding. */
@@ -147,7 +147,7 @@ export const bets = pgTable(
         clv: doublePrecision(),
         /** A scanner tip: when a later poll found no bookmaker paying the fair price any more. */
         priceGoneAt: timestamp("price_gone_at", { withTimezone: true }),
-        profitOre: integer("profit_ore"),
+        profitOre: bigint("profit_ore", { mode: "number" }),
         ...timestamps,
         settledAt: timestamp("settled_at", { withTimezone: true }),
     },
