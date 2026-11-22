@@ -29,6 +29,8 @@ COPY --from=build --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
 USER node
 EXPOSE 3000
+# Loads the real page, not a bare health route: the deploy waits for healthy, so a build that can't read the
+# database fails the deploy. That costs one dashboard load a minute.
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
     CMD ["node", "-e", "fetch('http://localhost:3000').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 CMD ["node", "apps/web/server.js"]

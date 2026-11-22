@@ -1,5 +1,6 @@
 /** The spec's go-live rule: what a player needs before real money. */
-export const GO_LIVE = { bets: 300, months: 3, maxDrawdown: 0.3 } as const;
+/** The go-live rule. `bugFreeDays` is checked by hand; the rest by `goLiveCheck`. */
+export const GO_LIVE = { bets: 300, months: 3, maxDrawdown: 0.3, bugFreeDays: 30 } as const;
 
 /** 1.96 standard errors either side of the mean: a 95% range under a normal approximation. */
 const Z95 = 1.96;
@@ -47,7 +48,7 @@ export interface GoLiveCheck {
     /** Largest fall from a bankroll peak, as a share of the starting bankroll. */
     maxDrawdown: number;
     items: GoLiveItem[];
-    /** Every rule above holds. "No unexplained bugs in the last 30 days" is checked by hand. */
+    /** Every rule above holds. `GO_LIVE.bugFreeDays` without unexplained bugs is checked by hand. */
     ready: boolean;
 }
 

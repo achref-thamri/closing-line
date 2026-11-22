@@ -40,8 +40,8 @@ function describe(item: GoLiveItem, check: GoLiveCheck, now: Date): { rule: stri
 const EARLY_ITEMS = new Set<GoLiveItem["key"]>(["benchmark", "drawdown"]);
 
 /**
- * The scanner against the go-live rule, from bets today's rules would place. The last rule, no unexplained bugs in
- * the last 30 days, is checked by hand.
+ * The scanner against the go-live rule, from bets today's rules would place. The last rule, no unexplained bugs
+ * lately (`GO_LIVE.bugFreeDays`), is checked by hand.
  */
 export function GoLivePanel({ check, now = new Date() }: { check: GoLiveCheck; now?: Date }) {
     const early = check.settled < GO_LIVE.bets;
@@ -56,7 +56,9 @@ export function GoLivePanel({ check, now = new Date() }: { check: GoLiveCheck; n
                 <span
                     className={`text-sm font-medium ${check.ready ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500"}`}
                 >
-                    {check.ready ? "Yes, if there were no unexplained bugs in the last 30 days" : "Not yet"}
+                    {check.ready
+                        ? `Yes, if there were no unexplained bugs in the last ${GO_LIVE.bugFreeDays} days`
+                        : "Not yet"}
                 </span>
             </header>
             <p className="mt-1 text-xs text-zinc-500">

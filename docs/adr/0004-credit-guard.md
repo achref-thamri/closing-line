@@ -29,8 +29,3 @@ The guard records the balance that every response reports in its headers, warns 
 - The free plan lasts the month whatever the fixture list looks like; busy weekends cannot drain it.
 - Missing balance headers read as zero, which stops paid calls instead of guessing.
 - More leagues or more frequent polls need the paid plan, a settings change.
-
-## Changes
-
-- 2026-11-16: the reserve used to be kept for a `bet` priority (people asking for prices in Telegram), and `closing`
-  stopped at it. `/picks` was removed, so nothing asks for prices any more and `closing` took the reserve.
