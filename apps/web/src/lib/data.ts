@@ -99,7 +99,11 @@ function database(): Promise<DatabaseHandle> {
         const handle = await openDatabase({ kind: "pglite" });
         await seedDemo(createRepositories(handle.db), new Date());
         return handle;
-    })();
+    })().catch((error: unknown) => {
+        // Forget a failed open, so the next request tries again instead of getting the same error until a restart.
+        delete cache.closingLineDatabase;
+        throw error;
+    });
     return cache.closingLineDatabase;
 }
 
