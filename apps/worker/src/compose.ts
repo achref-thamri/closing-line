@@ -2,7 +2,7 @@ import type { Config } from "@closing-line/config";
 import { createRepositories, type Database, type Repositories } from "@closing-line/db";
 import { FootballDataClient } from "./adapters/footballData/client.ts";
 import { OddsApiClient } from "./adapters/oddsApi/client.ts";
-import type { UserFromGetMe } from "grammy/types";
+import type { BotFullInfo } from "grammy/types";
 import { createTelegramBot, type TelegramBot } from "./adapters/telegram/bot.ts";
 import { BetFlow } from "./app/betFlow.ts";
 import { Bettors } from "./app/bettors.ts";
@@ -40,7 +40,7 @@ export function compose(options: {
     logger: Logger;
     now?: () => Date;
     /** Known bot details, so tests can feed updates without Telegram's getMe. */
-    botInfo?: UserFromGetMe;
+    botInfo?: BotFullInfo;
 }): Worker {
     const { config, logger } = options;
     const now = options.now ?? (() => new Date());
