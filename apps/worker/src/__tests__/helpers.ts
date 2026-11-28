@@ -1,4 +1,4 @@
-import type { UserFromGetMe } from "grammy/types";
+import type { BotFullInfo } from "grammy/types";
 import type { Reply } from "../app/chat.ts";
 
 /** Chat ids for the owner and an approved bettor in the flow tests. */
@@ -6,7 +6,7 @@ export const OWNER = 100;
 export const FRIEND = 200;
 
 /** A bot account for grammY, so tests run without asking Telegram who the bot is. */
-export const botInfo: UserFromGetMe = {
+export const botInfo: BotFullInfo = {
     id: 1,
     is_bot: true,
     first_name: "Closing Line",
@@ -20,6 +20,9 @@ export const botInfo: UserFromGetMe = {
     allows_users_to_create_topics: false,
     can_manage_bots: false,
     supports_join_request_queries: false,
+    supports_guest_queries: false,
+    needs_inline_query_location: false,
+    has_topic_sidebar: false,
 };
 
 /** The callback data of the first button whose label contains `label`. */

@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard, type Context } from "grammy";
-import type { Update, UserFromGetMe } from "grammy/types";
+import type { Update, BotFullInfo } from "grammy/types";
 import type { BetFlow } from "../../app/betFlow.ts";
 import type { Bettors } from "../../app/bettors.ts";
 import type { ButtonHandler, Messenger, Reply } from "../../app/chat.ts";
@@ -39,7 +39,7 @@ export function createTelegramBot(options: {
     botToken: string;
     logger: Logger;
     /** Tests pass this to run updates without Telegram. */
-    botInfo?: UserFromGetMe;
+    botInfo?: BotFullInfo;
 }) {
     const bot = new Bot(options.botToken, {
         client: { timeoutSeconds: 60 },
