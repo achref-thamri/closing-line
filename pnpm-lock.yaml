@@ -243,8 +243,8 @@ importers:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
       recharts:
-        specifier: 3.11.0
-        version: 3.11.0(@types/react@19.3.1)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1)
+        specifier: 3.11.1
+        version: 3.11.1(@types/react@19.3.1)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1)
     devDependencies:
       '@playwright/test':
         specifier: 1.65.1
@@ -274,8 +274,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/db
       grammy:
-        specifier: 1.46.0
-        version: 1.46.0
+        specifier: 1.48.0
+        version: 1.48.0
       pino:
         specifier: 10.4.0
         version: 10.4.0
@@ -308,11 +308,11 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@electric-sql/pglite':
-        specifier: 0.5.16
-        version: 0.5.16
+        specifier: 0.6.0
+        version: 0.6.0
       drizzle-orm:
         specifier: 0.45.4
-        version: 0.45.4(@electric-sql/pglite@0.5.16)(@opentelemetry/api@1.10.0)(postgres@4.1.1)
+        version: 0.45.4(@electric-sql/pglite@0.6.0)(@opentelemetry/api@1.10.0)(postgres@4.1.1)
       postgres:
         specifier: 4.1.1
         version: 4.1.1
@@ -360,8 +360,8 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@electric-sql/pglite@0.5.16':
-    resolution: {integrity: sha512-Nj8KcIsJL748W408U2N8q4+9IlONdpRIU8MJypIAAINMJ5nqKyqpX7Mgg/5XKkXiAib3AoZGR6hnJFlrlLBrcg==}
+  '@electric-sql/pglite@0.6.0':
+    resolution: {integrity: sha512-g3tAPFjRLEdN1g5FvawTl4ETo9LtmVwBRUJYnH6Erl6mhlKFRGB2mYhPABffIuXMYxki64mX0Al8U4UFUhuYDQ==}
 
   '@emnapi/core@1.11.2':
     resolution: {integrity: sha512-TC8MkTuZUtcTSiFeuC0ksCh9QIJ5+F21MvZ4Wn4ORfYaFJ/0dsiudv5tVkejgwZlwQ39jL9WWDe2lz8x0WglOA==}
@@ -740,8 +740,8 @@ packages:
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@grammyjs/types@5.0.0':
-    resolution: {integrity: sha512-iq1Qrq1iPKkB8yAa0qSuIURMZOCuqTY5pWy5gHpCeL1oQ+GPadGhw/cDTVE8waJwuCzacUzuIjRv1sESvk7u7A==}
+  '@grammyjs/types@5.2.0':
+    resolution: {integrity: sha512-URnzUV3rBEkEtsHz/+/na8uDJS45eD0vXGM73Ucps2nKpdVfhT4+EyYV8lDftazVRoWN2mT2hjMzMEbSPURBhA==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2053,8 +2053,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  grammy@1.46.0:
-    resolution: {integrity: sha512-/8Qw+iisrUdOMk+p2mjEHouMm/BBdBEN1DHh16wiTpRUZkxDG3PxexdjCvR+wvK3LWPdrEvnQbdrwpU954sPhg==}
+  grammy@1.48.0:
+    resolution: {integrity: sha512-/QMphprJxroslpNCFR3SFQwOobjf6uCAmz+OzK94FAVvhQxG/NmKqnkLVhnKkcZ6hruwAFKka6+34Zzg5CjAiQ==}
     engines: {node: ^12.20.0 || >=14.13.1}
 
   hashery@1.5.1:
@@ -2410,8 +2410,8 @@ packages:
   real-require@1.0.0:
     resolution: {integrity: sha512-P4nbQYQfePJxRSmY+v/KINxVucm4NF3p3s7pJveMTtom52FR4YGltUQLB8idDXwDDWW+eYrWDFbuzUnjoWHF7g==}
 
-  recharts@3.11.0:
-    resolution: {integrity: sha512-Hs7vXskAYl82TKKkeikPxMFOaOqVJBoqxay6a4Oj+sBURVorpSKk8J732vyNsmedxK08lpPhyj2GL4E6ZMHR6Q==}
+  recharts@3.11.1:
+    resolution: {integrity: sha512-3XYqpdvpOYRDbi6NUMUEStTRXLmSmw9GJ/cp3xGbACLt+0PEa5CnWfg5Wi4VN7YLtVA5/hJiIhNPoxntWaTY/g==}
     engines: {node: '>=18'}
     peerDependencies:
       '@types/react': '*'
@@ -2769,7 +2769,7 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@electric-sql/pglite@0.5.16': {}
+  '@electric-sql/pglite@0.6.0': {}
 
   '@emnapi/core@1.11.2':
     dependencies:
@@ -2997,7 +2997,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@grammyjs/types@5.0.0': {}
+  '@grammyjs/types@5.2.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -3788,9 +3788,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.4(@electric-sql/pglite@0.5.16)(@opentelemetry/api@1.10.0)(postgres@4.1.1):
+  drizzle-orm@0.45.4(@electric-sql/pglite@0.6.0)(@opentelemetry/api@1.10.0)(postgres@4.1.1):
     optionalDependencies:
-      '@electric-sql/pglite': 0.5.16
+      '@electric-sql/pglite': 0.6.0
       '@opentelemetry/api': 1.10.0
       postgres: 4.1.1
 
@@ -4012,9 +4012,9 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  grammy@1.46.0:
+  grammy@1.48.0:
     dependencies:
-      '@grammyjs/types': 5.0.0
+      '@grammyjs/types': 5.2.0
       abort-controller: 3.0.0
       debug: 4.4.3
       node-fetch: 2.7.0
@@ -4360,7 +4360,7 @@ snapshots:
 
   real-require@1.0.0: {}
 
-  recharts@3.11.0(@types/react@19.3.1)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1):
+  recharts@3.11.1(@types/react@19.3.1)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1):
     dependencies:
       '@reduxjs/toolkit': 2.13.0(react-redux@9.3.1(@types/react@19.3.1)(react@19.3.1)(redux@5.0.1))(react@19.3.1)
       clsx: 2.1.1
