@@ -46,16 +46,16 @@ const stakeRulesSchema = zod
         step: zod.number().positive().default(10),
     })
     .refine((rules) => rules.minStake <= rules.maxStake, {
-        message: "minStake cannot exceed maxStake",
+        error: "minStake cannot exceed maxStake",
         path: ["minStake"],
     })
     .refine((rules) => rules.minStake % rules.step === 0, {
-        message: "minStake must be a multiple of step",
+        error: "minStake must be a multiple of step",
         path: ["minStake"],
     })
     // The cap is applied after rounding to the step, so an odd cap would give an odd stake.
     .refine((rules) => rules.maxStake % rules.step === 0, {
-        message: "maxStake must be a multiple of step",
+        error: "maxStake must be a multiple of step",
         path: ["maxStake"],
     }) satisfies zod.ZodType<StakeRules>;
 
@@ -131,11 +131,11 @@ export const settingsSchema = zod
         timezone: zod.string().min(1).default("Europe/Copenhagen"),
     })
     .refine((settings) => settings.bookmakers.includes(settings.sharpBookmaker), {
-        message: "sharpBookmaker must be one of bookmakers",
+        error: "sharpBookmaker must be one of bookmakers",
         path: ["sharpBookmaker"],
     })
     .refine((settings) => isTimeZone(settings.timezone), {
-        message: "is not a valid IANA time zone",
+        error: "is not a valid IANA time zone",
         path: ["timezone"],
     });
 
